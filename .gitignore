@@ -1,0 +1,19 @@
+## Intellij IDEA
+*.iml
+*.eml
+*.ipr
+*.iws
+.idea
+*java.orig
+**/out/*
+
+## Eclipse
+*.classpath
+*.project
+
+## Gradle
+.gradle
+build
+
+## Qodana
+.qodana
