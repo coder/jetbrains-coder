@@ -1,5 +1,6 @@
 package com.coder.gateway
 
+import com.coder.gateway.views.CoderGatewayConnectorView
 import com.intellij.ui.IconManager
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.BrowserLink
@@ -14,7 +15,7 @@ class CoderGatewayConnector : GatewayConnector {
         get() = IconManager.getInstance().getIcon("coder_logo.svg", this::class.java)
 
     override fun createView(lifetime: Lifetime): GatewayConnectorView {
-        TODO("Not yet implemented")
+        return CoderGatewayConnectorView()
     }
 
     override fun getActionText(): String {
