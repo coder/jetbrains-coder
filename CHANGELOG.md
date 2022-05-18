@@ -9,3 +9,4 @@
 * welcome screen
 * basuc connector view triggered by the Coder's welcome view.
 * back button to return to the main welcome view
+* basic Coder http client

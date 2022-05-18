@@ -17,6 +17,19 @@ plugins {
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
+val ktorVersion = properties("ktorVersion")
+dependencies {
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-logging:$ktorVersion")
+    implementation("io.ktor:ktor-client-encoding:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-gson:$ktorVersion")
+    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.2")
+
+}
+
 // Configure project's dependencies
 repositories {
     mavenCentral()

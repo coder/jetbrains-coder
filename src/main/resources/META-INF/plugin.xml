@@ -8,7 +8,9 @@
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
     <depends>com.jetbrains.gateway</depends>
-
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.coder.gateway.sdk.CoderClientService"></applicationService>
+    </extensions>
     <extensions defaultExtensionNs="com.jetbrains">
         <gatewayConnector implementation="com.coder.gateway.CoderGatewayConnector"/>
     </extensions>
