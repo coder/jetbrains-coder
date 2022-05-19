@@ -19,15 +19,12 @@ version = properties("pluginVersion")
 
 val ktorVersion = properties("ktorVersion")
 dependencies {
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
-    implementation("io.ktor:ktor-client-logging:$ktorVersion")
-    implementation("io.ktor:ktor-client-encoding:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-gson:$ktorVersion")
-    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.17.2")
-
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    // define a BOM and its version
+    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.9.3"))
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp")
+    implementation("com.squareup.okhttp3:logging-interceptor")
 }
 
 // Configure project's dependencies
@@ -54,6 +51,13 @@ changelog {
 }
 
 tasks {
+    buildPlugin {
+        exclude { "coroutines" in it.name }
+    }
+    prepareSandbox {
+        exclude { "coroutines" in it.name }
+    }
+
     // Set the JVM compatibility versions
     properties("javaVersion").let {
         withType<JavaCompile> {

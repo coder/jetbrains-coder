@@ -1,58 +1,42 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.sdk.ex.AuthenticationException
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.compression.ContentEncoding
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.DEFAULT
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.serialization.gson.gson
-import kotlinx.coroutines.runBlocking
+import com.intellij.openapi.diagnostic.Logger
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
-@Service
-class CoderClientService {
-    private val httpClient = HttpClient(CIO) {
-        install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.ALL
+@Service(Service.Level.APP)
+class CoderClientService : Disposable {
+    private lateinit var retroRestClient: CoderRestService
+
+    lateinit var sessionToken: String
+
+    /**
+     * This must be called before anything else. It will authenticate with coder and retrieve a session token
+     * @throws [AuthenticationException] if authentication failed
+     */
+    fun initClientSession(host: String, port: Int, email: String, password: String) {
+        val hostPath = host.trimEnd('/')
+        val sessionTokenResponse = Retrofit.Builder()
+            .baseUrl("http://$hostPath:$port")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CoderAuthenticatonRestService::class.java).authenticate(LoginRequest(email, password)).execute()
+
+        if (!sessionTokenResponse.isSuccessful) {
+            throw AuthenticationException("Authentication failed with code:${sessionTokenResponse.code()}, reason: ${sessionTokenResponse.errorBody().toString()}")
         }
-        install(ContentEncoding)
-        install(ContentNegotiation) {
-            gson() {
-                setPrettyPrinting()
-            }
-        }
+        sessionToken = sessionTokenResponse.body()!!.sessionToken
+        retroRestClient = Retrofit.Builder()
+            .baseUrl("https://$hostPath:$port")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CoderRestService::class.java)
     }
 
-    suspend fun authenthicateWithPassword(url: String, email: String, password: String) {
-        val urlPath = url.trimEnd('/')
-        val response = httpClient.post("$urlPath/auth/basic/login") {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(email, password))
-        }
+    override fun dispose() {
 
-        println(">>> ${response.bodyAsText()}")
     }
-
-    fun dispose() {
-        httpClient.close()
-    }
-}
-
-fun main() {
-    val coderClient = CoderClientService()
-
-    runBlocking {
-        coderClient.authenthicateWithPassword("http://localhost:7080", "example@email.com", "password example")
-    }
-
-    coderClient.dispose()
 }
