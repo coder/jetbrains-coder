@@ -1,42 +1,71 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.UriScheme
+import com.coder.gateway.models.User
+import com.coder.gateway.models.Workspace
 import com.coder.gateway.sdk.ex.AuthenticationException
-import com.intellij.openapi.Disposable
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
+import com.jetbrains.gateway.sdk.convertors.InstantConverter
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.time.Instant
 
 @Service(Service.Level.APP)
-class CoderClientService : Disposable {
+class CoderClientService {
     private lateinit var retroRestClient: CoderRestService
 
     lateinit var sessionToken: String
+    lateinit var me: User
 
     /**
      * This must be called before anything else. It will authenticate with coder and retrieve a session token
      * @throws [AuthenticationException] if authentication failed
      */
-    fun initClientSession(host: String, port: Int, email: String, password: String) {
+    fun initClientSession(uriScheme: UriScheme, host: String, port: Int, email: String, password: String) {
         val hostPath = host.trimEnd('/')
-        val sessionTokenResponse = Retrofit.Builder()
-            .baseUrl("http://$hostPath:$port")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(CoderAuthenticatonRestService::class.java).authenticate(LoginRequest(email, password)).execute()
 
-        if (!sessionTokenResponse.isSuccessful) {
-            throw AuthenticationException("Authentication failed with code:${sessionTokenResponse.code()}, reason: ${sessionTokenResponse.errorBody().toString()}")
-        }
-        sessionToken = sessionTokenResponse.body()!!.sessionToken
+        val gson: Gson = GsonBuilder()
+            .registerTypeAdapter(Instant::class.java, InstantConverter())
+            .setPrettyPrinting()
+            .create()
+
+        val interceptor = HttpLoggingInterceptor()
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+
         retroRestClient = Retrofit.Builder()
-            .baseUrl("https://$hostPath:$port")
-            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl("${uriScheme.scheme}://$hostPath:$port")
+            .client(OkHttpClient.Builder().addInterceptor(interceptor).build())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(CoderRestService::class.java)
+
+        val sessionTokenResponse = retroRestClient.authenticate(LoginRequest(email, password)).execute()
+
+        if (!sessionTokenResponse.isSuccessful) {
+            throw AuthenticationException("Authentication failed with code:${sessionTokenResponse.code()}, reason: ${sessionTokenResponse.message()}")
+        }
+        sessionToken = sessionTokenResponse.body()!!.sessionToken
+
+        val userResponse = retroRestClient.me(sessionToken).execute()
+
+        if (!userResponse.isSuccessful) {
+            throw IllegalStateException("Could not retrieve information about logged use:${userResponse.code()}, reason: ${userResponse.message()}")
+        }
+
+        me = userResponse.body()!!
     }
 
-    override fun dispose() {
+    fun workspaces(): List<Workspace> {
+        val workspacesResponse = retroRestClient.workspaces(sessionToken, me.id).execute()
+        if (!workspacesResponse.isSuccessful) {
+            throw IllegalStateException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
+        }
+
+        return workspacesResponse.body()!!
 
     }
 }

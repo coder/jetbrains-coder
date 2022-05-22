@@ -2,6 +2,7 @@ package com.coder.gateway.views
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.LoginModel
+import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.CoderClientService
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.askPassword
@@ -9,6 +10,7 @@ import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.IconManager
@@ -18,8 +20,10 @@ import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.bindIntText
+import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.toNullableProperty
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -40,6 +44,8 @@ class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
     private val model = LoginModel()
     private val coderClient: CoderClientService = ApplicationManager.getApplication().getService(CoderClientService::class.java)
 
+    private lateinit var loginPanel: DialogPanel
+
     init {
         initView()
     }
@@ -50,8 +56,8 @@ class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
         addToBottom(createBackComponent())
     }
 
-    private fun createLoginComponent(): Component {
-        return panel {
+    private fun createLoginComponent(): DialogPanel {
+        loginPanel = panel {
             indent {
                 row {
                     label(CoderGatewayBundle.message("gateway.connector.view.login.header.text")).applyToComponent {
@@ -65,10 +71,15 @@ class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
                 row {
                     browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder/latest/workspaces")
                 }.bottomGap(BottomGap.MEDIUM)
-                row(CoderGatewayBundle.message("gateway.connector.view.login.host.label")) {
+                row {
+                    label(CoderGatewayBundle.message("gateway.connector.view.login.scheme.label"))
+                    comboBox(UriScheme.values().toList()).bindItem(model::uriScheme.toNullableProperty())
+                    label(CoderGatewayBundle.message("gateway.connector.view.login.host.label"))
                     textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::host)
-                    intTextField(0..65536).bindIntText(model::port).label(CoderGatewayBundle.message("gateway.connector.view.login.port.label"))
+                    label(CoderGatewayBundle.message("gateway.connector.view.login.port.label"))
+                    intTextField(0..65536).bindIntText(model::port)
                     button(CoderGatewayBundle.message("gateway.connector.view.login.connect.action")) {
+                        loginPanel.apply()
                         model.password = askPassword(
                             null,
                             CoderGatewayBundle.message("gateway.connector.view.login.credentials.dialog.title"),
@@ -77,10 +88,10 @@ class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
                             false
                         )
                         cs.launch {
-                            withContext(Dispatchers.IO) {
-                                coderClient.initClientSession(model.host, model.port, model.email, model.password!!)
+                            val workspaces = withContext(Dispatchers.IO) {
+                                coderClient.initClientSession(model.uriScheme, model.host, model.port, model.email, model.password!!)
+                                coderClient.workspaces()
                             }
-                            logger.info("Session token:${coderClient.sessionToken}")
                         }
 
                     }.applyToComponent {
@@ -98,6 +109,8 @@ class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
         }.apply {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
         }
+
+        return loginPanel
     }
 
     private fun createBackComponent(): Component {
