@@ -1,138 +1,129 @@
 package com.coder.gateway.views
 
-import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.LoginModel
-import com.coder.gateway.models.UriScheme
-import com.coder.gateway.sdk.CoderClientService
-import com.intellij.credentialStore.CredentialAttributes
-import com.intellij.credentialStore.askPassword
-import com.intellij.ide.IdeBundle
+import com.coder.gateway.views.steps.CoderAuthStepView
+import com.coder.gateway.views.steps.CoderWorkspacesStepView
+import com.coder.gateway.views.steps.CoderWorkspacesWizardStep
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.ui.DialogPanel
-import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
-import com.intellij.ui.IconManager
-import com.intellij.ui.SeparatorComponent
-import com.intellij.ui.components.panels.VerticalLayout
-import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
-import com.intellij.ui.dsl.builder.TopGap
-import com.intellij.ui.dsl.builder.bindIntText
-import com.intellij.ui.dsl.builder.bindItem
-import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.toNullableProperty
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
-import com.intellij.util.ui.JBFont
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import javax.swing.JButton
-import javax.swing.JPanel
 
 class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
-    private val logger = Logger.getInstance(CoderClientService::class.java)
     private val cs = CoroutineScope(Dispatchers.Main)
-    private val model = LoginModel()
-    private val coderClient: CoderClientService = ApplicationManager.getApplication().getService(CoderClientService::class.java)
+    private var steps = arrayListOf<CoderWorkspacesWizardStep>()
+    private var currentStep = 0
+    private val model = CoderWorkspacesWizardModel(LoginModel(), emptyList())
 
-    private lateinit var loginPanel: DialogPanel
+    private lateinit var previousButton: JButton
+    private lateinit var nextButton: JButton
 
     init {
-        initView()
+        setupWizard()
     }
 
-    private fun initView() {
+    private fun setupWizard() {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        addToCenter(createLoginComponent())
+
+        registerStep(CoderAuthStepView())
+        registerStep(CoderWorkspacesStepView())
+
         addToBottom(createBackComponent())
-    }
 
-    private fun createLoginComponent(): DialogPanel {
-        loginPanel = panel {
-            indent {
-                row {
-                    label(CoderGatewayBundle.message("gateway.connector.view.login.header.text")).applyToComponent {
-                        font = JBFont.h3().asBold()
-                        icon = IconManager.getInstance().getIcon("coder_logo_16.svg", CoderGatewayLoginView::class.java)
-                    }
-                }.topGap(TopGap.SMALL).bottomGap(BottomGap.MEDIUM)
-                row {
-                    cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.login.comment.text"), false, -1, true))
-                }
-                row {
-                    browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder/latest/workspaces")
-                }.bottomGap(BottomGap.MEDIUM)
-                row {
-                    label(CoderGatewayBundle.message("gateway.connector.view.login.scheme.label"))
-                    comboBox(UriScheme.values().toList()).bindItem(model::uriScheme.toNullableProperty())
-                    label(CoderGatewayBundle.message("gateway.connector.view.login.host.label"))
-                    textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::host)
-                    label(CoderGatewayBundle.message("gateway.connector.view.login.port.label"))
-                    intTextField(0..65536).bindIntText(model::port)
-                    button(CoderGatewayBundle.message("gateway.connector.view.login.connect.action")) {
-                        loginPanel.apply()
-                        model.password = askPassword(
-                            null,
-                            CoderGatewayBundle.message("gateway.connector.view.login.credentials.dialog.title"),
-                            CoderGatewayBundle.message("gateway.connector.view.login.password.label"),
-                            CredentialAttributes("Coder"),
-                            false
-                        )
-                        cs.launch {
-                            val workspaces = withContext(Dispatchers.IO) {
-                                coderClient.initClientSession(model.uriScheme, model.host, model.port, model.email, model.password!!)
-                                coderClient.workspaces()
-                            }
-                        }
-
-                    }.applyToComponent {
-                        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-                        border = JBUI.Borders.empty(3, 3, 3, 3)
-                    }
-                    cell()
-                }
-
-                row(CoderGatewayBundle.message("gateway.connector.view.login.email.label")) {
-                    textField().resizableColumn().bindText(model::email)
-                    cell()
-                }
-            }
-        }.apply {
-            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+        steps[0].apply {
+            onInit(model)
+            addToCenter(component)
+            updateUI()
+            nextButton.text = nextActionText
+            previousButton.text = previousActionText
         }
 
-        return loginPanel
+    }
+
+    private fun registerStep(step: CoderWorkspacesWizardStep) {
+        steps.add(step)
+    }
+
+    private fun previous() {
+        nextButton.isVisible = true
+        if (currentStep == 0) {
+            GatewayUI.Companion.getInstance().reset()
+        } else {
+            remove(steps[currentStep].component)
+            updateUI()
+
+            currentStep--
+            steps[currentStep].apply {
+                onInit(model)
+                addToCenter(component)
+                nextButton.text = nextActionText
+                previousButton.text = previousActionText
+            }
+        }
+    }
+
+    private fun next() {
+        cs.launch {
+            if (currentStep + 1 < steps.size) {
+                withContext(Dispatchers.Main) { doNextCallback() }
+                remove(steps[currentStep].component)
+                updateUI()
+                currentStep++
+                steps[currentStep].apply {
+                    addToCenter(component)
+                    onInit(model)
+                    updateUI()
+
+                    nextButton.text = nextActionText
+                    previousButton.text = previousActionText
+                }
+
+                nextButton.isVisible = currentStep != steps.size - 1
+            }
+        }
+    }
+
+
+    private suspend fun doNextCallback() {
+        steps[currentStep].apply {
+            component.apply()
+            onNext(model)
+        }
     }
 
     private fun createBackComponent(): Component {
-        return JPanel(VerticalLayout(0)).apply {
-            add(SeparatorComponent(0, 0, WelcomeScreenUIManager.getSeparatorColor(), null))
-            add(BorderLayoutPanel().apply {
-                border = JBUI.Borders.empty(6, 24, 6, 0)
-                addToLeft(JButton(IdeBundle.message("button.back")).apply {
-                    border = JBUI.Borders.empty(3, 3, 3, 3)
-                    background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-                    addActionListener {
-                        GatewayUI.Companion.getInstance().reset()
-                    }
-                })
+        previousButton = JButton()
+        nextButton = JButton()
+        return panel {
+            separator(background = WelcomeScreenUIManager.getSeparatorColor())
+            indent {
+                row {
+
+                    label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL)
+                    previousButton = button("") { previous() }.horizontalAlign(HorizontalAlign.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                    nextButton = button("") { next() }.horizontalAlign(HorizontalAlign.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                }
+            }.apply {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-            })
+            }
+
+        }.apply {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
         }
     }
 
     override fun dispose() {
-        cs.cancel()
+        steps.clear()
     }
 }
 
