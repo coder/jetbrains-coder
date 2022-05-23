@@ -81,13 +81,15 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     override suspend fun onNext(wizardModel: CoderWorkspacesWizardModel) {
-        model.password = askPassword(
+        val password = askPassword(
             null,
             CoderGatewayBundle.message("gateway.connector.view.login.credentials.dialog.title"),
             CoderGatewayBundle.message("gateway.connector.view.login.password.label"),
             CredentialAttributes("Coder"),
             true
         )
+
+        model.password = password
         withContext(Dispatchers.IO) {
             coderClient.initClientSession(model.uriScheme, model.host, model.port, model.email, model.password!!)
         }
