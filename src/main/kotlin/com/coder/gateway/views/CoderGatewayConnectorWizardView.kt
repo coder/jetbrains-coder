@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import javax.swing.JButton
 
-class CoderGatewayLoginView : BorderLayoutPanel(), Disposable {
+class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var steps = arrayListOf<CoderWorkspacesWizardStep>()
     private var currentStep = 0

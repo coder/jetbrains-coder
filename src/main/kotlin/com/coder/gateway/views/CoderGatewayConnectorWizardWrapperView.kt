@@ -5,7 +5,7 @@ import com.intellij.util.ui.JBUI
 import com.jetbrains.gateway.api.GatewayConnectorView
 import javax.swing.JComponent
 
-class CoderGatewayConnectorView : GatewayConnectorView {
+class CoderGatewayConnectorWizardWrapperView : GatewayConnectorView {
     override val component: JComponent
-        get() = Wrapper(CoderGatewayLoginView()).apply { border = JBUI.Borders.empty() }
+        get() = Wrapper(CoderGatewayConnectorWizardView()).apply { border = JBUI.Borders.empty() }
 }

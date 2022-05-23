@@ -1,6 +1,6 @@
 package com.coder.gateway
 
-import com.coder.gateway.views.CoderGatewayConnectorView
+import com.coder.gateway.views.CoderGatewayConnectorWizardWrapperView
 import com.intellij.ui.IconManager
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.BrowserLink
@@ -10,12 +10,12 @@ import com.jetbrains.rd.util.lifetime.Lifetime
 import javax.swing.Icon
 import javax.swing.JComponent
 
-class CoderGatewayConnector : GatewayConnector {
+class CoderGatewayMainView : GatewayConnector {
     override val icon: Icon
         get() = IconManager.getInstance().getIcon("coder_logo.svg", this::class.java)
 
     override fun createView(lifetime: Lifetime): GatewayConnectorView {
-        return CoderGatewayConnectorView()
+        return CoderGatewayConnectorWizardWrapperView()
     }
 
     override fun getActionText(): String {

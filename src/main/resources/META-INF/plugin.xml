@@ -12,6 +12,6 @@
         <applicationService serviceImplementation="com.coder.gateway.sdk.CoderClientService"></applicationService>
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains">
-        <gatewayConnector implementation="com.coder.gateway.CoderGatewayConnector"/>
+        <gatewayConnector implementation="com.coder.gateway.CoderGatewayMainView"/>
     </extensions>
 </idea-plugin>
