@@ -2,6 +2,7 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.models.UriScheme
 import com.coder.gateway.models.User
+import com.coder.gateway.models.SSHKeys
 import com.coder.gateway.models.Workspace
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.google.gson.Gson
@@ -66,6 +67,14 @@ class CoderClientService {
         }
 
         return workspacesResponse.body()!!
+    }
 
+    fun userSSHKeys(): SSHKeys {
+        val sshKeysResponse = retroRestClient.sshKeys(sessionToken, me.id).execute()
+        if (!sshKeysResponse.isSuccessful) {
+            throw IllegalStateException("Could not retrieve Coder Workspaces:${sshKeysResponse.code()}, reason: ${sshKeysResponse.message()}")
+        }
+
+        return sshKeysResponse.body()!!
     }
 }
