@@ -13,5 +13,6 @@
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains">
         <gatewayConnector implementation="com.coder.gateway.CoderGatewayMainView"/>
+        <gatewayConnectionProvider implementation="com.coder.gateway.CoderGatewayConnectionProvider"/>
     </extensions>
 </idea-plugin>
