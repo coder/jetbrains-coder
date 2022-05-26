@@ -1,14 +1,16 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.SSHKeys
 import com.coder.gateway.models.UriScheme
 import com.coder.gateway.models.User
-import com.coder.gateway.models.SSHKeys
 import com.coder.gateway.models.Workspace
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
 import com.jetbrains.gateway.sdk.convertors.InstantConverter
+import com.jetbrains.gateway.sdk.convertors.RTCIceServerAdapter
+import dev.onvoid.webrtc.RTCIceServer
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -31,6 +33,7 @@ class CoderClientService {
 
         val gson: Gson = GsonBuilder()
             .registerTypeAdapter(Instant::class.java, InstantConverter())
+            .registerTypeAdapter(RTCIceServer::class.java, RTCIceServerAdapter())
             .setPrettyPrinting()
             .create()
 
@@ -76,5 +79,13 @@ class CoderClientService {
         }
 
         return sshKeysResponse.body()!!
+    }
+
+    fun iceServers(): List<RTCIceServer> {
+        val iceServersResponse = retroRestClient.iceServers(sessionToken).execute()
+        if (!iceServersResponse.isSuccessful) {
+            throw IllegalStateException("Could not retrieve retrieve ICE servers:${iceServersResponse.code()}, reason: ${iceServersResponse.message()}")
+        }
+        return iceServersResponse.body()!!.iceServers
     }
 }

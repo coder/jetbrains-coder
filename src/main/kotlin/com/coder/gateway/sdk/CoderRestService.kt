@@ -1,7 +1,7 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.User
 import com.coder.gateway.models.SSHKeys
+import com.coder.gateway.models.User
 import com.coder.gateway.models.Workspace
 import retrofit2.Call
 import retrofit2.http.Body
@@ -25,4 +25,7 @@ interface CoderRestService {
 
     @GET("api/v0/users/{userId}/sshkey")
     fun sshKeys(@Header("Session-Token") sessionToken: String, @Path("userId") userID: String): Call<SSHKeys>
+
+    @GET("api/private/webrtc/ice")
+    fun iceServers(@Header("Session-Token") sessionToken: String): Call<IceServersWrapper>
 }
