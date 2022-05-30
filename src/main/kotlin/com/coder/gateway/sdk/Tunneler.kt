@@ -1,7 +1,6 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.models.BrokerMessage
-import com.coder.gateway.models.UriScheme
 import com.coder.gateway.models.Workspace
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -30,6 +29,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okhttp3.logging.HttpLoggingInterceptor
 import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
 import java.net.URL
 import java.time.Instant
 import java.util.logging.Logger
@@ -112,11 +112,11 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
         logger.info("created peer connection")
 
         logger.info("creating control channel { \"proto\" : \"control\"}")
-        rtc.createDataChannel("control",  RTCDataChannelInit().apply {
+        rtc.createDataChannel("control", RTCDataChannelInit().apply {
             protocol = "control"
             ordered = true
         })
-        rtc.createOffer(RTCOfferOptions(), object: CreateSessionDescriptionObserver {
+        rtc.createOffer(RTCOfferOptions(), object : CreateSessionDescriptionObserver {
             override fun onSuccess(sessionDescription: RTCSessionDescription?) {
                 logger.info("created offer {\"offer\": ${sessionDescription}}")
                 rtc.setLocalDescription(sessionDescription, object : SetSessionDescriptionObserver {
@@ -124,6 +124,7 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
                         logger.info("set local offer $sessionDescription with success")
                         val offerMsg = BrokerMessage(sessionDescription!!, options.iceServers, options.turnRemoteProxyURL.toString())
                         logger.info("sending offer message {\"msg\": ${gson.toJson(offerMsg)}}")
+                        connection.send(gson.toJson(offerMsg).encodeUtf8())
                     }
 
                     override fun onFailure(p0: String?) {
@@ -134,18 +135,20 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
             }
 
             override fun onFailure(p0: String?) {
+                logger.warning("onFailure to set local $p0 with success")
                 TODO("Not yet implemented")
             }
         })
 
-        return Dialer(connection,rtc.createDataChannel("data_channel_tmp", RTCDataChannelInit()), rtc)
+        return Dialer(connection, rtc.createDataChannel("data_channel_tmp", RTCDataChannelInit()), rtc)
     }
+
     private fun newPeerConnection(servers: List<RTCIceServer>, dialer: TURNProxyDialer, connection: WebSocket): RTCPeerConnection {
         val configuration = RTCConfiguration().apply {
             iceServers = servers
             if (servers.size == 1) {
                 val url = iceServers[0].urls[0]
-                if (url.startsWith( "turn") || url.startsWith("turns")) {
+                if (url.startsWith("turn") || url.startsWith("turns")) {
                     this.iceTransportPolicy = RTCIceTransportPolicy.RELAY
                 }
             }
@@ -182,9 +185,7 @@ data class TURNProxyDialer(val baseURL: URL, val token: String)
  * inside a workspace. The opposing end of the WebSocket messages
  * should be proxied with a Listener.
  */
-class Dialer(val connection: WebSocket, val ctrl: RTCDataChannel, val rtc: RTCPeerConnection) {
-
-}
+class Dialer(val connection: WebSocket, val ctrl: RTCDataChannel, val rtc: RTCPeerConnection)
 
 data class ICECandidateInit(
     @SerializedName("candidate") val candidate: String,
