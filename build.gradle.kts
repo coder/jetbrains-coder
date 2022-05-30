@@ -25,6 +25,10 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:okhttp")
     implementation("com.squareup.okhttp3:logging-interceptor")
+
+    implementation(files("lib/webrtc-java-0.6.0.jar"))
+    implementation(files("lib/webrtc-java-0.6.0-windows-x86_64.jar"))
+
 }
 
 // Configure project's dependencies
