@@ -7,7 +7,11 @@ import dev.onvoid.webrtc.RTCSdpType
 import dev.onvoid.webrtc.RTCSessionDescription
 
 class RTCSessionDescriptionAdapter : TypeAdapter<RTCSessionDescription>() {
-    override fun write(writer: JsonWriter, sessionDescription: RTCSessionDescription) {
+    override fun write(writer: JsonWriter, sessionDescription: RTCSessionDescription?) {
+        if (sessionDescription == null) {
+            writer.nullValue()
+            return
+        }
         writer.beginObject()
         writer.name("type").value(sessionDescription.sdpType.name.toLowerCase())
         writer.name("sdp").value(sessionDescription.sdp)
@@ -15,7 +19,7 @@ class RTCSessionDescriptionAdapter : TypeAdapter<RTCSessionDescription>() {
     }
 
     override fun read(reader: JsonReader): RTCSessionDescription {
-        var sdpType = 0;
+        var sdpType = 0
         var sdp: String? = null
         reader.beginObject()
         while (reader.hasNext()) {
