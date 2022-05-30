@@ -7,8 +7,11 @@ import dev.onvoid.webrtc.RTCSdpType
 import dev.onvoid.webrtc.RTCSessionDescription
 
 class RTCSessionDescriptionAdapter : TypeAdapter<RTCSessionDescription>() {
-    override fun write(writer: JsonWriter?, p1: RTCSessionDescription?) {
-        TODO("not implemented yet")
+    override fun write(writer: JsonWriter, sessionDescription: RTCSessionDescription) {
+        writer.beginObject()
+        writer.name("type").value(sessionDescription.sdpType.name.toLowerCase())
+        writer.name("sdp").value(sessionDescription.sdp)
+        writer.endObject()
     }
 
     override fun read(reader: JsonReader): RTCSessionDescription {
