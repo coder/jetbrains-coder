@@ -8,7 +8,6 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
-import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface CoderV2RestFacade {
@@ -23,14 +22,14 @@ interface CoderV2RestFacade {
      * Retrieves details about the authenticated user.
      */
     @GET("api/v2/users/me")
-    fun me(@Header("Session-Token") sessionToken: String): Call<User>
+    fun me(): Call<User>
 
     /**
      * Retrieves all workspaces the authenticated user has access to.
      */
     @GET("api/v2/workspaces")
-    fun workspaces(@Header("Session-Token") sessionToken: String): Call<List<Workspace>>
+    fun workspaces(): Call<List<Workspace>>
 
     @GET("api/v2/workspaceagents/me/gitsshkey")
-    fun sshKeys(@Header("Session-Token") sessionToken: String): Call<AgentGitSSHKeys>
+    fun sshKeys(): Call<AgentGitSSHKeys>
 }

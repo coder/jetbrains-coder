@@ -16,10 +16,13 @@ data class WorkspaceBuild(
     @SerializedName("template_version_id") val templateVersionID: UUID,
     @SerializedName("build_number") val buildNumber: Int,
     @SerializedName("name") val name: String,
-    @SerializedName("transition") val workspaceTransition: String,
+    @SerializedName("transition") val workspaceTransition: WorkspaceBuildTransition,
     @SerializedName("owner_id") val ownerID: UUID,
     @SerializedName("initiator_id") val initiatorID: UUID,
     @SerializedName("job") val job: ProvisionerJob,
     @SerializedName("deadline") val deadline: Instant,
 )
 
+enum class WorkspaceBuildTransition {
+    start, stop, delete
+}

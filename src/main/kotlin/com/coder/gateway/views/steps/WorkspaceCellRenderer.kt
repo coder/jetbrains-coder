@@ -1,6 +1,8 @@
 package com.coder.gateway.views.steps
 
-import com.coder.gateway.sdk.v1.Workspace
+import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 import com.intellij.ui.IconManager
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
@@ -32,22 +34,35 @@ class WorkspaceCellRenderer : ListCellRenderer<Workspace> {
         }
     }
 
-    private fun iconForImageTag(workspace: Workspace) = when (workspace.imageTag) {
+    private fun iconForImageTag(workspace: Workspace) = when (workspace.templateName) {
         "ubuntu" -> UBUNTU_ICON
         "centos" -> CENTOS_ICON
         else -> LINUX_ICON
     }
 
-    private fun iconForStatus(workspace: Workspace) = when (workspace.latestStat.container_status) {
-        "ON" -> GREEN_CIRCLE_ICON
-        "OFF" -> GRAY_CIRCLE_ICON
+    private fun iconForStatus(workspace: Workspace) = when (workspace.latestBuild.job.status) {
+        ProvisionerJobStatus.succeeded -> if (workspace.latestBuild.workspaceTransition == WorkspaceBuildTransition.start) GREEN_CIRCLE_ICON else RED_CIRCLE_ICON
+        ProvisionerJobStatus.running -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.start, WorkspaceBuildTransition.stop, WorkspaceBuildTransition.delete -> GRAY_CIRCLE_ICON
+        }
         else -> RED_CIRCLE_ICON
     }
 
-    private fun labelForStatus(workspace: Workspace) = when (workspace.latestStat.container_status) {
-        "ON" -> "Running"
-        "OFF" -> "Off"
-        else -> "Unknown status"
+    private fun labelForStatus(workspace: Workspace) = when (workspace.latestBuild.job.status) {
+        ProvisionerJobStatus.pending -> "◍ Queued"
+        ProvisionerJobStatus.running -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.start -> "⦿ Starting"
+            WorkspaceBuildTransition.stop -> "◍ Stopping"
+            WorkspaceBuildTransition.delete -> "⦸ Deleting"
+        }
+        ProvisionerJobStatus.succeeded -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.start -> "⦿ Running"
+            WorkspaceBuildTransition.stop -> "◍ Stopped"
+            WorkspaceBuildTransition.delete -> "⦸ Deleted"
+        }
+        ProvisionerJobStatus.canceling -> "◍ Canceling action"
+        ProvisionerJobStatus.canceled -> "◍ Canceled action"
+        ProvisionerJobStatus.failed -> "ⓧ Failed"
     }
 
     companion object {

@@ -10,6 +10,10 @@ data class ProvisionerJob(
     @SerializedName("started_at") val startedAt: Instant,
     @SerializedName("completed_at") val completedAt: Instant,
     @SerializedName("error") val error: String,
-    @SerializedName("status") val status: String,
+    @SerializedName("status") val status: ProvisionerJobStatus,
     @SerializedName("worker_id") val workerID: UUID,
 )
+
+enum class ProvisionerJobStatus {
+    canceled, canceling, failed, pending, running, succeeded
+}
