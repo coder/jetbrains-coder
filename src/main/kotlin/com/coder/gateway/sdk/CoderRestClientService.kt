@@ -2,17 +2,20 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.ex.AuthenticationException
-import com.coder.gateway.sdk.v1.CoderV1RestFacade
-import com.coder.gateway.sdk.v1.LoginRequest
-import com.coder.gateway.sdk.v1.SSHKeys
-import com.coder.gateway.sdk.v1.User
-import com.coder.gateway.sdk.v1.Workspace
+import com.coder.gateway.sdk.v2.CoderV2RestFacade
+import com.coder.gateway.sdk.v2.models.AgentGitSSHKeys
+import com.coder.gateway.sdk.v2.models.LoginWithPasswordRequest
+import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.Workspace
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
 import com.jetbrains.gateway.sdk.convertors.InstantConverter
 import com.jetbrains.gateway.sdk.convertors.RTCIceServerAdapter
 import dev.onvoid.webrtc.RTCIceServer
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -21,9 +24,7 @@ import java.time.Instant
 
 @Service(Service.Level.APP)
 class CoderRestClientService {
-    private lateinit var retroRestClient: CoderV1RestFacade
-
-    lateinit var sessionToken: String
+    private lateinit var retroRestClient: CoderV2RestFacade
     lateinit var me: User
 
     /**
@@ -44,19 +45,23 @@ class CoderRestClientService {
 
         retroRestClient = Retrofit.Builder()
             .baseUrl("${uriScheme.scheme}://$hostPath:$port")
-            .client(OkHttpClient.Builder().addInterceptor(interceptor).build())
+            .client(
+                OkHttpClient.Builder()
+                    .addInterceptor(interceptor)
+                    .cookieJar(CoderCookieJar())
+                    .build()
+            )
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
-            .create(CoderV1RestFacade::class.java)
+            .create(CoderV2RestFacade::class.java)
 
-        val sessionTokenResponse = retroRestClient.authenticate(LoginRequest(email, password)).execute()
+        val sessionTokenResponse = retroRestClient.authenticate(LoginWithPasswordRequest(email, password)).execute()
 
         if (!sessionTokenResponse.isSuccessful) {
             throw AuthenticationException("Authentication failed with code:${sessionTokenResponse.code()}, reason: ${sessionTokenResponse.message()}")
         }
-        sessionToken = sessionTokenResponse.body()!!.sessionToken
 
-        val userResponse = retroRestClient.me(sessionToken).execute()
+        val userResponse = retroRestClient.me().execute()
 
         if (!userResponse.isSuccessful) {
             throw IllegalStateException("Could not retrieve information about logged use:${userResponse.code()}, reason: ${userResponse.message()}")
@@ -66,7 +71,7 @@ class CoderRestClientService {
     }
 
     fun workspaces(): List<Workspace> {
-        val workspacesResponse = retroRestClient.workspaces(sessionToken, me.id).execute()
+        val workspacesResponse = retroRestClient.workspaces().execute()
         if (!workspacesResponse.isSuccessful) {
             throw IllegalStateException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
         }
@@ -74,8 +79,8 @@ class CoderRestClientService {
         return workspacesResponse.body()!!
     }
 
-    fun userSSHKeys(): SSHKeys {
-        val sshKeysResponse = retroRestClient.sshKeys(sessionToken, me.id).execute()
+    fun userSSHKeys(): AgentGitSSHKeys {
+        val sshKeysResponse = retroRestClient.sshKeys().execute()
         if (!sshKeysResponse.isSuccessful) {
             throw IllegalStateException("Could not retrieve Coder Workspaces:${sshKeysResponse.code()}, reason: ${sshKeysResponse.message()}")
         }
@@ -83,11 +88,20 @@ class CoderRestClientService {
         return sshKeysResponse.body()!!
     }
 
-    fun iceServers(): List<RTCIceServer> {
-        val iceServersResponse = retroRestClient.iceServers(sessionToken).execute()
-        if (!iceServersResponse.isSuccessful) {
-            throw IllegalStateException("Could not retrieve retrieve ICE servers:${iceServersResponse.code()}, reason: ${iceServersResponse.message()}")
+    private class CoderCookieJar : CookieJar {
+        private lateinit var coderCookies: List<Cookie>
+        override fun loadForRequest(url: HttpUrl): List<Cookie> {
+            if (!url.encodedPath.endsWith("user/login")) {
+                return coderCookies
+            }
+            return emptyList()
         }
-        return iceServersResponse.body()!!.iceServers
+
+        override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+            if (url.encodedPath.endsWith("user/login")) {
+                coderCookies = ArrayList(cookies)
+            }
+        }
+
     }
 }
