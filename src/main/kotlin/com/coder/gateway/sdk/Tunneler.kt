@@ -46,7 +46,7 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
     fun start() {
         runBlocking {
             logger.info("Connecting to workspace ${workspace.name}")
-            dialWebsocket(connectionEndpoint(brokerAddr, workspace.id, token), DialOptions(token, brokerAddr, brokerAddr, iceServers))
+            dialWebsocket(urlForSignalingServer(brokerAddr, workspace.id, token), DialOptions(token, brokerAddr, brokerAddr, iceServers))
         }
     }
 
@@ -73,18 +73,19 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
         return withContext(Dispatchers.IO) { dial(connection, netOpts) }
     }
 
-    private fun connectionEndpoint(url: URL, workspaceId: String, token: String): String {
+    private fun urlForSignalingServer(url: URL, workspaceId: String, token: String): String {
         val wsScheme = if (url.protocol == "https") "wss" else "ws"
-        return "${wsScheme}://${url.host}:${url.port}/api/private/envagent/${workspaceId}/connect?session_token=${token}"
+
+        return "${wsScheme}://${url.host}/api/private/envagent/${workspaceId}/connect?session_token=${token}"
     }
 
     /**
      * Dial negotiates a connection to a listener.
      */
     private suspend fun dial(connection: CoderWebSocket, options: DialOptions): Dialer {
-        val turnProxy = TURNProxyDialer(options.turnLocalProxyURL, options.turnProxyAuthToken)
-        logger.info("creating peer connection { \"options: \"${options}, turn_proxy: ${turnProxy}\"")
-        val rtc = newPeerConnection(iceServers, turnProxy, connection)
+        val turnConnection = dialTurnRelay(options.turnLocalProxyURL, options.turnProxyAuthToken)
+        logger.info("creating peer connection { \"options: \"${options}")
+        val rtc = newPeerConnection(iceServers, connection)
         logger.info("created peer connection")
 
         logger.info("creating control channel { \"proto\" : \"control\"}")
@@ -96,6 +97,7 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
         logger.info("created offer {\"offer\": ${offer.sessionDescription}}")
 
         rtc.setCoderLocalDescription(offer.sessionDescription)
+        println(">>>ice gathering state: ${rtc.iceGatheringState}")
 
         val offerMsg = BrokerMessage(offer.sessionDescription, options.iceServers, options.turnRemoteProxyURL.toString())
         logger.info("sending offer message {\"msg\": ${gson.toJson(offerMsg)}}")
@@ -106,7 +108,35 @@ class Tunneler(val brokerAddr: URL, val token: String, val workspace: Workspace,
         return dialer
     }
 
-    private fun newPeerConnection(servers: List<RTCIceServer>, dialer: TURNProxyDialer, connection: CoderWebSocket): RTCPeerConnection {
+    /**
+     * Opens a websocket to TURN relay
+     */
+    private suspend fun dialTurnRelay(brokerAddr: URL, token: String): CoderWebSocket {
+        val connection = withContext(Dispatchers.IO) {
+            client.coderWebSocket(
+                Request.Builder()
+                    .url(urlForTurnRelayServer(brokerAddr))
+                    .header("Session-Token", token)
+                    .build()
+            )
+        }
+        // Switching protocols
+        if (!connection.response.isSuccessful && connection.response.code != 101) {
+            throw IllegalStateException("Could not establish a web socket connection, code: ${connection.response.code}, reason: ${connection.response.message}")
+        }
+
+        return connection
+    }
+
+    private fun urlForTurnRelayServer(url: URL): String {
+        val wsScheme = if (url.protocol == "https") "wss" else "ws"
+        return "${wsScheme}://${url.host}/api/private/turn"
+    }
+
+    private fun newPeerConnection(servers: List<RTCIceServer>, connection: CoderWebSocket): RTCPeerConnection {
+        for (iceServer in servers) {
+            iceServer.tlsCertPolicy = null
+        }
         val configuration = RTCConfiguration().apply {
             iceServers = servers
             if (servers.size == 1) {
@@ -153,6 +183,7 @@ class Dialer(val connection: CoderWebSocket, val ctrl: RTCDataChannel, val rtc: 
 
     suspend fun negotiate() {
         val msg = connection.inChannel.receive()
+        println(msg)
         //  read the candidates and the answer and set it as remote description on peer connection
     }
 }
