@@ -2,8 +2,8 @@ package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.models.v1.Workspace
 import com.coder.gateway.sdk.CoderRestClientService
+import com.coder.gateway.sdk.v1.Workspace
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager

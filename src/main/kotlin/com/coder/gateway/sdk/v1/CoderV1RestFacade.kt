@@ -1,10 +1,5 @@
 package com.coder.gateway.sdk.v1
 
-import com.coder.gateway.models.v1.LoginRequest
-import com.coder.gateway.models.v1.LoginResponse
-import com.coder.gateway.models.v1.SSHKeys
-import com.coder.gateway.models.v1.User
-import com.coder.gateway.models.v1.Workspace
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET

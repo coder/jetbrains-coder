@@ -1,4 +1,4 @@
-package com.coder.gateway.models.v1
+package com.coder.gateway.sdk.v1
 
 import com.google.gson.annotations.SerializedName
 import java.time.Duration

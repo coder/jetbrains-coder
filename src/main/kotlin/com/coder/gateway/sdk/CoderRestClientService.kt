@@ -1,12 +1,12 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.models.UriScheme
-import com.coder.gateway.models.v1.LoginRequest
-import com.coder.gateway.models.v1.SSHKeys
-import com.coder.gateway.models.v1.User
-import com.coder.gateway.models.v1.Workspace
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.coder.gateway.sdk.v1.CoderV1RestFacade
+import com.coder.gateway.sdk.v1.LoginRequest
+import com.coder.gateway.sdk.v1.SSHKeys
+import com.coder.gateway.sdk.v1.User
+import com.coder.gateway.sdk.v1.Workspace
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service

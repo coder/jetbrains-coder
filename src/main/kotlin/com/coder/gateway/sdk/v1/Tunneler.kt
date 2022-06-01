@@ -1,7 +1,7 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.v1.BrokerMessage
-import com.coder.gateway.models.v1.Workspace
+import com.coder.gateway.sdk.v1.BrokerMessage
+import com.coder.gateway.sdk.v1.Workspace
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
