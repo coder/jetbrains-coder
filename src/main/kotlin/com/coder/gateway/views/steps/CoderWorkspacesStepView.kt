@@ -2,8 +2,8 @@ package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.models.Workspace
-import com.coder.gateway.sdk.CoderClientService
+import com.coder.gateway.models.v1.Workspace
+import com.coder.gateway.sdk.CoderRestClientService
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -28,7 +28,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var workspaces = CollectionListModel<Workspace>()
     private var workspacesView = JBList(workspaces)
-    private val coderClient: CoderClientService = ApplicationManager.getApplication().getService(CoderClientService::class.java)
+    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
     override val component = panel {
         val model = DefaultComboBoxModel(arrayOf("IntelliJ IDEA", "PyCharm", "Goland"))

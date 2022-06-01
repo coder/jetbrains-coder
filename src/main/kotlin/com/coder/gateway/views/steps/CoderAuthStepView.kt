@@ -4,7 +4,7 @@ import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.LoginModel
 import com.coder.gateway.models.UriScheme
-import com.coder.gateway.sdk.CoderClientService
+import com.coder.gateway.sdk.CoderRestClientService
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.askPassword
 import com.intellij.ide.IdeBundle
@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var model = LoginModel()
-    private val coderClient: CoderClientService = ApplicationManager.getApplication().getService(CoderClientService::class.java)
+    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
     override val component = panel {
         indent {

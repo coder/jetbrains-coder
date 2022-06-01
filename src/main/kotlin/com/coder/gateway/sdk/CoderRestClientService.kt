@@ -1,10 +1,12 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.SSHKeys
 import com.coder.gateway.models.UriScheme
-import com.coder.gateway.models.User
-import com.coder.gateway.models.Workspace
+import com.coder.gateway.models.v1.LoginRequest
+import com.coder.gateway.models.v1.SSHKeys
+import com.coder.gateway.models.v1.User
+import com.coder.gateway.models.v1.Workspace
 import com.coder.gateway.sdk.ex.AuthenticationException
+import com.coder.gateway.sdk.v1.CoderV1RestFacade
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
@@ -18,8 +20,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.time.Instant
 
 @Service(Service.Level.APP)
-class CoderClientService {
-    private lateinit var retroRestClient: CoderRestService
+class CoderRestClientService {
+    private lateinit var retroRestClient: CoderV1RestFacade
 
     lateinit var sessionToken: String
     lateinit var me: User
@@ -45,7 +47,7 @@ class CoderClientService {
             .client(OkHttpClient.Builder().addInterceptor(interceptor).build())
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
-            .create(CoderRestService::class.java)
+            .create(CoderV1RestFacade::class.java)
 
         val sessionTokenResponse = retroRestClient.authenticate(LoginRequest(email, password)).execute()
 

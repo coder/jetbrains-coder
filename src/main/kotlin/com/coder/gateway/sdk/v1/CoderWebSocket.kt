@@ -1,4 +1,4 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.sdk.v1
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking

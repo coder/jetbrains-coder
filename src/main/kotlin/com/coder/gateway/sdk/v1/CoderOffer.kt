@@ -1,4 +1,4 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.sdk.v1
 
 import dev.onvoid.webrtc.CreateSessionDescriptionObserver
 import dev.onvoid.webrtc.RTCOfferOptions

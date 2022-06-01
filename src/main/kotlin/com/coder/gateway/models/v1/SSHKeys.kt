@@ -1,4 +1,4 @@
-package com.coder.gateway.models
+package com.coder.gateway.models.v1
 
 import com.google.gson.annotations.SerializedName
 

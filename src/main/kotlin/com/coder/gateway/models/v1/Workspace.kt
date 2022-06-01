@@ -1,4 +1,4 @@
-package com.coder.gateway.models
+package com.coder.gateway.models.v1
 
 import com.google.gson.annotations.SerializedName
 import java.time.Instant
@@ -25,5 +25,4 @@ data class Workspace(
     @SerializedName("auto_off_threshold") val autoOffThreshold: Long,
     @SerializedName("use_container_vm") val useContainerVM: Boolean,
     @SerializedName("resource_pool_id") val resourcePoolId: String,
-
     )

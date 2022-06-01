@@ -1,6 +1,6 @@
 package com.coder.gateway.views.steps
 
-import com.coder.gateway.models.Workspace
+import com.coder.gateway.models.v1.Workspace
 import com.intellij.ui.IconManager
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
