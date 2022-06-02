@@ -25,6 +25,7 @@ import java.time.Instant
 class CoderRestClientService {
     private lateinit var retroRestClient: CoderV2RestFacade
     lateinit var me: User
+    lateinit var sessionToken: String
 
     /**
      * This must be called before anything else. It will authenticate with coder and retrieve a session token
@@ -53,14 +54,15 @@ class CoderRestClientService {
             .build()
             .create(CoderV2RestFacade::class.java)
 
-        val sessionTokenResponse = retroRestClient.authenticate(LoginWithPasswordRequest(email, password)).execute()
+        val loginResponse = retroRestClient.authenticate(LoginWithPasswordRequest(email, password)).execute()
 
-        if (!sessionTokenResponse.isSuccessful) {
-            throw AuthenticationException("Authentication failed with code:${sessionTokenResponse.code()}, reason: ${sessionTokenResponse.message()}")
+        if (!loginResponse.isSuccessful) {
+            throw AuthenticationException("Authentication failed with code:${loginResponse.code()}, reason: ${loginResponse.message()}")
         }
 
-        val userResponse = retroRestClient.me().execute()
+        sessionToken = loginResponse.body()?.sessionToken!!
 
+        val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
             throw IllegalStateException("Could not retrieve information about logged use:${userResponse.code()}, reason: ${userResponse.message()}")
         }
@@ -85,5 +87,10 @@ class CoderRestClientService {
 
         return sshKeysResponse.body()!!
     }
+}
 
+fun main() {
+    val restClient = CoderRestClientService()
+    restClient.initClientSession(UriScheme.HTTPS, "dev.coder.com", 443, "faur@coder.com", "coder123")
+    println(restClient.workspaces())
 }
