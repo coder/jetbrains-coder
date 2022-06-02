@@ -27,6 +27,10 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-urlconnection")
     implementation("com.squareup.okhttp3:logging-interceptor")
 
+    implementation("org.zeroturnaround:zt-exec:1.12") {
+        exclude("org.slf4j")
+    }
+
     implementation(files("lib/webrtc-java-0.6.0.jar"))
     implementation(files("lib/webrtc-java-0.6.0-windows-x86_64.jar"))
 
