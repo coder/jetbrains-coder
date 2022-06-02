@@ -86,7 +86,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
             CoderGatewayBundle.message("gateway.connector.view.login.credentials.dialog.title"),
             CoderGatewayBundle.message("gateway.connector.view.login.password.label"),
             CredentialAttributes("Coder"),
-            true
+            false
         )
 
         model.password = password
@@ -96,7 +96,6 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
         wizardModel.apply {
             loginModel = model.copy()
         }
-
     }
 
 

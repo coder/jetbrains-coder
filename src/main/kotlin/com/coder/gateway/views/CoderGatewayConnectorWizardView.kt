@@ -55,7 +55,6 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     }
 
     private fun previous() {
-        nextButton.isVisible = true
         if (currentStep == 0) {
             GatewayUI.Companion.getInstance().reset()
         } else {
@@ -74,8 +73,8 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
 
     private fun next() {
         cs.launch {
+            withContext(Dispatchers.Main) { doNextCallback() }
             if (currentStep + 1 < steps.size) {
-                withContext(Dispatchers.Main) { doNextCallback() }
                 remove(steps[currentStep].component)
                 updateUI()
                 currentStep++
@@ -87,8 +86,6 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
                     nextButton.text = nextActionText
                     previousButton.text = previousActionText
                 }
-
-                nextButton.isVisible = currentStep != steps.size - 1
             }
         }
     }

@@ -3,9 +3,9 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
+import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.IconManager
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import java.awt.Component
 import javax.swing.JList
@@ -27,10 +27,10 @@ class WorkspaceCellRenderer : ListCellRenderer<Workspace> {
                             label(labelForStatus(workspace))
                         }
                     }
-
-                    button("Open", {}).horizontalAlign(HorizontalAlign.RIGHT)
                 }
             }
+        }.apply {
+            background = WelcomeScreenUIManager.getProjectsSelectionBackground(true)
         }
     }
 
