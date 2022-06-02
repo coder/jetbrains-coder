@@ -13,13 +13,12 @@ import com.intellij.openapi.components.Service
 import com.jetbrains.gateway.sdk.convertors.InstantConverter
 import com.jetbrains.gateway.sdk.convertors.RTCIceServerAdapter
 import dev.onvoid.webrtc.RTCIceServer
-import okhttp3.Cookie
-import okhttp3.CookieJar
-import okhttp3.HttpUrl
+import okhttp3.JavaNetCookieJar
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.net.CookieManager
 import java.time.Instant
 
 @Service(Service.Level.APP)
@@ -42,13 +41,12 @@ class CoderRestClientService {
 
         val interceptor = HttpLoggingInterceptor()
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
-
         retroRestClient = Retrofit.Builder()
             .baseUrl("${uriScheme.scheme}://$hostPath:$port")
             .client(
                 OkHttpClient.Builder()
                     .addInterceptor(interceptor)
-                    .cookieJar(CoderCookieJar())
+                    .cookieJar(JavaNetCookieJar(CookieManager()))
                     .build()
             )
             .addConverterFactory(GsonConverterFactory.create(gson))
@@ -88,20 +86,4 @@ class CoderRestClientService {
         return sshKeysResponse.body()!!
     }
 
-    private class CoderCookieJar : CookieJar {
-        private lateinit var coderCookies: List<Cookie>
-        override fun loadForRequest(url: HttpUrl): List<Cookie> {
-            if (!url.encodedPath.endsWith("user/login")) {
-                return coderCookies
-            }
-            return emptyList()
-        }
-
-        override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-            if (url.encodedPath.endsWith("user/login")) {
-                coderCookies = ArrayList(cookies)
-            }
-        }
-
-    }
 }
