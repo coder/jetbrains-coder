@@ -1,7 +1,6 @@
 package com.coder.gateway.sdk.v2.models
 
 import com.google.gson.annotations.SerializedName
-import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
@@ -20,5 +19,5 @@ data class Workspace(
     @SerializedName("outdated") val outdated: Boolean,
     @SerializedName("name") val name: String,
     @SerializedName("autostart_schedule") val autostartSchedule: String,
-    @SerializedName("ttl") val ttl: Duration,
+    @SerializedName("ttl") val ttl: Long,
 )
