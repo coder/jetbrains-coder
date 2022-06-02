@@ -1,5 +1,8 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.sdk.convertors.InstantConverter
+import com.coder.gateway.sdk.convertors.RTCIceServerAdapter
+import com.coder.gateway.sdk.convertors.RTCSessionDescriptionAdapter
 import com.coder.gateway.sdk.v1.BrokerMessage
 import com.coder.gateway.sdk.v1.CoderWebSocket
 import com.coder.gateway.sdk.v1.Workspace
@@ -8,9 +11,6 @@ import com.coder.gateway.sdk.v1.createCoderOffer
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.annotations.SerializedName
-import com.jetbrains.gateway.sdk.convertors.InstantConverter
-import com.jetbrains.gateway.sdk.convertors.RTCIceServerAdapter
-import com.jetbrains.gateway.sdk.convertors.RTCSessionDescriptionAdapter
 import dev.onvoid.webrtc.PeerConnectionFactory
 import dev.onvoid.webrtc.PeerConnectionObserver
 import dev.onvoid.webrtc.RTCConfiguration

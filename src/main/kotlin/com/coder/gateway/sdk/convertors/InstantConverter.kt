@@ -1,4 +1,4 @@
-package com.jetbrains.gateway.sdk.convertors
+package com.coder.gateway.sdk.convertors
 
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
