@@ -22,7 +22,4 @@ interface CoderV1RestFacade {
 
     @GET("api/v0/users/{userId}/sshkey") //V2 -/api/v2/workspaceagents/me/gitsshkey
     fun sshKeys(@Header("Session-Token") sessionToken: String, @Path("userId") userID: String): Call<SSHKeys>
-
-    @GET("api/private/webrtc/ice")
-    fun iceServers(@Header("Session-Token") sessionToken: String): Call<IceServersWrapper>
 }

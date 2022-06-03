@@ -2,7 +2,6 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.convertors.InstantConverter
-import com.coder.gateway.sdk.convertors.RTCIceServerAdapter
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.AgentGitSSHKeys
@@ -12,7 +11,6 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
-import dev.onvoid.webrtc.RTCIceServer
 import okhttp3.JavaNetCookieJar
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -36,7 +34,6 @@ class CoderRestClientService {
 
         val gson: Gson = GsonBuilder()
             .registerTypeAdapter(Instant::class.java, InstantConverter())
-            .registerTypeAdapter(RTCIceServer::class.java, RTCIceServerAdapter())
             .setPrettyPrinting()
             .create()
 

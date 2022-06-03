@@ -31,8 +31,6 @@ dependencies {
         exclude("org.slf4j")
     }
 
-    implementation(files("lib/webrtc-java-0.6.0.jar"))
-    implementation(files("lib/webrtc-java-0.6.0-windows-x86_64.jar"))
 
 }
 
