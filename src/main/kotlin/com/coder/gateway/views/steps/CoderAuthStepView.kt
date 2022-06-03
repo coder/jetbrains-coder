@@ -6,6 +6,8 @@ import com.coder.gateway.models.LoginModel
 import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
+import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.getOS
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.askPassword
 import com.intellij.ide.IdeBundle
@@ -32,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URL
+import java.util.logging.Logger
 
 class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -91,7 +94,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
             CoderGatewayBundle.message("gateway.connector.view.login.credentials.dialog.title"),
             CoderGatewayBundle.message("gateway.connector.view.login.password.label"),
             CredentialAttributes("Coder"),
-            false
+            true
         )
         model.password = password
         val authTask = object : Task.Modal(null, "Authenticate and setup coder", false) {
@@ -108,22 +111,29 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                 val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
                 val cliManager = CoderCLIManager(URL(url.protocol, url.host, url.port, ""))
                 val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
-
+                if (getOS() != OS.WINDOWS) {
+                    pi.fraction = 0.5
+                    val chmodOutput = ProcessExecutor().command("chmod", "+x", cli.toAbsolutePath().toString()).readOutput(true).execute().outputUTF8()
+                    logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
+                }
                 pi.text = "Configuring coder cli..."
                 pi.fraction = 0.5
                 val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", url.toString(), "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
-                CoderWorkspacesStepView.logger.info("coder-cli login output: $loginOutput")
+                logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.6
                 val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()
-                CoderWorkspacesStepView.logger.info("coder-cli config-ssh output: $sshConfigOutput")
+                logger.info("coder-cli config-ssh output: $sshConfigOutput")
                 pi.fraction = 1.0
             }
         }
         ProgressManager.getInstance().run(authTask)
     }
 
-
     override fun dispose() {
         cs.cancel()
+    }
+
+    companion object {
+        val logger = Logger.getLogger(CoderAuthStepView::class.java.simpleName)
     }
 }

@@ -13,7 +13,7 @@ class CoderCLIManager(private val url: URL) {
         return coderCLIDownloader.downloadCLI(URL(url.protocol, url.host, url.port, "/bin/$cliNameWitExt"), cliName, if (os == OS.WINDOWS) ".exe" else "")
     }
 
-    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String? {
+    fun getCoderCLIForOS(os: OS?, arch: Arch?): String? {
         if (os == null || arch == null) {
             return null
         }
@@ -35,38 +35,4 @@ class CoderCLIManager(private val url: URL) {
             }
         }
     }
-
-    private fun getOS(): OS? {
-        val os = System.getProperty("os.name").toLowerCase()
-        return when {
-            os.contains("win") -> {
-                OS.WINDOWS
-            }
-            os.contains("nix") || os.contains("nux") || os.contains("aix") -> {
-                OS.LINUX
-            }
-            os.contains("mac") -> {
-                OS.MAC
-            }
-            else -> null
-        }
-    }
-
-    private fun getArch(): Arch? {
-        val arch = System.getProperty("os.arch").toLowerCase()
-        return when {
-            arch.contains("amd64") -> Arch.amd64
-            arch.contains("arm64") -> Arch.arm64
-            arch.contains("armv7") -> Arch.armv7
-            else -> null
-        }
-    }
-}
-
-enum class OS {
-    WINDOWS, LINUX, MAC
-}
-
-enum class Arch {
-    amd64, arm64, armv7
 }
