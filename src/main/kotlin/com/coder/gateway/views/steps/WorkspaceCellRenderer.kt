@@ -3,7 +3,6 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
-import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.IconManager
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBFont
@@ -13,7 +12,7 @@ import javax.swing.ListCellRenderer
 
 class WorkspaceCellRenderer : ListCellRenderer<Workspace> {
 
-    override fun getListCellRendererComponent(list: JList<out Workspace>?, workspace: Workspace, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
+    override fun getListCellRendererComponent(list: JList<out Workspace>, workspace: Workspace, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
         return panel {
             indent {
                 row {
@@ -30,7 +29,13 @@ class WorkspaceCellRenderer : ListCellRenderer<Workspace> {
                 }
             }
         }.apply {
-            background = WelcomeScreenUIManager.getProjectsSelectionBackground(true)
+            if (isSelected) {
+                background = list.selectionBackground
+                foreground = list.selectionForeground
+            } else {
+                background = list.background
+                foreground = list.selectionForeground
+            }
         }
     }
 
