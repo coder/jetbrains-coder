@@ -2,7 +2,6 @@ package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.intellij.ide.IdeBundle
@@ -25,7 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URL
 import java.util.logging.Logger
 import javax.swing.DefaultComboBoxModel
@@ -94,17 +92,6 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         if (workspace != null) {
             logger.info("Connecting to ${workspace.name}...")
             cs.launch {
-                withContext(Dispatchers.IO) {
-                    val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
-                    val cliManager = CoderCLIManager(URL(url.protocol, url.host, url.port, ""))
-                    val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
-                    val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", url.toString(), "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
-
-                    logger.info("coder-cli login output: $loginOutput")
-                    val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()
-                    logger.info("coder-cli config-ssh output: $sshConfigOutput")
-                }
-
                 GatewayUI.getInstance().connect(
                     mapOf(
                         "type" to "coder",
