@@ -11,12 +11,12 @@ import java.awt.BorderLayout
 
 class CoderGatewayConnectionComponent(val lifetime: Lifetime, val url: String, val workspaceId: String) : BorderLayoutPanel() {
     private val disposable = Disposer.newDisposable()
-    private val contentPanel = BorderLayoutPanel().apply {
+    private val mainPanel = BorderLayoutPanel().apply {
         add(JBLabel(IconManager.getInstance().getIcon("coder_logo_52.svg", CoderGatewayConnectionComponent::class.java)), "Center")
     }
     val loadingPanel = JBLoadingPanel(BorderLayout(), disposable).apply {
         startLoading()
-        add(contentPanel, "Center")
+        add(mainPanel, "Center")
     }
 
     init {
