@@ -58,7 +58,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                     .resizableColumn()
                     .horizontalAlign(HorizontalAlign.FILL)
                     .applyToComponent {
-                        this.text = "/home/ifaur/workspace/"
+                        this.text = "/home/coder/workspace/"
                     }.component
                 cell()
             }.topGap(TopGap.NONE)
@@ -72,7 +72,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 
     override val previousActionText = IdeBundle.message("button.back")
-    override val nextActionText = "Connect"
+    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
 
     override fun onInit(wm: CoderWorkspacesWizardModel) {
         wizardModel = wm
