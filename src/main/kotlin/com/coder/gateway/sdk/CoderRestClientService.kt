@@ -1,6 +1,5 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
@@ -17,6 +16,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.CookieManager
+import java.net.URL
 import java.time.Instant
 
 @Service(Service.Level.APP)
@@ -29,9 +29,7 @@ class CoderRestClientService {
      * This must be called before anything else. It will authenticate with coder and retrieve a session token
      * @throws [AuthenticationException] if authentication failed
      */
-    fun initClientSession(uriScheme: UriScheme, host: String, port: Int, email: String, password: String) {
-        val hostPath = host.trimEnd('/')
-
+    fun initClientSession(url: URL, email: String, password: String) {
         val gson: Gson = GsonBuilder()
             .registerTypeAdapter(Instant::class.java, InstantConverter())
             .setPrettyPrinting()
@@ -40,7 +38,7 @@ class CoderRestClientService {
         val interceptor = HttpLoggingInterceptor()
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
         retroRestClient = Retrofit.Builder()
-            .baseUrl("${uriScheme.scheme}://$hostPath:$port")
+            .baseUrl(url.toString())
             .client(
                 OkHttpClient.Builder()
                     .addInterceptor(interceptor)
@@ -84,10 +82,4 @@ class CoderRestClientService {
 
         return sshKeysResponse.body()!!
     }
-}
-
-fun main() {
-    val restClient = CoderRestClientService()
-    restClient.initClientSession(UriScheme.HTTPS, "dev.coder.com", 443, "faur@coder.com", "coder123")
-    println(restClient.workspaces())
 }

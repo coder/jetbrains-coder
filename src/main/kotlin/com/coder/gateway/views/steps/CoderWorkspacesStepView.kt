@@ -24,7 +24,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.URL
 import java.util.logging.Logger
 import javax.swing.DefaultComboBoxModel
 
@@ -95,7 +94,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 GatewayUI.getInstance().connect(
                     mapOf(
                         "type" to "coder",
-                        "coder_url" to URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "").toString(),
+                        "coder_url" to wizardModel.loginModel.url,
                         "workspace_name" to workspace.name,
                         "username" to coderClient.me.username,
                         "password" to wizardModel.loginModel.password!!,
@@ -105,11 +104,9 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 )
             }
         }
-
     }
 
     override fun dispose() {
-
     }
 
     companion object {

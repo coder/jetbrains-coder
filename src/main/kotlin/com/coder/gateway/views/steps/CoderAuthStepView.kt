@@ -3,7 +3,6 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.LoginModel
-import com.coder.gateway.models.UriScheme
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
@@ -22,11 +21,8 @@ import com.intellij.ui.IconManager
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
-import com.intellij.ui.dsl.builder.bindIntText
-import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.toNullableProperty
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import kotlinx.coroutines.CoroutineScope
@@ -56,12 +52,8 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row {
-                label(CoderGatewayBundle.message("gateway.connector.view.login.scheme.label"))
-                comboBox(UriScheme.values().toList()).bindItem(model::uriScheme.toNullableProperty())
-                label(CoderGatewayBundle.message("gateway.connector.view.login.host.label"))
-                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::host)
-                label(CoderGatewayBundle.message("gateway.connector.view.login.port.label"))
-                intTextField(0..65536).bindIntText(model::port)
+                label(CoderGatewayBundle.message("gateway.connector.view.login.url.label"))
+                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::url)
                 cell()
             }
 
@@ -79,9 +71,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         model.apply {
-            uriScheme = wizardModel.loginModel.uriScheme
-            host = wizardModel.loginModel.host
-            port = wizardModel.loginModel.port
+            url = wizardModel.loginModel.url
             email = wizardModel.loginModel.email
             password = wizardModel.loginModel.password
         }
@@ -99,16 +89,23 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
         model.password = password
         val authTask = object : Task.Modal(null, "Authenticate and setup coder", false) {
             override fun run(pi: ProgressIndicator) {
-                pi.text = "Authenticating ${model.email} on ${model.host}..."
-                pi.fraction = 0.3
-                coderClient.initClientSession(model.uriScheme, model.host, model.port, model.email, model.password!!)
+
+                pi.apply {
+                    text = "Authenticating ${model.email} on ${model.url}..."
+                    fraction = 0.3
+                }
+
+                val url = URL(model.url)
+                coderClient.initClientSession(url, model.email, model.password!!)
                 wizardModel.apply {
                     loginModel = model.copy()
                 }
 
-                pi.text = "Downloading coder cli..."
-                pi.fraction = 0.4
-                val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
+                pi.apply {
+                    text = "Downloading coder cli..."
+                    fraction = 0.4
+                }
+
                 val cliManager = CoderCLIManager(URL(url.protocol, url.host, url.port, ""))
                 val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
                 if (getOS() != OS.WINDOWS) {
@@ -116,8 +113,11 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                     val chmodOutput = ProcessExecutor().command("chmod", "+x", cli.toAbsolutePath().toString()).readOutput(true).execute().outputUTF8()
                     logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
                 }
-                pi.text = "Configuring coder cli..."
-                pi.fraction = 0.5
+                pi.apply {
+                    text = "Configuring coder cli..."
+                    fraction = 0.5
+                }
+
                 val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", url.toString(), "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
                 logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.6
