@@ -92,6 +92,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     override suspend fun onNext(wizardModel: CoderWorkspacesWizardModel) {
         val workspace = workspacesView.selectedValue
         if (workspace != null) {
+            logger.info("Connecting to ${workspace.name}...")
             cs.launch {
                 withContext(Dispatchers.IO) {
                     val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
