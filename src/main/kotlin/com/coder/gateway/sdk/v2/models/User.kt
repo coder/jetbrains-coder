@@ -12,5 +12,5 @@ data class User(
 
     @SerializedName("status") val status: String?,
     @SerializedName("organization_ids") val organizationIDs: List<UUID>?,
-    @SerializedName("roles") val roles: Set<String>?,
+    @SerializedName("roles") val roles: List<Role>?,
 )
