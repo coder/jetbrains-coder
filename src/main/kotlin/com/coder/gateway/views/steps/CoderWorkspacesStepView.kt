@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URL
+import java.util.logging.Logger
 import javax.swing.DefaultComboBoxModel
 
 class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
@@ -90,35 +91,40 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
 
     override suspend fun onNext(wizardModel: CoderWorkspacesWizardModel) {
         val workspace = workspacesView.selectedValue
-        println(">>> ${workspace.name} was selected")
-        cs.launch {
-            val privateSSHKey = withContext(Dispatchers.IO) {
-                val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
-                val cliManager = CoderCLIManager(URL(url.protocol, url.host, url.port, ""))
-                val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
-                val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", url.toString(), "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
-                println(">>> coder-cli login output: $loginOutput")
-                val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()
-                println(">>> coder-cli config-ssh output: $sshConfigOutput")
+        if (workspace != null) {
+            cs.launch {
+                withContext(Dispatchers.IO) {
+                    val url = URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "")
+                    val cliManager = CoderCLIManager(URL(url.protocol, url.host, url.port, ""))
+                    val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
+                    val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", url.toString(), "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
 
-                coderClient.userSSHKeys().privateKey
-            }
+                    logger.info("coder-cli login output: $loginOutput")
+                    val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()
+                    logger.info("coder-cli config-ssh output: $sshConfigOutput")
+                }
 
-            GatewayUI.getInstance().connect(
-                mapOf(
-                    "type" to "coder",
-                    "coder_url" to URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port.toString()).toString(),
-                    "workspace_name" to workspace.name,
-                    "username" to coderClient.me.username,
-                    "private_ssh_key" to privateSSHKey,
-                    "project_path" to tfProject.text
+                GatewayUI.getInstance().connect(
+                    mapOf(
+                        "type" to "coder",
+                        "coder_url" to URL(wizardModel.loginModel.uriScheme.toString().toLowerCase(), wizardModel.loginModel.host, wizardModel.loginModel.port, "").toString(),
+                        "workspace_name" to workspace.name,
+                        "username" to coderClient.me.username,
+                        "password" to wizardModel.loginModel.password!!,
+                        "session_token" to coderClient.sessionToken,
+                        "project_path" to tfProject.text
+                    )
                 )
-            )
+            }
         }
 
     }
 
     override fun dispose() {
 
+    }
+
+    companion object {
+        val logger = Logger.getLogger(CoderWorkspacesStepView::class.java.simpleName)
     }
 }
