@@ -86,7 +86,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         }
     }
 
-    override suspend fun onNext(wizardModel: CoderWorkspacesWizardModel) {
+    override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val workspace = workspacesView.selectedValue
         if (workspace != null) {
             logger.info("Connecting to ${workspace.name}...")
@@ -94,16 +94,17 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 GatewayUI.getInstance().connect(
                     mapOf(
                         "type" to "coder",
-                        "coder_url" to wizardModel.loginModel.url,
+                        "coder_url" to coderClient.coderURL.toString(),
                         "workspace_name" to workspace.name,
                         "username" to coderClient.me.username,
-                        "password" to wizardModel.loginModel.password!!,
                         "session_token" to coderClient.sessionToken,
                         "project_path" to tfProject.text
                     )
                 )
             }
+            return true
         }
+        return false
     }
 
     override fun dispose() {

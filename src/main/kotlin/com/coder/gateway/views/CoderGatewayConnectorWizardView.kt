@@ -1,7 +1,6 @@
 package com.coder.gateway.views
 
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.models.LoginModel
 import com.coder.gateway.views.steps.CoderAuthStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.coder.gateway.views.steps.CoderWorkspacesWizardStep
@@ -12,18 +11,13 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayUI
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.awt.Component
 import javax.swing.JButton
 
 class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
-    private val cs = CoroutineScope(Dispatchers.Main)
     private var steps = arrayListOf<CoderWorkspacesWizardStep>()
     private var currentStep = 0
-    private val model = CoderWorkspacesWizardModel(LoginModel(), emptyList())
+    private val model = CoderWorkspacesWizardModel()
 
     private lateinit var previousButton: JButton
     private lateinit var nextButton: JButton
@@ -72,29 +66,27 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     }
 
     private fun next() {
-        cs.launch {
-            withContext(Dispatchers.Main) { doNextCallback() }
-            if (currentStep + 1 < steps.size) {
-                remove(steps[currentStep].component)
+        if (!doNextCallback()) return
+        if (currentStep + 1 < steps.size) {
+            remove(steps[currentStep].component)
+            updateUI()
+            currentStep++
+            steps[currentStep].apply {
+                addToCenter(component)
+                onInit(model)
                 updateUI()
-                currentStep++
-                steps[currentStep].apply {
-                    addToCenter(component)
-                    onInit(model)
-                    updateUI()
 
-                    nextButton.text = nextActionText
-                    previousButton.text = previousActionText
-                }
+                nextButton.text = nextActionText
+                previousButton.text = previousActionText
             }
         }
     }
 
 
-    private suspend fun doNextCallback() {
+    private fun doNextCallback(): Boolean {
         steps[currentStep].apply {
             component.apply()
-            onNext(model)
+            return onNext(model)
         }
     }
 
