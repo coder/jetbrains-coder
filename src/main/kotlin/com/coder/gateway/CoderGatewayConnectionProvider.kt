@@ -1,6 +1,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.views.CoderGatewayConnectionComponent
+import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.ssh.config.unified.SshConfig
@@ -10,11 +11,12 @@ import com.jetbrains.gateway.api.GatewayConnectionProvider
 import com.jetbrains.gateway.ssh.IdeInfo
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import com.jetbrains.gateway.ssh.SshCommandsExecutor
+import com.jetbrains.gateway.ssh.SshDeployFlowUtil
 import com.jetbrains.gateway.ssh.SshDownloadMethod
 import com.jetbrains.gateway.ssh.SshMultistagePanelContext
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import java.time.Duration
 import java.util.logging.Logger
 import javax.swing.JComponent
 
@@ -39,37 +41,34 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 userName = "coder"
                 authType = AuthType.OPEN_SSH
             }
-            val context = SshMultistagePanelContext().apply {
-                deploy = true
-                sshConfig = SshConfig(true).apply {
-                    setHost("coder.${workspaceName}")
-                    setUsername(user)
-                    authType = AuthType.OPEN_SSH
+
+            clientLifetime.launchUnderBackgroundProgress("Coder Gateway Deploy", true, true, null) {
+                val context = SshMultistagePanelContext().apply {
+                    deploy = true
+                    sshConfig = SshConfig(true).apply {
+                        setHost("coder.${workspaceName}")
+                        setUsername(user)
+                        authType = AuthType.OPEN_SSH
+                    }
+                    remoteProjectPath = projectPath
+                    remoteCommandsExecutor = SshCommandsExecutor.Companion.create(credentials)
+                    downloadMethod = SshDownloadMethod.SftpUpload
+                    ide = IdeInfo(
+                        IntelliJPlatformProduct.IDEA,
+                        buildNumber = "221.5787.30"
+                    )
                 }
-                downloadMethod = SshDownloadMethod.SftpUpload
-                ide = IdeInfo(
-                    IntelliJPlatformProduct.IDEA,
-                    buildNumber = "221.5787.30"
-                )
+                val deployPair = async {
+                    SshDeployFlowUtil.fullDeployCycle(
+                        clientLifetime,
+                        context,
+                        Duration.ofMinutes(10)
+                    )
+                }.await()
+
+                logger.info(">>>$deployPair")
             }
 
-//            GlobalScope.launch {
-//                val deployPair = withContext(Dispatchers.IO) {
-//                    SshDeployFlowUtil.fullDeployCycle(
-//                        clientLifetime,
-//                        context,
-//                        Duration.ofMinutes(10)
-//                    )
-//                }
-//
-//
-//                println(deployPair)
-//            }
-
-            GlobalScope.launch {
-                val cmdExecutor = SshCommandsExecutor.Companion.create(credentials)
-                cmdExecutor.getInstalledIDEs()
-            }
 
             return object : GatewayConnectionHandle(clientLifetime) {
                 override fun createComponent(): JComponent {
