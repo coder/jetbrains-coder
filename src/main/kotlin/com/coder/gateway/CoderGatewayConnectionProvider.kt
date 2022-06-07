@@ -52,10 +52,11 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     }
                     remoteProjectPath = projectPath
                     remoteCommandsExecutor = SshCommandsExecutor.Companion.create(credentials)
-                    downloadMethod = SshDownloadMethod.SftpUpload
+                    downloadMethod = SshDownloadMethod.CustomizedLink
+                    customDownloadLink = "https://download.jetbrains.com/idea/ideaIU-2021.3.3.tar.gz"
                     ide = IdeInfo(
                         IntelliJPlatformProduct.IDEA,
-                        buildNumber = "221.5787.30"
+                        buildNumber = "213.7172.25"
                     )
                 }
                 val deployPair = async {
@@ -68,7 +69,6 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
                 logger.info(">>>$deployPair")
             }
-
 
             return object : GatewayConnectionHandle(clientLifetime) {
                 override fun createComponent(): JComponent {
