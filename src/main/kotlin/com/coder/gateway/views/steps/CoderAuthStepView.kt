@@ -86,7 +86,9 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
         model.token = pastedToken
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.login.cli.downloader.dialog.title"), false) {
             override fun run(pi: ProgressIndicator) {
+
                 pi.apply {
+                    isIndeterminate = false
                     text = "Downloading coder cli..."
                     fraction = 0.1
                 }
