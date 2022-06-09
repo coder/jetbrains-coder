@@ -1,5 +1,10 @@
 package com.coder.gateway.models
 
-import com.coder.gateway.sdk.v1.Workspace
+import com.coder.gateway.sdk.v2.models.Workspace
 
-data class CoderWorkspacesWizardModel(var coderURL: String = "https://localhost", var token: String = "", var workspaces: List<Workspace> = mutableListOf())
+data class CoderWorkspacesWizardModel(
+    var coderURL: String = "https://localhost",
+    var token: String = "",
+    var workspaces: List<Workspace> = mutableListOf(),
+    var selectedWorkspace: Workspace? = null
+)

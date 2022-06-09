@@ -23,21 +23,21 @@ import javax.swing.JComponent
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     private val connections = mutableSetOf<CoderConnectionMetadata>()
     override suspend fun connect(parameters: Map<String, String>, requestor: ConnectionRequestor): GatewayConnectionHandle? {
-        val coderUrl = parameters["coder_url"]
-        val workspaceName = parameters["workspace_name"]
-        val user = parameters["username"]
+        val coderWorkspaceHostname = parameters["coder_workspace_hostname"]
         val projectPath = parameters["project_path"]
+        val ideProductCode = parameters["ide_product_code"]!!
+        val ideBuildNumber = parameters["ide_build_number"]!!
+        val ideDownloadLink = parameters["ide_download_link"]
 
-        if (coderUrl != null && workspaceName != null) {
-            val connection = CoderConnectionMetadata(coderUrl, workspaceName)
+        if (coderWorkspaceHostname != null) {
+            val connection = CoderConnectionMetadata(coderWorkspaceHostname)
             if (connection in connections) {
-                logger.warning("There is already a connection started on ${connection.url} using the workspace ${connection.workspaceId}")
+                logger.warning("There is already a connection started on ${connection.workspaceHostname}")
                 return null
             }
             val clientLifetime = LifetimeDefinition()
-            val credentials = RemoteCredentialsHolder()
-            credentials.apply {
-                setHost("coder.${workspaceName}")
+            val credentials = RemoteCredentialsHolder().apply {
+                setHost(coderWorkspaceHostname)
                 userName = "coder"
                 authType = AuthType.OPEN_SSH
             }
@@ -46,17 +46,17 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 val context = SshMultistagePanelContext().apply {
                     deploy = true
                     sshConfig = SshConfig(true).apply {
-                        setHost("coder.${workspaceName}")
-                        setUsername(user)
+                        setHost(coderWorkspaceHostname)
+                        setUsername("coder")
                         authType = AuthType.OPEN_SSH
                     }
                     remoteProjectPath = projectPath
                     remoteCommandsExecutor = SshCommandsExecutor.Companion.create(credentials)
                     downloadMethod = SshDownloadMethod.CustomizedLink
-                    customDownloadLink = "https://download.jetbrains.com/idea/ideaIU-2021.3.3.tar.gz"
+                    customDownloadLink = ideDownloadLink
                     ide = IdeInfo(
-                        IntelliJPlatformProduct.IDEA,
-                        buildNumber = "213.7172.25"
+                        product = IntelliJPlatformProduct.fromProductCode(ideProductCode)!!,
+                        buildNumber = ideBuildNumber
                     )
                 }
                 val deployPair = async {
@@ -72,7 +72,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
             return object : GatewayConnectionHandle(clientLifetime) {
                 override fun createComponent(): JComponent {
-                    return CoderGatewayConnectionComponent(clientLifetime, coderUrl, workspaceName)
+                    return CoderGatewayConnectionComponent(clientLifetime, coderWorkspaceHostname)
                 }
 
                 override fun getTitle(): String {
@@ -96,4 +96,4 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     }
 }
 
-internal data class CoderConnectionMetadata(val url: String, val workspaceId: String)
+internal data class CoderConnectionMetadata(val workspaceHostname: String)

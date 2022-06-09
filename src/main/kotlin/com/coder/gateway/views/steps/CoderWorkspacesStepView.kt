@@ -11,34 +11,28 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.IconManager
 import com.intellij.ui.components.JBList
-import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.BottomGap
-import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
-import com.jetbrains.gateway.api.GatewayUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.logging.Logger
-import javax.swing.DefaultComboBoxModel
 
 class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
+
+    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
     private var workspaces = CollectionListModel<Workspace>()
     private var workspacesView = JBList(workspaces)
 
-    private lateinit var tfProject: JBTextField
-    private lateinit var wizardModel: CoderWorkspacesWizardModel
-
-    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
+    private lateinit var wizard: CoderWorkspacesWizardModel
 
     override val component = panel {
-        val model = DefaultComboBoxModel(arrayOf("IntelliJ IDEA", "PyCharm", "Goland"))
         indent {
             row {
                 label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.choose.text")).applyToComponent {
@@ -47,32 +41,18 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 }
             }.bottomGap(BottomGap.MEDIUM)
             row {
-                label("IDE version:")
-                comboBox(model)
-                    .gap(RightGap.SMALL)
-                label("Project directory:")
-                tfProject = textField()
-                    .resizableColumn()
-                    .horizontalAlign(HorizontalAlign.FILL)
-                    .applyToComponent {
-                        this.text = "/home/coder/workspace/"
-                    }.component
-                cell()
-            }.topGap(TopGap.NONE)
-
-            row {
                 scrollCell(workspacesView).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
-            }.resizableRow()
+            }.topGap(TopGap.NONE).resizableRow()
 
         }
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 
     override val previousActionText = IdeBundle.message("button.back")
-    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
+    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
-    override fun onInit(wm: CoderWorkspacesWizardModel) {
-        wizardModel = wm
+    override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
+        wizard = wizardModel
         workspaces.removeAll()
         workspacesView.cellRenderer = WorkspaceCellRenderer()
 
@@ -89,25 +69,14 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val workspace = workspacesView.selectedValue
         if (workspace != null) {
-            logger.info("Connecting to ${workspace.name}...")
-            cs.launch {
-                GatewayUI.getInstance().connect(
-                    mapOf(
-                        "type" to "coder",
-                        "coder_url" to coderClient.coderURL.toString(),
-                        "workspace_name" to workspace.name,
-                        "username" to coderClient.me.username,
-                        "session_token" to coderClient.sessionToken,
-                        "project_path" to tfProject.text
-                    )
-                )
-            }
+            wizardModel.selectedWorkspace = workspace
             return true
         }
         return false
     }
 
     override fun dispose() {
+
     }
 
     companion object {

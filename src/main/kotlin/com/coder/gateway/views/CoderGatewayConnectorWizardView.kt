@@ -2,6 +2,7 @@ package com.coder.gateway.views
 
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.views.steps.CoderAuthStepView
+import com.coder.gateway.views.steps.CoderLocateRemoteProjectStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.coder.gateway.views.steps.CoderWorkspacesWizardStep
 import com.intellij.openapi.Disposable
@@ -31,6 +32,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
 
         registerStep(CoderAuthStepView())
         registerStep(CoderWorkspacesStepView())
+        registerStep(CoderLocateRemoteProjectStepView())
 
         addToBottom(createBackComponent())
 
