@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -9,7 +10,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.CollectionListModel
-import com.intellij.ui.IconManager
 import com.intellij.ui.components.JBList
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.TopGap
@@ -37,7 +37,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
             row {
                 label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.choose.text")).applyToComponent {
                     font = JBFont.h3().asBold()
-                    icon = IconManager.getInstance().getIcon("coder_logo_16.svg", this@CoderWorkspacesStepView::class.java)
+                    icon = CoderIcons.LOGO_16
                 }
             }.bottomGap(BottomGap.MEDIUM)
             row {

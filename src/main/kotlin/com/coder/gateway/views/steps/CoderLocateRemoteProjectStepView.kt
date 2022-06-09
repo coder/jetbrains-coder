@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.views.LazyBrowserLink
@@ -12,7 +13,6 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.ui.AnimatedIcon
-import com.intellij.ui.IconManager
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RowLayout
@@ -61,7 +61,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
             row {
                 titleLabel = label("").applyToComponent {
                     font = JBFont.h3().asBold()
-                    icon = IconManager.getInstance().getIcon("coder_logo_16.svg", this@CoderLocateRemoteProjectStepView::class.java)
+                    icon = CoderIcons.LOGO_16
                 }.component
             }.bottomGap(BottomGap.MEDIUM)
 
@@ -87,7 +87,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                 cell()
                 terminalLink = cell(
                     LazyBrowserLink(
-                        IconManager.getInstance().getIcon("open_terminal.svg", this::class.java),
+                        CoderIcons.OPEN_TERMINAL,
                         "Open Terminal"
                     )
                 ).component

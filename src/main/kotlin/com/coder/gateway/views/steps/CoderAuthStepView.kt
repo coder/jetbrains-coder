@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
@@ -20,7 +21,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AppIcon
-import com.intellij.ui.IconManager
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
 import com.intellij.ui.dsl.builder.BottomGap
@@ -47,7 +47,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
             row {
                 label(CoderGatewayBundle.message("gateway.connector.view.login.header.text")).applyToComponent {
                     font = JBFont.h3().asBold()
-                    icon = IconManager.getInstance().getIcon("coder_logo_16.svg", this@CoderAuthStepView::class.java)
+                    icon = CoderIcons.LOGO_16
                 }
             }.topGap(TopGap.SMALL).bottomGap(BottomGap.MEDIUM)
             row {
