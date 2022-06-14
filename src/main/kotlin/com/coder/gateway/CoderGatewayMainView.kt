@@ -2,11 +2,14 @@ package com.coder.gateway
 
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.views.CoderGatewayConnectorWizardWrapperView
+import com.coder.gateway.views.CoderGatewayRecentWorkspaceConnectionsView
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.BrowserLink
 import com.jetbrains.gateway.api.GatewayConnector
 import com.jetbrains.gateway.api.GatewayConnectorView
+import com.jetbrains.gateway.api.GatewayRecentConnections
 import com.jetbrains.rd.util.lifetime.Lifetime
+import java.awt.Component
 import javax.swing.Icon
 import javax.swing.JComponent
 
@@ -28,6 +31,10 @@ class CoderGatewayMainView : GatewayConnector {
 
     override fun getDocumentationLink(): ActionLink? {
         return BrowserLink(null, "Learn more about Coder Workspaces", null, "https://coder.com/docs/coder/latest/workspaces")
+    }
+
+    override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections? {
+        return CoderGatewayRecentWorkspaceConnectionsView()
     }
 
     override fun getTitle(): String {
