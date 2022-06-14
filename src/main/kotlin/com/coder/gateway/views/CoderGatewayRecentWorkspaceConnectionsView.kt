@@ -9,6 +9,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.BottomGap
+import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
@@ -60,32 +61,30 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                             }.horizontalAlign(HorizontalAlign.LEFT)
                             cell()
                         }
-                    }
+                    }.topGap(TopGap.MEDIUM)
 
-                    group {
-                        recentConnections.forEach { connectionDetails ->
-                            val product = IntelliJPlatformProduct.fromProductCode(connectionDetails.ideProductCode!!)!!
-                            row {
-                                icon(product.icon)
-                                cell(ActionLink(connectionDetails.projectPath!!) {
-                                    cs.launch {
-                                        GatewayUI.getInstance().connect(
-                                            mapOf(
-                                                "type" to "coder",
-                                                "coder_workspace_hostname" to "${connectionDetails.coderWorkspaceHostname}",
-                                                "project_path" to connectionDetails.projectPath!!,
-                                                "ide_product_code" to "${product.productCode}",
-                                                "ide_build_number" to "${connectionDetails.ideBuildNumber}",
-                                                "ide_download_link" to "${connectionDetails.downloadSource}"
-                                            )
+                    recentConnections.forEach { connectionDetails ->
+                        val product = IntelliJPlatformProduct.fromProductCode(connectionDetails.ideProductCode!!)!!
+                        row {
+                            icon(product.icon)
+                            cell(ActionLink(connectionDetails.projectPath!!) {
+                                cs.launch {
+                                    GatewayUI.getInstance().connect(
+                                        mapOf(
+                                            "type" to "coder",
+                                            "coder_workspace_hostname" to "${connectionDetails.coderWorkspaceHostname}",
+                                            "project_path" to connectionDetails.projectPath!!,
+                                            "ide_product_code" to "${product.productCode}",
+                                            "ide_build_number" to "${connectionDetails.ideBuildNumber}",
+                                            "ide_download_link" to "${connectionDetails.downloadSource}"
                                         )
-                                    }
-                                })
-                                label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
-                                label("Last opened: ${connectionDetails.lastOpened}").horizontalAlign(HorizontalAlign.RIGHT).applyToComponent {
-                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                    font = ComponentPanelBuilder.getCommentFont(font)
+                                    )
                                 }
+                            })
+                            label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
+                            label("Last opened: ${connectionDetails.lastOpened}").horizontalAlign(HorizontalAlign.RIGHT).applyToComponent {
+                                foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                font = ComponentPanelBuilder.getCommentFont(font)
                             }
                         }
                     }
@@ -93,6 +92,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
             }
         }.apply {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            border = JBUI.Borders.empty(0, 0, 0, 12)
         }
     }
 }
