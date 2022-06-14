@@ -4,6 +4,7 @@ import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.views.CoderGatewayConnectionComponent
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
@@ -22,7 +23,6 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.logging.Logger
 import javax.swing.JComponent
 
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
@@ -40,7 +40,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         if (coderWorkspaceHostname != null && projectPath != null) {
             val connection = CoderConnectionMetadata(coderWorkspaceHostname)
             if (connection in connections) {
-                logger.warning("There is already a connection started on ${connection.workspaceHostname}")
+                logger.warn("There is already a connection started on ${connection.workspaceHostname}")
                 return null
             }
             val clientLifetime = LifetimeDefinition()
@@ -114,7 +114,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     }
 
     companion object {
-        val logger = Logger.getLogger(CoderGatewayConnectionProvider::class.java.simpleName)
+        val logger = Logger.getInstance(CoderGatewayConnectionProvider::class.java.simpleName)
     }
 }
 

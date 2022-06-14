@@ -21,7 +21,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.logging.Logger
 
 class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -77,9 +76,5 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
 
     override fun dispose() {
 
-    }
-
-    companion object {
-        val logger = Logger.getLogger(CoderWorkspacesStepView::class.java.simpleName)
     }
 }

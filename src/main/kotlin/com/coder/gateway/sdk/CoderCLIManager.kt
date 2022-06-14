@@ -1,8 +1,8 @@
 package com.coder.gateway.sdk
 
+import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Path
-import java.util.logging.Logger
 
 class CoderCLIManager(private val url: URL) {
     private val coderCLIDownloader = CoderCLIDownloader()
@@ -41,6 +41,6 @@ class CoderCLIManager(private val url: URL) {
     }
 
     companion object {
-        val logger = Logger.getLogger(CoderCLIManager::class.java.simpleName)
+        val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
     }
 }

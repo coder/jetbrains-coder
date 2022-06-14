@@ -15,6 +15,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -35,7 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Dimension
-import java.util.logging.Logger
 
 class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -147,6 +147,6 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     companion object {
-        val logger = Logger.getLogger(CoderAuthStepView::class.java.simpleName)
+        val logger = Logger.getInstance(CoderAuthStepView::class.java.simpleName)
     }
 }

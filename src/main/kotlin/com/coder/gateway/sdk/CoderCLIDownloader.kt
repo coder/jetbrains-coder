@@ -1,11 +1,11 @@
 package com.coder.gateway.sdk
 
+import com.intellij.openapi.diagnostic.Logger
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.logging.Logger
 
 class CoderCLIDownloader {
 
@@ -19,6 +19,6 @@ class CoderCLIDownloader {
     }
 
     companion object {
-        val logger = Logger.getLogger(CoderCLIDownloader::class.java.simpleName)
+        val logger = Logger.getInstance(CoderCLIDownloader::class.java.simpleName)
     }
 }

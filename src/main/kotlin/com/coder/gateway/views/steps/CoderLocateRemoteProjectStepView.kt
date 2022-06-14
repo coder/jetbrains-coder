@@ -8,6 +8,7 @@ import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
@@ -34,7 +35,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
-import java.util.logging.Logger
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JLabel
@@ -102,7 +102,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
         wizard = wizardModel
         val selectedWorkspace = wizardModel.selectedWorkspace
         if (selectedWorkspace == null) {
-            logger.warning("No workspace was selected. Please go back to the previous step and select a Coder Workspace")
+            logger.warn("No workspace was selected. Please go back to the previous step and select a Coder Workspace")
             return
         }
 
@@ -125,7 +125,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                 .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
 
             if (idesWithStatus.isNullOrEmpty()) {
-                logger.warning("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
+                logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
             } else {
                 cbIDE.remove(spinner)
                 ideComboBoxModel.addAll(idesWithStatus)
@@ -157,7 +157,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     companion object {
-        val logger = Logger.getLogger(CoderLocateRemoteProjectStepView::class.java.simpleName)
+        val logger = Logger.getInstance(CoderLocateRemoteProjectStepView::class.java.simpleName)
     }
 
     private class IDEComboBox(model: ComboBoxModel<IdeWithStatus>) : ComboBox<IdeWithStatus>(model) {
