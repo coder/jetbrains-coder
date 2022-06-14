@@ -5,6 +5,7 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.openapi.components.service
+import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
@@ -41,11 +42,16 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                     }
                 }
                 row {
-                    scrollCell(recentConnectionsView).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                    scrollCell(recentConnectionsView).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL).applyToComponent {
+                        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+                    }
                     cell()
                 }.topGap(TopGap.NONE).resizableRow()
             }
+        }.apply {
+            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
         }
+
         recentConnectionsView.apply {
             isRootVisible = false
             showsRootHandles = false
