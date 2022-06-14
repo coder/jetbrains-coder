@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <title>DeleteTest</title>
+  <g>
+    <rect width="16" height="16" fill="#ffc4ff" opacity="0" />
+    <path d="M10,2h3V4H3V2H6V1h4Zm.667,12A1.314,1.314,0,0,0,12,12.714V5H4v7.714A1.314,1.314,0,0,0,5.333,14Z" fill="#6e6e6e" />
+  </g>
+</svg>

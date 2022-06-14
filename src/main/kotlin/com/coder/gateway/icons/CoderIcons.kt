@@ -16,4 +16,6 @@ object CoderIcons {
     val GREEN_CIRCLE = IconLoader.getIcon("green_circle.svg", javaClass)
     val GRAY_CIRCLE = IconLoader.getIcon("gray_circle.svg", javaClass)
     val RED_CIRCLE = IconLoader.getIcon("red_circle.svg", javaClass)
+
+    val DELETE = IconLoader.getIcon("delete.svg", javaClass)
 }

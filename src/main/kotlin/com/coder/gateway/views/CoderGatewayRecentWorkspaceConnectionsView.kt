@@ -3,7 +3,9 @@ package com.coder.gateway.views
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.components.ActionLink
@@ -82,10 +84,16 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                                 }
                             })
                             label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
-                            label("Last opened: ${connectionDetails.lastOpened}").horizontalAlign(HorizontalAlign.RIGHT).applyToComponent {
+                            label("Last opened: ${connectionDetails.lastOpened}").applyToComponent {
                                 foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                                 font = ComponentPanelBuilder.getCommentFont(font)
                             }
+                            actionButton(object : DumbAwareAction("", "", CoderIcons.DELETE) {
+                                override fun actionPerformed(e: AnActionEvent) {
+                                    recentConnectionsService.removeConnection(connectionDetails)
+                                    updateContentView()
+                                }
+                            })
                         }
                     }
                 }
