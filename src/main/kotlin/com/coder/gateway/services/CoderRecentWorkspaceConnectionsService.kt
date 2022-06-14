@@ -15,9 +15,9 @@ import com.intellij.openapi.diagnostic.Logger
 class CoderRecentWorkspaceConnectionsService : PersistentStateComponent<RecentWorkspaceConnectionState> {
     var myState = RecentWorkspaceConnectionState()
 
-    fun addRecentConnection(connection: RecentWorkspaceConnection) = myState.recentConnections.add(connection)
+    fun addRecentConnection(connection: RecentWorkspaceConnection) = myState.add(connection)
 
-    fun removeConnection(connection: RecentWorkspaceConnection) = myState.recentConnections.remove(connection)
+    fun removeConnection(connection: RecentWorkspaceConnection) = myState.remove(connection)
 
     fun getAllRecentConnections() = myState.recentConnections
 
