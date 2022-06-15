@@ -90,7 +90,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                         label(hostname).applyToComponent {
                             font = JBFont.h3().asBold()
                         }.horizontalAlign(HorizontalAlign.LEFT).gap(RightGap.SMALL)
-                        actionButton(object : DumbAwareAction("Open SSH Web Terminal", "", CoderIcons.OPEN_TERMINAL) {
+                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
                             override fun actionPerformed(e: AnActionEvent) {
                                 BrowserUtil.browse(recentConnections[0]?.webTerminalLink ?: "")
                             }
@@ -121,7 +121,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                             foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                             font = ComponentPanelBuilder.getCommentFont(font)
                         }
-                        actionButton(object : DumbAwareAction("Remove from Recent Connections", "", CoderIcons.DELETE) {
+                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.remove.button.tooltip"), "", CoderIcons.DELETE) {
                             override fun actionPerformed(e: AnActionEvent) {
                                 recentConnectionsService.removeConnection(connectionDetails)
                                 updateContentView(recentConnectionsService.getAllRecentConnections().groupBy { it.coderWorkspaceHostname })
