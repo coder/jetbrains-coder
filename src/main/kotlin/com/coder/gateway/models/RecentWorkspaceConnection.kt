@@ -4,13 +4,14 @@ import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
 class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConnection> {
-    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String) : this() {
+    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String, terminalLink: String) : this() {
         coderWorkspaceHostname = hostname
         projectPath = prjPath
         lastOpened = openedAt
         ideProductCode = productCode
         ideBuildNumber = buildNumber
         downloadSource = source
+        webTerminalLink = terminalLink
     }
 
     @get:Attribute
@@ -31,6 +32,9 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
     @get:Attribute
     var downloadSource by string()
 
+    @get:Attribute
+    var webTerminalLink by string()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -43,6 +47,7 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         if (ideProductCode != other.ideProductCode) return false
         if (ideBuildNumber != other.ideBuildNumber) return false
         if (downloadSource != other.downloadSource) return false
+        if (webTerminalLink != other.webTerminalLink) return false
 
         return true
     }
@@ -54,6 +59,8 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         result = 31 * result + (ideProductCode?.hashCode() ?: 0)
         result = 31 * result + (ideBuildNumber?.hashCode() ?: 0)
         result = 31 * result + (downloadSource?.hashCode() ?: 0)
+        result = 31 * result + (webTerminalLink?.hashCode() ?: 0)
+
         return result
     }
 
@@ -72,6 +79,10 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
 
         val m = other.downloadSource?.let { downloadSource?.compareTo(it) }
         if (m != null && m != 0) return m
+
+        val n = other.webTerminalLink?.let { webTerminalLink?.compareTo(it) }
+        if (n != null && n != 0) return n
+
         return 0
     }
 }

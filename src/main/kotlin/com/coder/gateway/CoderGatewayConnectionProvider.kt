@@ -36,6 +36,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         val ideProductCode = parameters["ide_product_code"]!!
         val ideBuildNumber = parameters["ide_build_number"]!!
         val ideDownloadLink = parameters["ide_download_link"]!!
+        val webTerminalLink = parameters["web_terminal_link"]!!
 
         if (coderWorkspaceHostname != null && projectPath != null) {
             val connection = CoderConnectionMetadata(coderWorkspaceHostname)
@@ -89,6 +90,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     ideProductCode,
                     ideBuildNumber,
                     ideDownloadLink,
+                    webTerminalLink,
                 )
             )
 

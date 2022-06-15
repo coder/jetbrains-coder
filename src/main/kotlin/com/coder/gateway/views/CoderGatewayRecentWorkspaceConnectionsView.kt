@@ -3,6 +3,7 @@ package com.coder.gateway.views
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
@@ -11,6 +12,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.BottomGap
+import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
@@ -60,8 +62,12 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                         if (hostname != null) {
                             label(hostname).applyToComponent {
                                 font = JBFont.h3().asBold()
-                            }.horizontalAlign(HorizontalAlign.LEFT)
-                            cell()
+                            }.horizontalAlign(HorizontalAlign.LEFT).gap(RightGap.SMALL)
+                            actionButton(object : DumbAwareAction("Open SSH Web Terminal", "", CoderIcons.OPEN_TERMINAL) {
+                                override fun actionPerformed(e: AnActionEvent) {
+                                    BrowserUtil.browse(recentConnections[0]?.webTerminalLink ?: "")
+                                }
+                            })
                         }
                     }.topGap(TopGap.MEDIUM)
 
@@ -78,7 +84,8 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                                             "project_path" to connectionDetails.projectPath!!,
                                             "ide_product_code" to "${product.productCode}",
                                             "ide_build_number" to "${connectionDetails.ideBuildNumber}",
-                                            "ide_download_link" to "${connectionDetails.downloadSource}"
+                                            "ide_download_link" to "${connectionDetails.downloadSource}",
+                                            "web_terminal_link" to "${connectionDetails.webTerminalLink}"
                                         )
                                     )
                                 }
@@ -88,7 +95,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                                 foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                                 font = ComponentPanelBuilder.getCommentFont(font)
                             }
-                            actionButton(object : DumbAwareAction("", "", CoderIcons.DELETE) {
+                            actionButton(object : DumbAwareAction("Remove", "", CoderIcons.DELETE) {
                                 override fun actionPerformed(e: AnActionEvent) {
                                     recentConnectionsService.removeConnection(connectionDetails)
                                     updateContentView()

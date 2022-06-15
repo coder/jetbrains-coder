@@ -146,7 +146,8 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                     "project_path" to tfProject.text,
                     "ide_product_code" to "${selectedIDE.product.productCode}",
                     "ide_build_number" to "${selectedIDE.buildNumber}",
-                    "ide_download_link" to "${selectedIDE.source}"
+                    "ide_download_link" to "${selectedIDE.source}",
+                    "web_terminal_link" to "${terminalLink.url}"
                 )
             )
         }
