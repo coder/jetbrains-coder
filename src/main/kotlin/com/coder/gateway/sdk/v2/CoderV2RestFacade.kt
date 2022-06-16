@@ -1,6 +1,7 @@
 package com.coder.gateway.sdk.v2
 
 import com.coder.gateway.sdk.v2.models.AgentGitSSHKeys
+import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.LoginWithPasswordRequest
 import com.coder.gateway.sdk.v2.models.LoginWithPasswordResponse
 import com.coder.gateway.sdk.v2.models.User
@@ -32,4 +33,7 @@ interface CoderV2RestFacade {
 
     @GET("api/v2/workspaceagents/me/gitsshkey")
     fun sshKeys(): Call<AgentGitSSHKeys>
+
+    @GET("api/v2/buildinfo")
+    fun buildInfo(): Call<BuildInfo>
 }

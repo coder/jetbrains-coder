@@ -84,6 +84,8 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
             return false
         }
         model.token = pastedToken
+        model.buildVersion = coderClient.buildVersion
+
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.login.cli.downloader.dialog.title"), false) {
             override fun run(pi: ProgressIndicator) {
 
@@ -93,7 +95,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                     fraction = 0.1
                 }
 
-                val cliManager = CoderCLIManager(model.coderURL.toURL())
+                val cliManager = CoderCLIManager(model.coderURL.toURL(), model.buildVersion)
                 val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
@@ -105,7 +107,7 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                     fraction = 0.5
                 }
 
-                val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", model.coderURL, "--token", coderClient.sessionToken).readOutput(true).execute().outputUTF8()
+                val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", model.coderURL, "--token", model.token).readOutput(true).execute().outputUTF8()
                 logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.8
                 val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()

@@ -4,18 +4,17 @@ import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Path
 
-class CoderCLIManager(private val url: URL) {
-    private val coderCLIDownloader = CoderCLIDownloader()
+class CoderCLIManager(private val url: URL, private val buildVersion: String) {
+    private val coderCLIDownloader = CoderCLIDownloader(buildVersion)
 
     fun download(): Path? {
         val os = getOS()
         val cliName = getCoderCLIForOS(os, getArch()) ?: return null
-        logger.info("Resolved OS: $os with arch: ${getArch()}")
         val cliNameWitExt = if (os == OS.WINDOWS) "$cliName.exe" else cliName
-        return coderCLIDownloader.downloadCLI(URL(url.protocol, url.host, url.port, "/bin/$cliNameWitExt"), cliName, if (os == OS.WINDOWS) ".exe" else "")
+        return coderCLIDownloader.downloadCLI(URL(url.protocol, url.host, url.port, "/bin/$cliNameWitExt"), cliName, if (os == OS.WINDOWS) "exe" else "")
     }
 
-    fun getCoderCLIForOS(os: OS?, arch: Arch?): String? {
+    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String? {
         logger.info("Resolving coder cli for $os $arch")
         if (os == null) {
             return null
