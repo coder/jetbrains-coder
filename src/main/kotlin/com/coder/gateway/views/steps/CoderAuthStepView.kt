@@ -3,12 +3,7 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.sdk.CoderCLIManager
-import com.coder.gateway.sdk.CoderRestClientService
-import com.coder.gateway.sdk.OS
-import com.coder.gateway.sdk.getOS
-import com.coder.gateway.sdk.toURL
-import com.coder.gateway.sdk.withPath
+import com.coder.gateway.sdk.*
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
@@ -24,11 +19,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AppIcon
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
-import com.intellij.ui.dsl.builder.BottomGap
-import com.intellij.ui.dsl.builder.RightGap
-import com.intellij.ui.dsl.builder.TopGap
-import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.*
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import kotlinx.coroutines.CoroutineScope
@@ -110,8 +101,8 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                 val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", model.coderURL, "--token", model.token).readOutput(true).execute().outputUTF8()
                 logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.8
-                val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh").readOutput(true).execute().outputUTF8()
-                logger.info("coder-cli config-ssh output: $sshConfigOutput")
+                val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+                logger.info("Result of `${cli.toAbsolutePath()} config-ssh --yes --use-previous-options`: $sshConfigOutput")
                 pi.fraction = 1.0
             }
         }
