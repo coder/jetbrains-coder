@@ -12,6 +12,8 @@ plugins {
     id("org.jetbrains.intellij") version "1.6.0"
     // Gradle Changelog Plugin
     id("org.jetbrains.changelog") version "1.3.1"
+    // Gradle Qodana Plugin
+    id("org.jetbrains.qodana") version "0.1.13"
 }
 
 group = properties("pluginGroup")
@@ -30,8 +32,6 @@ dependencies {
     implementation("org.zeroturnaround:zt-exec:1.12") {
         exclude("org.slf4j")
     }
-
-
 }
 
 // Configure project's dependencies
@@ -55,6 +55,14 @@ intellij {
 changelog {
     version.set(properties("pluginVersion"))
     groups.set(emptyList())
+}
+
+// Configure Gradle Qodana Plugin - read more: https://github.com/JetBrains/gradle-qodana-plugin
+qodana {
+    cachePath.set(projectDir.resolve(".qodana").canonicalPath)
+    reportPath.set(projectDir.resolve("build/reports/inspections").canonicalPath)
+    saveReport.set(true)
+    showReport.set(System.getenv("QODANA_SHOW_REPORT")?.toBoolean() ?: false)
 }
 
 tasks {

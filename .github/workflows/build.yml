@@ -1,6 +1,7 @@
 # GitHub Actions Workflow created for testing and preparing the plugin release in following steps:
 # - validate Gradle Wrapper,
 # - run 'test' and 'verifyPlugin' tasks,
+# - run Qodana inspections,
 # - run 'buildPlugin' task and prepare artifact for the further tests,
 # - run 'runPluginVerifier' task,
 #
@@ -76,6 +77,10 @@ jobs:
           name: tests-result
           path: ${{ github.workspace }}/build/reports/tests
 
+      # Run plugin build
+      - name: Run Build
+        - run: ./gradlew clean buildPlugin
+
 # until https://github.com/JetBrains/gradle-intellij-plugin/issues/1027 is solved
 
 #      # Cache Plugin Verifier IDEs
@@ -96,6 +101,10 @@ jobs:
 #        with:
 #          name: pluginVerifier-result
 #          path: ${{ github.workspace }}/build/reports/pluginVerifier
+
+      # Run Qodana inspections
+      - name: Qodana - Code Inspection
+        uses: JetBrains/qodana-action@v4.2.5
 
       # Prepare plugin archive content for creating artifact
       - name: Prepare Plugin Artifact
