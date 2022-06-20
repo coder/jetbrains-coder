@@ -79,3 +79,26 @@ The project-specific configuration file [gradle.properties][file:gradle.properti
 | `gradleVersion`             | Version of Gradle used for plugin development.                                                                |
 
 The properties listed define the plugin itself or configure the [gradle-intellij-plugin][gh:gradle-intellij-plugin] – check its documentation for more details.
+
+### Testing
+
+No functional or UI tests are available yet.
+
+### Code Monitoring
+
+Code quality is monitored with the help of [Qodana](https://www.jetbrains.com/qodana/)
+
+Qodana inspections are accessible within the project on two levels:
+
+- using the [Qodana IntelliJ GitHub Action][docs:qodana-github-action], run automatically within the [Build](.github/workflows/build.yml) workflow,
+- with the [Gradle Qodana Plugin][gh:gradle-qodana-plugin], so you can use it on the local environment or any CI other than GitHub Actions.
+
+Qodana inspection is configured with the `qodana { ... }` section in the [Gradle build file][file:build.gradle.kts] and [`qodana.yml`][file:qodana.yml] YAML configuration file.
+
+> **NOTE:** Qodana requires Docker to be installed and available in your environment.
+
+To run inspections, you can use a predefined *Run Qodana* configuration, which will provide a full report on `http://localhost:8080`, or invoke the Gradle task directly with the `./gradlew runInspections` command.
+
+A final report is available in the `./build/reports/inspections/` directory.
+
+![Qodana][file:qodana.png]
