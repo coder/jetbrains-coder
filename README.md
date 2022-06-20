@@ -22,3 +22,13 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 - Onboard instantly then stay up to date continuously
 
 <!-- Plugin description end -->
+
+## Getting Started
+
+To manually install a local build:
+
+1. Install [Jetbrains Gateway](https://www.jetbrains.com/help/phpstorm/remote-development-a.html#gateway)
+2. run `./gradlew clean buildPlugin` to generate a zip distribution
+3. locate the zip file in the `build/distributions` folder and follow [these instructions](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk) on how to install a plugin from disk.
+
+Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the one specified in `gradle.properties` - `platformVersion`) with the latest plugin changes deployed. 
