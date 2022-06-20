@@ -79,7 +79,7 @@ jobs:
 
       # Run plugin build
       - name: Run Build
-        - run: ./gradlew clean buildPlugin
+        run: ./gradlew clean buildPlugin
 
 # until https://github.com/JetBrains/gradle-intellij-plugin/issues/1027 is solved
 
