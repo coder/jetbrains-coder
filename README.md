@@ -102,3 +102,7 @@ To run inspections, you can use a predefined *Run Qodana* configuration, which w
 A final report is available in the `./build/reports/inspections/` directory.
 
 ![Qodana][file:qodana.png]
+
+### Plugin compatibility
+
+`./gradlew runPluginVerifier` can check the plugin compatibility against the specified Gateway. The integration with Githug Actions is commented until [this gradle intellij plugin issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed.
