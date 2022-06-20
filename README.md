@@ -31,4 +31,30 @@ To manually install a local build:
 2. run `./gradlew clean buildPlugin` to generate a zip distribution
 3. locate the zip file in the `build/distributions` folder and follow [these instructions](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk) on how to install a plugin from disk.
 
-Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the one specified in `gradle.properties` - `platformVersion`) with the latest plugin changes deployed. 
+Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the one specified in `gradle.properties` - `platformVersion`) with the latest plugin changes deployed.
+
+### Plugin Structure
+```
+.
+├── .github/                GitHub Actions workflows and Dependabot configuration files
+├── gradle
+│   └── wrapper/            Gradle Wrapper
+├── build/                  Output build directory
+├── src                     Plugin sources
+│   └── main
+│       ├── kotlin/         Kotlin production sources
+│       └── resources/      Resources - plugin.xml, icons, i8n
+│   └── test
+│       ├── kotlin/         Kotlin test sources
+├── .gitignore              Git ignoring rules
+├── build.gradle.kts        Gradle configuration
+├── CHANGELOG.md            Full change history
+├── gradle.properties       Gradle configuration properties
+├── gradlew                 *nix Gradle Wrapper script
+├── gradlew.bat             Windows Gradle Wrapper script
+├── qodana.yml              Qodana profile configuration file
+├── README.md               README
+└── settings.gradle.kts     Gradle project settings
+```
+
+`src` directory is the most important part of the project, the Coder Gateway  implementation and the manifest for the plugin – [plugin.xml][file:plugin.xml].
