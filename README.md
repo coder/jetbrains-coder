@@ -34,6 +34,7 @@ To manually install a local build:
 Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the one specified in `gradle.properties` - `platformVersion`) with the latest plugin changes deployed.
 
 ### Plugin Structure
+
 ```
 .
 ├── .github/                GitHub Actions workflows and Dependabot configuration files
@@ -58,3 +59,23 @@ Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the 
 ```
 
 `src` directory is the most important part of the project, the Coder Gateway  implementation and the manifest for the plugin – [plugin.xml][file:plugin.xml].
+
+### Gradle Configuration Properties
+
+The project-specific configuration file [gradle.properties][file:gradle.properties] contains:
+
+| Property name               | Description                                                                                                   |
+| --------------------------- |---------------------------------------------------------------------------------------------------------------|
+| `pluginGroup`               | Package name, set to `com.coder.gateway`.                                                                     |
+| `pluginName`                | Zip filename.                                                                                                 |
+| `pluginVersion`             | The current version of the plugin in [SemVer](https://semver.org/) format.                                    |
+| `pluginSinceBuild`          | The `since-build` attribute of the `<idea-version>` tag. The minimum Gateway build supported by the plugin    |
+| `pluginUntilBuild`          | The `until-build` attribute of the `<idea-version>` tag. Supported Gateway builds, until & not inclusive      |
+| `platformType`              | The type of IDE distribution, in this GW.                                                                     |
+| `platformVersion`           | The version of the Gateway used to build&run the plugin.                                                      |
+| `platformDownloadSources`   | Gateway sources downloaded while initializing the Gradle build. Note: Gateway does not have open sources      |
+| `platformPlugins`           | Comma-separated list of dependencies to the bundled Gateway plugins and plugins from the Plugin Repositories. |
+| `javaVersion`               | Java language level used to compile sources and generate the files for - Java 11 is required since 2020.3.    |
+| `gradleVersion`             | Version of Gradle used for plugin development.                                                                |
+
+The properties listed define the plugin itself or configure the [gradle-intellij-plugin][gh:gradle-intellij-plugin] – check its documentation for more details.
