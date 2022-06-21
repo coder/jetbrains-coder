@@ -1,3 +1,5 @@
+@file:Suppress("DialogTitleCapitalization")
+
 package com.coder.gateway
 
 import com.coder.gateway.models.RecentWorkspaceConnection

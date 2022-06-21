@@ -1,3 +1,5 @@
+@file:Suppress("DialogTitleCapitalization")
+
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
