@@ -33,7 +33,7 @@ class CoderRestClientService {
      * This must be called before anything else. It will authenticate with coder and retrieve a session token
      * @throws [AuthenticationException] if authentication failed
      */
-    fun initClientSession(url: URL, token: String): User? {
+    fun initClientSession(url: URL, token: String): User {
         val cookieUrl = url.toHttpUrlOrNull()!!
         val cookieJar = JavaNetCookieJar(CookieManager()).apply {
             saveFromResponse(
