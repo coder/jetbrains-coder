@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Path
 
-class CoderCLIManager(private val url: URL, private val buildVersion: String) {
+class CoderCLIManager(private val url: URL, buildVersion: String) {
     private val coderCLIDownloader = CoderCLIDownloader(buildVersion)
 
     fun download(): Path? {
