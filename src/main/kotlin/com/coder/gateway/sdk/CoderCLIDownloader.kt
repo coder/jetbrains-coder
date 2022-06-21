@@ -11,7 +11,7 @@ import java.nio.file.StandardCopyOption
 class CoderCLIDownloader(private val buildVersion: String) {
 
     fun downloadCLI(url: URL, outputName: String, ext: String): Path {
-        val filename = if (ext.isNullOrBlank()) "${outputName}-$buildVersion" else "${outputName}-${buildVersion}.${ext}"
+        val filename = if (ext.isBlank()) "${outputName}-$buildVersion" else "${outputName}-${buildVersion}.${ext}"
         val cliPath = Paths.get(System.getProperty("java.io.tmpdir"), filename)
         if (Files.exists(cliPath)) {
             logger.info("${cliPath.toAbsolutePath()} already exists, skipping download")
