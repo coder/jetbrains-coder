@@ -76,6 +76,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     ide = ideConfig
                 }
                 launch {
+                    @Suppress("UnstableApiUsage")
                     SshDeployFlowUtil.fullDeployCycle(
                         clientLifetime,
                         context,
