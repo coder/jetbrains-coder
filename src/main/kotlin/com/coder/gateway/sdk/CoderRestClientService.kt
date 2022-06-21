@@ -23,8 +23,8 @@ import java.time.Instant
 @Service(Service.Level.APP)
 class CoderRestClientService {
     private lateinit var retroRestClient: CoderV2RestFacade
+    private lateinit var sessionToken: String
     lateinit var coderURL: URL
-    lateinit var sessionToken: String
     lateinit var me: User
     lateinit var buildVersion: String
 
