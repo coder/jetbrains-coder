@@ -1,3 +1,5 @@
+@file:Suppress("DialogTitleCapitalization")
+
 package com.coder.gateway
 
 import com.coder.gateway.models.RecentWorkspaceConnection
@@ -63,7 +65,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 buildNumber = ideBuildNumber
             )
 
-            clientLifetime.launchUnderBackgroundProgress("Coder Gateway Deploy", true, true, null) {
+            clientLifetime.launchUnderBackgroundProgress("Coder Gateway Deploy", canBeCancelled = true, isIndeterminate = true, project = null) {
                 val context = SshMultistagePanelContext().apply {
                     deploy = true
                     sshConfig = sshConfiguration
@@ -74,6 +76,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     ide = ideConfig
                 }
                 launch {
+                    @Suppress("UnstableApiUsage")
                     SshDeployFlowUtil.fullDeployCycle(
                         clientLifetime,
                         context,

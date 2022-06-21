@@ -15,5 +15,21 @@ data class ProvisionerJob(
 )
 
 enum class ProvisionerJobStatus {
-    canceled, canceling, failed, pending, running, succeeded
+    @SerializedName("canceled")
+    CANCELED,
+
+    @SerializedName("canceling")
+    CANCELING,
+
+    @SerializedName("failed")
+    FAILED,
+
+    @SerializedName("pending")
+    PENDING,
+
+    @SerializedName("running")
+    RUNNING,
+
+    @SerializedName("succeeded")
+    SUCCEEDED
 }

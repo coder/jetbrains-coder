@@ -124,7 +124,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                 .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
                 .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
 
-            if (idesWithStatus.isNullOrEmpty()) {
+            if (idesWithStatus.isEmpty()) {
                 logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
             } else {
                 cbIDE.remove(spinner)
@@ -144,9 +144,9 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                     "type" to "coder",
                     "coder_workspace_hostname" to "coder.${wizardModel.selectedWorkspace?.name}",
                     "project_path" to tfProject.text,
-                    "ide_product_code" to "${selectedIDE.product.productCode}",
-                    "ide_build_number" to "${selectedIDE.buildNumber}",
-                    "ide_download_link" to "${selectedIDE.source}",
+                    "ide_product_code" to selectedIDE.product.productCode,
+                    "ide_build_number" to selectedIDE.buildNumber,
+                    "ide_download_link" to selectedIDE.source,
                     "web_terminal_link" to "${terminalLink.url}"
                 )
             )

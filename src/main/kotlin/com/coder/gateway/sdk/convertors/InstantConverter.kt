@@ -32,7 +32,7 @@ class InstantConverter : JsonSerializer<Instant?>, JsonDeserializer<Instant?> {
      * @param typeOfSrc the actual type (fully genericized version) of the source object.
      * @return a JsonElement corresponding to the specified object.
      */
-    override fun serialize(src: Instant?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement? {
+    override fun serialize(src: Instant?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
         return JsonPrimitive(FORMATTER.format(src))
     }
 

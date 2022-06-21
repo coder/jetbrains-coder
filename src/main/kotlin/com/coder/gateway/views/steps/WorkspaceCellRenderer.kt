@@ -51,27 +51,27 @@ class WorkspaceCellRenderer : ListCellRenderer<Workspace> {
     }
 
     private fun iconForStatus(workspace: Workspace) = when (workspace.latestBuild.job.status) {
-        ProvisionerJobStatus.succeeded -> if (workspace.latestBuild.workspaceTransition == WorkspaceBuildTransition.start) GREEN_CIRCLE else RED_CIRCLE
-        ProvisionerJobStatus.running -> when (workspace.latestBuild.workspaceTransition) {
-            WorkspaceBuildTransition.start, WorkspaceBuildTransition.stop, WorkspaceBuildTransition.delete -> GRAY_CIRCLE
+        ProvisionerJobStatus.SUCCEEDED -> if (workspace.latestBuild.workspaceTransition == WorkspaceBuildTransition.START) GREEN_CIRCLE else RED_CIRCLE
+        ProvisionerJobStatus.RUNNING -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.START, WorkspaceBuildTransition.STOP, WorkspaceBuildTransition.DELETE -> GRAY_CIRCLE
         }
         else -> RED_CIRCLE
     }
 
     private fun labelForStatus(workspace: Workspace) = when (workspace.latestBuild.job.status) {
-        ProvisionerJobStatus.pending -> "◍ Queued"
-        ProvisionerJobStatus.running -> when (workspace.latestBuild.workspaceTransition) {
-            WorkspaceBuildTransition.start -> "⦿ Starting"
-            WorkspaceBuildTransition.stop -> "◍ Stopping"
-            WorkspaceBuildTransition.delete -> "⦸ Deleting"
+        ProvisionerJobStatus.PENDING -> "◍ Queued"
+        ProvisionerJobStatus.RUNNING -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.START -> "⦿ Starting"
+            WorkspaceBuildTransition.STOP -> "◍ Stopping"
+            WorkspaceBuildTransition.DELETE -> "⦸ Deleting"
         }
-        ProvisionerJobStatus.succeeded -> when (workspace.latestBuild.workspaceTransition) {
-            WorkspaceBuildTransition.start -> "⦿ Running"
-            WorkspaceBuildTransition.stop -> "◍ Stopped"
-            WorkspaceBuildTransition.delete -> "⦸ Deleted"
+        ProvisionerJobStatus.SUCCEEDED -> when (workspace.latestBuild.workspaceTransition) {
+            WorkspaceBuildTransition.START -> "⦿ Running"
+            WorkspaceBuildTransition.STOP -> "◍ Stopped"
+            WorkspaceBuildTransition.DELETE -> "⦸ Deleted"
         }
-        ProvisionerJobStatus.canceling -> "◍ Canceling action"
-        ProvisionerJobStatus.canceled -> "◍ Canceled action"
-        ProvisionerJobStatus.failed -> "ⓧ Failed"
+        ProvisionerJobStatus.CANCELING -> "◍ Canceling action"
+        ProvisionerJobStatus.CANCELED -> "◍ Canceled action"
+        ProvisionerJobStatus.FAILED -> "ⓧ Failed"
     }
 }

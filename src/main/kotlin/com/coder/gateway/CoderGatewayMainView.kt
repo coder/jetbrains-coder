@@ -25,15 +25,15 @@ class CoderGatewayMainView : GatewayConnector {
         return CoderGatewayBundle.message("gateway.connector.action.text")
     }
 
-    override fun getDescription(): String? {
+    override fun getDescription(): String {
         return CoderGatewayBundle.message("gateway.connector.description")
     }
 
-    override fun getDocumentationLink(): ActionLink? {
+    override fun getDocumentationLink(): ActionLink {
         return BrowserLink(null, "Learn more about Coder Workspaces", null, "https://coder.com/docs/coder/latest/workspaces")
     }
 
-    override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections? {
+    override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections {
         return CoderGatewayRecentWorkspaceConnectionsView()
     }
 

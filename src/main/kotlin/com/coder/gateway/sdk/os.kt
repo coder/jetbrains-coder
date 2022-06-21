@@ -19,9 +19,9 @@ fun getOS(): OS? {
 fun getArch(): Arch? {
     val arch = System.getProperty("os.arch").toLowerCase()
     return when {
-        arch.contains("amd64", true) || arch.contains("x86_64", true) -> Arch.amd64
-        arch.contains("arm64", true) || arch.contains("aarch64", true) -> Arch.arm64
-        arch.contains("armv7", true) -> Arch.armv7
+        arch.contains("amd64", true) || arch.contains("x86_64", true) -> Arch.AMD64
+        arch.contains("arm64", true) || arch.contains("aarch64", true) -> Arch.ARM64
+        arch.contains("armv7", true) -> Arch.ARMV7
         else -> null
     }
 }
@@ -31,5 +31,5 @@ enum class OS {
 }
 
 enum class Arch {
-    amd64, arm64, armv7
+    AMD64, ARM64, ARMV7
 }

@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Path
 
-class CoderCLIManager(private val url: URL, private val buildVersion: String) {
+class CoderCLIManager(private val url: URL, buildVersion: String) {
     private val coderCLIDownloader = CoderCLIDownloader(buildVersion)
 
     fun download(): Path? {
@@ -21,19 +21,19 @@ class CoderCLIManager(private val url: URL, private val buildVersion: String) {
         }
         return when (os) {
             OS.WINDOWS -> when (arch) {
-                Arch.amd64 -> "coder-windows-amd64"
-                Arch.arm64 -> "coder-windows-arm64"
+                Arch.AMD64 -> "coder-windows-amd64"
+                Arch.ARM64 -> "coder-windows-arm64"
                 else -> "coder-windows-amd64"
             }
             OS.LINUX -> when (arch) {
-                Arch.amd64 -> "coder-linux-amd64"
-                Arch.arm64 -> "coder-linux-arm64"
-                Arch.armv7 -> "coder-linux-armv7"
+                Arch.AMD64 -> "coder-linux-amd64"
+                Arch.ARM64 -> "coder-linux-arm64"
+                Arch.ARMV7 -> "coder-linux-armv7"
                 else -> "coder-linux-amd64"
             }
             OS.MAC -> when (arch) {
-                Arch.amd64 -> "coder-darwin-amd64"
-                Arch.arm64 -> "coder-darwin-arm64"
+                Arch.AMD64 -> "coder-darwin-amd64"
+                Arch.ARM64 -> "coder-darwin-arm64"
                 else -> "coder-darwin-amd64"
             }
         }

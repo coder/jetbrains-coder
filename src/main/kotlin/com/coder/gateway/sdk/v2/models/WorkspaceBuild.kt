@@ -24,5 +24,12 @@ data class WorkspaceBuild(
 )
 
 enum class WorkspaceBuildTransition {
-    start, stop, delete
+    @SerializedName("start")
+    START,
+
+    @SerializedName("stop")
+    STOP,
+
+    @SerializedName("delete")
+    DELETE
 }
