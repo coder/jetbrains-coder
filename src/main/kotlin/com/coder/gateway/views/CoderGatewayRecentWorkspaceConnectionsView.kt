@@ -92,7 +92,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                         }.horizontalAlign(HorizontalAlign.LEFT).gap(RightGap.SMALL)
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
                             override fun actionPerformed(e: AnActionEvent) {
-                                BrowserUtil.browse(recentConnections[0]?.webTerminalLink ?: "")
+                                BrowserUtil.browse(recentConnections[0].webTerminalLink ?: "")
                             }
                         })
                     }
@@ -109,7 +109,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
                                         "type" to "coder",
                                         "coder_workspace_hostname" to "${connectionDetails.coderWorkspaceHostname}",
                                         "project_path" to connectionDetails.projectPath!!,
-                                        "ide_product_code" to "${product.productCode}",
+                                        "ide_product_code" to product.productCode,
                                         "ide_build_number" to "${connectionDetails.ideBuildNumber}",
                                         "ide_download_link" to "${connectionDetails.downloadSource}"
                                     )
