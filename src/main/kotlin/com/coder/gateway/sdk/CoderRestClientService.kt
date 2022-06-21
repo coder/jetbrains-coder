@@ -3,7 +3,6 @@ package com.coder.gateway.sdk
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
-import com.coder.gateway.sdk.v2.models.AgentGitSSHKeys
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -82,16 +81,7 @@ class CoderRestClientService {
         return workspacesResponse.body()!!
     }
 
-    fun userSSHKeys(): AgentGitSSHKeys {
-        val sshKeysResponse = retroRestClient.sshKeys().execute()
-        if (!sshKeysResponse.isSuccessful) {
-            throw IllegalStateException("Could not retrieve Coder Workspaces:${sshKeysResponse.code()}, reason: ${sshKeysResponse.message()}")
-        }
-
-        return sshKeysResponse.body()!!
-    }
-
-    fun buildInfo(): BuildInfo {
+    private fun buildInfo(): BuildInfo {
         val buildInfoResponse = retroRestClient.buildInfo().execute()
         if (!buildInfoResponse.isSuccessful) {
             throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $coderURL, reason:${buildInfoResponse.message()}")
