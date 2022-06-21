@@ -30,7 +30,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     private fun setupWizard() {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
 
-        registerStep(CoderAuthStepView())
+        registerStep(CoderAuthStepView { next() })
         registerStep(CoderWorkspacesStepView())
         registerStep(CoderLocateRemoteProjectStepView())
 

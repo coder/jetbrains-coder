@@ -39,7 +39,7 @@ import kotlinx.coroutines.cancel
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Dimension
 
-class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
+class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var model = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
@@ -59,7 +59,11 @@ class CoderAuthStepView : CoderWorkspacesWizardStep, Disposable {
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::coderURL)
+                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::coderURL).applyToComponent {
+                    addActionListener {
+                        nextAction()
+                    }
+                }
                 cell()
             }
         }
