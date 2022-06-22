@@ -14,6 +14,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RowLayout
@@ -21,7 +22,6 @@ import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
@@ -47,7 +47,6 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
-    private val spinner = JLabel("", AnimatedIcon.Default(), SwingConstants.LEFT)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
 
     private lateinit var titleLabel: JLabel
@@ -127,7 +126,6 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
             if (idesWithStatus.isEmpty()) {
                 logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
             } else {
-                cbIDE.remove(spinner)
                 ideComboBoxModel.addAll(idesWithStatus)
                 cbIDE.selectedIndex = 0
             }
@@ -162,18 +160,28 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     private class IDEComboBox(model: ComboBoxModel<IdeWithStatus>) : ComboBox<IdeWithStatus>(model) {
+
+        init {
+            putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
+        }
+
         override fun getSelectedItem(): IdeWithStatus? {
             return super.getSelectedItem() as IdeWithStatus?
         }
     }
 
     private class IDECellRenderer : ListCellRenderer<IdeWithStatus> {
+        private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> = object : ColoredListCellRenderer<IdeWithStatus>() {
+            override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
+                background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                icon = AnimatedIcon.Default.INSTANCE
+                append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.loading.text"))
+            }
+        }
+
         override fun getListCellRendererComponent(list: JList<out IdeWithStatus>?, ideWithStatus: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
             return if (ideWithStatus == null && index == -1) {
-                JPanel().apply {
-                    layout = FlowLayout(FlowLayout.LEFT)
-                    add(JLabel("Retrieving products...", AnimatedIcon.Default(), SwingConstants.LEFT))
-                }
+                loadingComponentRenderer.getListCellRendererComponent(list, null, -1, isSelected, cellHasFocus)
             } else if (ideWithStatus != null) {
                 JPanel().apply {
                     layout = FlowLayout(FlowLayout.LEFT)
@@ -181,10 +189,10 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                     add(JLabel("${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.toLowerCase()}").apply {
                         foreground = UIUtil.getLabelDisabledForeground()
                     })
-                    background = JBUI.CurrentTheme.List.background(isSelected, cellHasFocus)
+                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
                 }
             } else {
-                JPanel()
+                panel {  }
             }
         }
     }
