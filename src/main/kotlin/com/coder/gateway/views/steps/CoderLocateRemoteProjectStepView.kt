@@ -44,7 +44,7 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 
-class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
+class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
@@ -124,6 +124,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                 }
             }
             if (workspaceOS == null) {
+                disableNextAction()
                 cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
                     override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                         background = UIUtil.getListBackground(isSelected, cellHasFocus)
