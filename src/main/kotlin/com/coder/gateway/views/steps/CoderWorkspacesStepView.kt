@@ -20,6 +20,7 @@ import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -81,7 +82,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     override fun dispose() {
-
+        cs.cancel()
     }
 
     companion object {

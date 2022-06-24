@@ -7,6 +7,7 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
@@ -30,12 +31,13 @@ import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import com.jetbrains.rd.util.lifetime.Lifetime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
 
-class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
+class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Disposable {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
@@ -136,5 +138,9 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             border = JBUI.Borders.empty(12, 0, 0, 12)
         }
+    }
+
+    override fun dispose() {
+        cs.cancel()
     }
 }
