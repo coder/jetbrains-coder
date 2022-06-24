@@ -8,6 +8,7 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.components.JBList
@@ -19,6 +20,7 @@ import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -57,7 +59,12 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
 
         cs.launch {
             val workspaceList = withContext(Dispatchers.IO) {
-                coderClient.workspaces()
+                try {
+                    coderClient.workspaces()
+                } catch (e: Exception) {
+                    logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
+                    emptyList()
+                }
             }
             workspaceList.forEach {
                 workspaces.add(it)
@@ -75,6 +82,10 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     }
 
     override fun dispose() {
+        cs.cancel()
+    }
 
+    companion object {
+        val logger = Logger.getInstance(CoderWorkspacesStepView::class.java.simpleName)
     }
 }

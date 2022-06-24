@@ -1,7 +1,8 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
-import com.coder.gateway.sdk.ex.AuthenticationException
+import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.User
@@ -30,7 +31,7 @@ class CoderRestClientService {
 
     /**
      * This must be called before anything else. It will authenticate with coder and retrieve a session token
-     * @throws [AuthenticationException] if authentication failed
+     * @throws [AuthenticationResponseException] if authentication failed.
      */
     fun initClientSession(url: URL, token: String): User {
         val cookieUrl = url.toHttpUrlOrNull()!!
@@ -61,7 +62,7 @@ class CoderRestClientService {
 
         val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
-            throw IllegalStateException("Could not retrieve information about logged use:${userResponse.code()}, reason: ${userResponse.message()}")
+            throw AuthenticationResponseException("Could not retrieve information about logged user:${userResponse.code()}, reason: ${userResponse.message()}")
         }
 
         coderURL = url
@@ -72,10 +73,14 @@ class CoderRestClientService {
         return me
     }
 
+    /**
+     * Retrieves the available workspaces created by the user.
+     * @throws WorkspaceResponseException if workspaces could not be retrieved.
+     */
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces().execute()
         if (!workspacesResponse.isSuccessful) {
-            throw IllegalStateException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
+            throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
         }
 
         return workspacesResponse.body()!!

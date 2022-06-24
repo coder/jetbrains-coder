@@ -32,7 +32,9 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
 
         registerStep(CoderAuthStepView { next() })
         registerStep(CoderWorkspacesStepView())
-        registerStep(CoderLocateRemoteProjectStepView())
+        registerStep(CoderLocateRemoteProjectStepView {
+            nextButton.isVisible = false
+        })
 
         addToBottom(createBackComponent())
 
@@ -64,7 +66,13 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
                 nextButton.text = nextActionText
                 previousButton.text = previousActionText
             }
+            showNavigationButtons()
         }
+    }
+
+    private fun showNavigationButtons() {
+        nextButton.isVisible = true
+        previousButton.isVisible = true
     }
 
     private fun next() {
@@ -81,6 +89,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
                 nextButton.text = nextActionText
                 previousButton.text = previousActionText
             }
+            showNavigationButtons()
         }
     }
 
