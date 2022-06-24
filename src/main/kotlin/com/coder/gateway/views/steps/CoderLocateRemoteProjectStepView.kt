@@ -110,14 +110,27 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
 
         cs.launch {
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-            try {
-                val workspaceOS = withContext(Dispatchers.IO) {
+            val workspaceOS = withContext(Dispatchers.IO) {
+                try {
                     RemoteCredentialsHolder().apply {
                         setHost("coder.${selectedWorkspace.name}")
                         userName = "coder"
                         authType = AuthType.OPEN_SSH
                     }.guessOs
+                } catch (e: Exception) {
+                    logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
+                    null
                 }
+            }
+            if (workspaceOS == null) {
+                cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
+                    override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
+                        background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                        icon = UIUtil.getBalloonErrorIcon()
+                        append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
+                    }
+                }
+            } else {
                 logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
                 val idesWithStatus = IntelliJPlatformProduct.values()
                     .filter { it.showInGateway }
@@ -130,15 +143,6 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                     ideComboBoxModel.addAll(idesWithStatus)
                     cbIDE.selectedIndex = 0
                 }
-            } catch (e: Exception) {
-                logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
-                cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
-                    override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
-                        background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                        icon = UIUtil.getBalloonErrorIcon()
-                        append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
-                    }
-                }
             }
         }
     }
@@ -147,7 +151,6 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
         val selectedIDE = cbIDE.selectedItem ?: return false
 
         cs.launch {
-
             GatewayUI.getInstance().connect(
                 mapOf(
                     "type" to "coder",
@@ -203,7 +206,7 @@ class CoderLocateRemoteProjectStepView : CoderWorkspacesWizardStep, Disposable {
                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
                 }
             } else {
-                panel {  }
+                panel { }
             }
         }
     }

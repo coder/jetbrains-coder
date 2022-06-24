@@ -8,6 +8,7 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.withPath
@@ -89,7 +90,12 @@ class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWiz
         if (pastedToken.isNullOrBlank()) {
             return false
         }
-        coderClient.initClientSession(model.coderURL.toURL(), pastedToken)
+        try {
+            coderClient.initClientSession(model.coderURL.toURL(), pastedToken)
+        } catch (e: AuthenticationResponseException) {
+            logger.error("Could not authenticate on ${model.coderURL}. Reason $e")
+            return false
+        }
         model.token = pastedToken
         model.buildVersion = coderClient.buildVersion
 
