@@ -28,6 +28,9 @@ class LazyBrowserLink(icon: Icon, @Nls text: String) : ActionLink() {
         set(value) {
             field = value
             if (value != null) {
+                actionListeners.forEach {
+                    removeActionListener(it)
+                }
                 addActionListener { BrowserUtil.browse(value) }
 
                 doWithLazyActionManager { instance ->
