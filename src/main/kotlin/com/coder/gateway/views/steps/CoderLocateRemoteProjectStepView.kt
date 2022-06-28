@@ -3,7 +3,9 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
+import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
+import com.coder.gateway.sdk.OS
 import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
@@ -25,6 +27,9 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.UIUtil
 import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
+import com.jetbrains.gateway.ssh.DeployTargetOS
+import com.jetbrains.gateway.ssh.DeployTargetOS.OSArch
+import com.jetbrains.gateway.ssh.DeployTargetOS.OSKind
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
@@ -111,7 +116,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         cs.launch {
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-            val workspaceOS = withContext(Dispatchers.IO) {
+            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) withContext(Dispatchers.IO) { toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) } else withContext(Dispatchers.IO) {
                 try {
                     RemoteCredentialsHolder().apply {
                         setHost("coder.${selectedWorkspace.name}")
@@ -145,6 +150,28 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     ideComboBoxModel.addAll(idesWithStatus)
                     cbIDE.selectedIndex = 0
                 }
+            }
+        }
+    }
+
+    private fun toDeployedOS(os: OS, arch: Arch): DeployTargetOS {
+        return when (os) {
+            OS.LINUX -> when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.Aarch64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.Unknown)
+            }
+
+            OS.WINDOWS -> when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.Aarch64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.Unknown)
+            }
+
+            OS.MAC -> when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.Aarch64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.Unknown)
             }
         }
     }

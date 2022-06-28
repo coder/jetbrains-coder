@@ -2,11 +2,13 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.WorkspaceResourcesResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
@@ -92,5 +94,20 @@ class CoderRestClientService {
             throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $coderURL, reason:${buildInfoResponse.message()}")
         }
         return buildInfoResponse.body()!!
+    }
+
+    /**
+     * Retrieves the workspace agents. A workspace is a collection of objects like, VMs, containers, cloud DBs, etc...
+     * Agents run on compute hosts like VMs or containers.
+     *
+     * @throws WorkspaceResourcesResponseException if workspace resources could not be retrieved.
+     */
+    fun workspaceAgents(workspace: Workspace): List<WorkspaceAgent> {
+        val workspaceResourcesResponse = retroRestClient.workspaceResourceByBuild(workspace.latestBuild.id).execute()
+        if (!workspaceResourcesResponse.isSuccessful) {
+            throw WorkspaceResourcesResponseException("Could not retrieve agents for ${workspace.name} workspace :${workspaceResourcesResponse.code()}, reason: ${workspaceResourcesResponse.message()}")
+        }
+
+        return workspaceResourcesResponse.body()!!.flatMap { it.agents ?: emptyList() }
     }
 }
