@@ -67,7 +67,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                         val agents = coderClient.workspaceAgents(workspace)
                         val shouldContainAgentName = agents.size > 1
                         agents.map { agent ->
-                            val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.operatingSystem}" else workspace.name
+                            val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.name}" else workspace.name
                             WorkspaceAgentModel(
                                 workspaceName,
                                 workspace.latestBuild.job.status,
