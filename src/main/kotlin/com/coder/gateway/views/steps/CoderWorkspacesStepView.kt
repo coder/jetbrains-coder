@@ -73,8 +73,8 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                                 workspace.latestBuild.job.status,
                                 workspace.latestBuild.workspaceTransition,
                                 OS.from(agent.operatingSystem),
-                                Arch.from(agent.architecture)
-
+                                Arch.from(agent.architecture),
+                                agent.directory
                             )
                         }
                     }

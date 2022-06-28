@@ -12,5 +12,6 @@ data class WorkspaceAgentModel(
     val buildTransition: WorkspaceBuildTransition,
 
     val agentOS: OS?,
-    val agentArch: Arch?
+    val agentArch: Arch?,
+    val homeDirectory: String?
 )

@@ -19,6 +19,6 @@ data class WorkspaceAgent(
     @SerializedName("environment_variables") val envVariables: Map<String, String>,
     @SerializedName("operating_system") val operatingSystem: String,
     @SerializedName("startup_script") val startupScript: String,
-    @SerializedName("directory") val directory: String,
+    @SerializedName("directory") val directory: String?,
     @SerializedName("apps") val apps: List<WorkspaceApp>
 )

@@ -82,10 +82,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 label("Project directory:")
                 tfProject = textField()
                     .resizableColumn()
-                    .horizontalAlign(HorizontalAlign.FILL)
-                    .applyToComponent {
-                        this.text = "/home/coder/workspace/"
-                    }.component
+                    .horizontalAlign(HorizontalAlign.FILL).component
                 cell()
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
             row {
@@ -111,6 +108,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             return
         }
 
+        tfProject.text = if (selectedWorkspace.homeDirectory.isNullOrBlank()) "/home" else selectedWorkspace.homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
         terminalLink.url = "${coderClient.coderURL}/@${coderClient.me.username}/${selectedWorkspace.name}.coder/terminal"
 
