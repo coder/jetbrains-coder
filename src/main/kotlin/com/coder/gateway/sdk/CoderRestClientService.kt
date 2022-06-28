@@ -2,6 +2,7 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.WorkspaceResourcesResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
@@ -95,10 +96,14 @@ class CoderRestClientService {
         return buildInfoResponse.body()!!
     }
 
+    /**
+     * Retrieves the workspace resources (a workspace is a collection of ojects like, VMs, containers, cloud DBs, etc...)
+     * @throws WorkspaceResourcesResponseException if workspace resources could not be retrieved.
+     */
     fun workspaceResources(workspace: Workspace): List<WorkspaceResource> {
         val workspaceResourcesResponse = retroRestClient.workspaceResourceByBuild(workspace.latestBuild.id).execute()
         if (!workspaceResourcesResponse.isSuccessful) {
-            throw IllegalStateException("Could not retrieve resources for ${workspace.name} workspace :${workspaceResourcesResponse.code()}, reason: ${workspaceResourcesResponse.message()}")
+            throw WorkspaceResourcesResponseException("Could not retrieve resources for ${workspace.name} workspace :${workspaceResourcesResponse.code()}, reason: ${workspaceResourcesResponse.message()}")
         }
 
         return workspaceResourcesResponse.body()!!
