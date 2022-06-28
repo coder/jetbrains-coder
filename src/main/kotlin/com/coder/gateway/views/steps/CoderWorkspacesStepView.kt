@@ -3,8 +3,10 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
+import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
-import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.OS
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -28,7 +30,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
 
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
-    private var workspaces = CollectionListModel<Workspace>()
+    private var workspaces = CollectionListModel<WorkspaceAgentModel>()
     private var workspacesView = JBList(workspaces)
 
     private lateinit var wizard: CoderWorkspacesWizardModel
@@ -60,7 +62,22 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         cs.launch {
             val workspaceList = withContext(Dispatchers.IO) {
                 try {
-                    coderClient.workspaces()
+                    val workspaces = coderClient.workspaces()
+                    return@withContext workspaces.flatMap { workspace ->
+                        val agents = coderClient.workspaceAgents(workspace)
+                        val shouldContainAgentName = agents.size > 1
+                        agents.map { agent ->
+                            val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.operatingSystem}" else workspace.name
+                            WorkspaceAgentModel(
+                                workspaceName,
+                                workspace.latestBuild.job.status,
+                                workspace.latestBuild.workspaceTransition,
+                                OS.from(agent.operatingSystem),
+                                Arch.from(agent.operatingSystem)
+
+                            )
+                        }
+                    }
                 } catch (e: Exception) {
                     logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
                     emptyList()

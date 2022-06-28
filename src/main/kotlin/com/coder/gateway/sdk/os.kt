@@ -1,35 +1,48 @@
 package com.coder.gateway.sdk
 
 fun getOS(): OS? {
-    val os = System.getProperty("os.name").toLowerCase()
-    return when {
-        os.contains("win", true) -> {
-            OS.WINDOWS
-        }
-        os.contains("nix", true) || os.contains("nux", true) || os.contains("aix", true) -> {
-            OS.LINUX
-        }
-        os.contains("mac", true) -> {
-            OS.MAC
-        }
-        else -> null
-    }
+    return OS.from(System.getProperty("os.name"))
 }
 
 fun getArch(): Arch? {
-    val arch = System.getProperty("os.arch").toLowerCase()
-    return when {
-        arch.contains("amd64", true) || arch.contains("x86_64", true) -> Arch.AMD64
-        arch.contains("arm64", true) || arch.contains("aarch64", true) -> Arch.ARM64
-        arch.contains("armv7", true) -> Arch.ARMV7
-        else -> null
-    }
+    return Arch.from(System.getProperty("os.arch").toLowerCase())
 }
 
 enum class OS {
-    WINDOWS, LINUX, MAC
+    WINDOWS, LINUX, MAC;
+
+    companion object {
+        fun from(os: String): OS? {
+            return when {
+                os.contains("win", true) -> {
+                    WINDOWS
+                }
+
+                os.contains("nix", true) || os.contains("nux", true) || os.contains("aix", true) -> {
+                    LINUX
+                }
+
+                os.contains("mac", true) -> {
+                    MAC
+                }
+
+                else -> null
+            }
+        }
+    }
 }
 
 enum class Arch {
-    AMD64, ARM64, ARMV7
+    AMD64, ARM64, ARMV7;
+
+    companion object {
+        fun from(arch: String): Arch? {
+            return when {
+                arch.contains("amd64", true) || arch.contains("x86_64", true) -> AMD64
+                arch.contains("arm64", true) || arch.contains("aarch64", true) -> ARM64
+                arch.contains("armv7", true) -> ARMV7
+                else -> null
+            }
+        }
+    }
 }

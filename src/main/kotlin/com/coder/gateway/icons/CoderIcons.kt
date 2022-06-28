@@ -9,9 +9,10 @@ object CoderIcons {
 
     val OPEN_TERMINAL = IconLoader.getIcon("open_terminal.svg", javaClass)
 
-    val UBUNTU = IconLoader.getIcon("ubuntu.svg", javaClass)
-    val CENTOS = IconLoader.getIcon("centos.svg", javaClass)
+    val WINDOWS = IconLoader.getIcon("windows.svg", javaClass)
+    val MACOS = IconLoader.getIcon("macOS.svg", javaClass)
     val LINUX = IconLoader.getIcon("linux.svg", javaClass)
+    val UNKNOWN = IconLoader.getIcon("unknown.svg", javaClass)
 
     val GREEN_CIRCLE = IconLoader.getIcon("green_circle.svg", javaClass)
     val GRAY_CIRCLE = IconLoader.getIcon("gray_circle.svg", javaClass)
