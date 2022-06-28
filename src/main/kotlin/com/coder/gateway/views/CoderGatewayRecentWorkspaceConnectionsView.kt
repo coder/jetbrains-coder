@@ -3,14 +3,17 @@
 package com.coder.gateway.views
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.DocumentAdapter
@@ -25,6 +28,7 @@ import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayRecentConnections
 import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
@@ -41,43 +45,69 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
-    private val contentPanel = JBScrollPane()
+    private val rootPanel = BorderLayoutPanel()
+    private lateinit var contentPanel: DialogPanel
+    private val recentWorkspacesContentPanel = JBScrollPane()
 
     private lateinit var searchBar: SearchTextField
 
-    override val id = "CoderGatewayRecentConnections"
+    override val id = CoderGatewayConstants.GATEWAY_RECENT_CONNECTIONS_ID
 
     override val recentsIcon = CoderIcons.LOGO_16
 
     override fun createRecentsView(lifetime: Lifetime): JComponent {
-        return panel {
+        contentPanel = panel {
             indent {
                 row {
                     label(CoderGatewayBundle.message("gateway.connector.recentconnections.title")).applyToComponent {
                         font = JBFont.h3().asBold()
                     }
-                    searchBar = cell(SearchTextField(false)).applyToComponent {
-                        minimumSize = Dimension(350, -1)
-                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                    }.horizontalAlign(HorizontalAlign.RIGHT).component
-                    searchBar.addDocumentListener(object : DocumentAdapter() {
-                        override fun textChanged(e: DocumentEvent) {
-                            val toSearchFor = searchBar.text
-                            val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
-                            updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
+                    panel {
+                        row {
+                            searchBar = cell(SearchTextField(false)).applyToComponent {
+                                minimumSize = Dimension(350, -1)
+                                textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                                addDocumentListener(object : DocumentAdapter() {
+                                    override fun textChanged(e: DocumentEvent) {
+                                        val toSearchFor = this@applyToComponent.text
+                                        val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
+                                        updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
+                                    }
+                                })
+                            }.component
+
+                            actionButton(
+                                object : DumbAwareAction("Open a new Coder Workspace", null, AllIcons.General.Add) {
+                                    override fun actionPerformed(e: AnActionEvent) {
+                                        rootPanel.apply {
+                                            removeAll()
+                                            addToCenter(CoderGatewayConnectorWizardWrapperView {
+                                                rootPanel.apply {
+                                                    removeAll()
+                                                    addToCenter(contentPanel)
+                                                    updateUI()
+                                                }
+                                            }.component)
+                                            updateUI()
+                                        }
+                                    }
+                                },
+                            ).gap(RightGap.SMALL)
                         }
-                    })
+                    }.horizontalAlign(HorizontalAlign.RIGHT)
                 }.bottomGap(BottomGap.MEDIUM)
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
                     resizableRow()
-                    cell(contentPanel).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL).component
+                    cell(recentWorkspacesContentPanel).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL).component
                 }
             }
         }.apply {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             border = JBUI.Borders.empty(12, 0, 0, 12)
         }
+
+        return rootPanel.addToCenter(contentPanel)
     }
 
     override fun getRecentsTitle() = CoderGatewayBundle.message("gateway.connector.title")
@@ -87,7 +117,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
     }
 
     private fun updateContentView(groupedConnections: Map<String?, List<RecentWorkspaceConnection>>) {
-        contentPanel.viewport.view = panel {
+        recentWorkspacesContentPanel.viewport.view = panel {
             groupedConnections.entries.forEach { (hostname, recentConnections) ->
                 row {
                     if (hostname != null) {
