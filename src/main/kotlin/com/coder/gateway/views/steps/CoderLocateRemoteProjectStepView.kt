@@ -116,7 +116,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         cs.launch {
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
+            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) withContext(Dispatchers.IO) { toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) } else withContext(Dispatchers.IO) {
                 try {
                     RemoteCredentialsHolder().apply {
                         setHost("coder.${selectedWorkspace.name}")
