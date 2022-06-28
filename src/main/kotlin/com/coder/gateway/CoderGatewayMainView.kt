@@ -14,6 +14,8 @@ import javax.swing.Icon
 import javax.swing.JComponent
 
 class CoderGatewayMainView : GatewayConnector {
+    override fun getConnectorId() = CoderGatewayConstants.GATEWAY_CONNECTOR_ID
+
     override val icon: Icon
         get() = CoderIcons.LOGO
 
