@@ -7,6 +7,7 @@ import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
@@ -92,5 +93,14 @@ class CoderRestClientService {
             throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $coderURL, reason:${buildInfoResponse.message()}")
         }
         return buildInfoResponse.body()!!
+    }
+
+    fun workspaceResources(workspace: Workspace): List<WorkspaceResource> {
+        val workspaceResourcesResponse = retroRestClient.workspaceResourceByBuild(workspace.latestBuild.id).execute()
+        if (!workspaceResourcesResponse.isSuccessful) {
+            throw IllegalStateException("Could not retrieve resources for ${workspace.name} workspace :${workspaceResourcesResponse.code()}, reason: ${workspaceResourcesResponse.message()}")
+        }
+
+        return workspaceResourcesResponse.body()!!
     }
 }
