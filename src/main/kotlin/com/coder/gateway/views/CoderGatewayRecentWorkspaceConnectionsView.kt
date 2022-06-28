@@ -77,7 +77,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                             }.component
 
                             actionButton(
-                                object : DumbAwareAction("Open a new Coder Workspace", null, AllIcons.General.Add) {
+                                object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
                                     override fun actionPerformed(e: AnActionEvent) {
                                         rootPanel.apply {
                                             removeAll()
