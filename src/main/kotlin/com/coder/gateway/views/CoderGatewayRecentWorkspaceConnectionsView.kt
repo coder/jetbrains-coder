@@ -145,7 +145,8 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                                         "project_path" to connectionDetails.projectPath!!,
                                         "ide_product_code" to product.productCode,
                                         "ide_build_number" to "${connectionDetails.ideBuildNumber}",
-                                        "ide_download_link" to "${connectionDetails.downloadSource}"
+                                        "ide_download_link" to "${connectionDetails.downloadSource}",
+                                        "web_terminal_link" to "${connectionDetails.webTerminalLink}"
                                     )
                                 )
                             }
