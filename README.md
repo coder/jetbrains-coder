@@ -105,3 +105,19 @@ A final report is available in the `./build/reports/inspections/` directory.
 ### Plugin compatibility
 
 `./gradlew runPluginVerifier` can check the plugin compatibility against the specified Gateway. The integration with Github Actions is commented until [this gradle intellij plugin issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed.
+
+## Continuous integration
+
+In the `.github/workflows` directory, you can find definitions for the following GitHub Actions workflows:
+
+- [Build](.github/workflows/build.yml)
+  - Triggered on `push` and `pull_request` events.
+  - Runs the *Gradle Wrapper Validation Action* to verify the wrapper's checksum.
+  - Runs the `verifyPlugin` and `test` Gradle tasks.
+  - Builds the plugin with the `buildPlugin` Gradle task and provides the artifact for the next jobs in the workflow.
+  - ~~Verifies the plugin using the *IntelliJ Plugin Verifier* tool.~~ (this is commented until [this issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed)
+  - Prepares a draft release of the GitHub Releases page for manual verification.
+- [Release](.github/workflows/release.yml)
+  - Triggered on `Publish release` event.
+  - Updates `CHANGELOG.md` file with the content provided with the release note.
+  - Pat
