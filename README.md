@@ -36,7 +36,6 @@ Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the 
 ### Plugin Structure
 
 ```
-.
 ├── .github/                GitHub Actions workflows and Dependabot configuration files
 ├── gradle
 │   └── wrapper/            Gradle Wrapper
@@ -58,11 +57,11 @@ Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the 
 └── settings.gradle.kts     Gradle project settings
 ```
 
-`src` directory is the most important part of the project, the Coder Gateway  implementation and the manifest for the plugin – [plugin.xml][file:plugin.xml].
+`src` directory is the most important part of the project, the Coder Gateway  implementation and the manifest for the plugin – [`plugin.xml`](src/main/resources/META-INF/plugin.xml).
 
 ### Gradle Configuration Properties
 
-The project-specific configuration file [gradle.properties][file:gradle.properties] contains:
+The project-specific configuration file [`gradle.properties`](gradle.properties) contains:
 
 | Property name               | Description                                                                                                   |
 | --------------------------- |---------------------------------------------------------------------------------------------------------------|
@@ -78,7 +77,7 @@ The project-specific configuration file [gradle.properties][file:gradle.properti
 | `javaVersion`               | Java language level used to compile sources and generate the files for - Java 11 is required since 2020.3.    |
 | `gradleVersion`             | Version of Gradle used for plugin development.                                                                |
 
-The properties listed define the plugin itself or configure the [gradle-intellij-plugin][gh:gradle-intellij-plugin] – check its documentation for more details.
+The properties listed define the plugin itself or configure the [gradle-intellij-plugin](https://github.com/JetBrains/gradle-intellij-plugin) – check its documentation for more details.
 
 ### Testing
 
@@ -91,9 +90,9 @@ Code quality is monitored with the help of [Qodana](https://www.jetbrains.com/qo
 Qodana inspections are accessible within the project on two levels:
 
 - using the [Qodana IntelliJ GitHub Action][docs:qodana-github-action], run automatically within the [Build](.github/workflows/build.yml) workflow,
-- with the [Gradle Qodana Plugin][gh:gradle-qodana-plugin], so you can use it on the local environment or any CI other than GitHub Actions.
+- with the [Gradle Qodana Plugin](https://github.com/JetBrains/gradle-qodana-plugin), so you can use it on the local environment or any CI other than GitHub Actions.
 
-Qodana inspection is configured with the `qodana { ... }` section in the [Gradle build file][file:build.gradle.kts] and [`qodana.yml`][file:qodana.yml] YAML configuration file.
+Qodana inspection is configured with the `qodana { ... }` section in the [Gradle build file](build.gradle.kts) and [`qodana.yml`](qodana.yml) YAML configuration file.
 
 > **NOTE:** Qodana requires Docker to be installed and available in your environment.
 
@@ -101,8 +100,8 @@ To run inspections, you can use a predefined *Run Qodana* configuration, which w
 
 A final report is available in the `./build/reports/inspections/` directory.
 
-![Qodana][file:qodana.png]
+![Qodana](.github/readme/qodana.png)
 
 ### Plugin compatibility
 
-`./gradlew runPluginVerifier` can check the plugin compatibility against the specified Gateway. The integration with Githug Actions is commented until [this gradle intellij plugin issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed.
+`./gradlew runPluginVerifier` can check the plugin compatibility against the specified Gateway. The integration with Github Actions is commented until [this gradle intellij plugin issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed.
