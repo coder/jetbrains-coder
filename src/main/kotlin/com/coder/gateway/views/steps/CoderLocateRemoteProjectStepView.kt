@@ -137,10 +137,12 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 }
             } else {
                 logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
-                val idesWithStatus = IntelliJPlatformProduct.values()
-                    .filter { it.showInGateway }
-                    .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
-                    .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
+                val idesWithStatus = withContext(Dispatchers.IO) {
+                    IntelliJPlatformProduct.values()
+                        .filter { it.showInGateway }
+                        .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
+                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
+                }
 
                 if (idesWithStatus.isEmpty()) {
                     logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
