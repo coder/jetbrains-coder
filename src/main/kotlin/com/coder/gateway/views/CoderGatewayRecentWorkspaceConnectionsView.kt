@@ -62,39 +62,36 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                     label(CoderGatewayBundle.message("gateway.connector.recentconnections.title")).applyToComponent {
                         font = JBFont.h3().asBold()
                     }
-                    panel {
-                        row {
-                            searchBar = cell(SearchTextField(false)).applyToComponent {
-                                minimumSize = Dimension(350, -1)
-                                textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                                addDocumentListener(object : DocumentAdapter() {
-                                    override fun textChanged(e: DocumentEvent) {
-                                        val toSearchFor = this@applyToComponent.text
-                                        val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
-                                        updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
-                                    }
-                                })
-                            }.component
+                    label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
+                    searchBar = cell(SearchTextField(false)).applyToComponent {
+                        minimumSize = Dimension(350, -1)
+                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                        addDocumentListener(object : DocumentAdapter() {
+                            override fun textChanged(e: DocumentEvent) {
+                                val toSearchFor = this@applyToComponent.text
+                                val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
+                                updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
+                            }
+                        })
+                    }.component
 
-                            actionButton(
-                                object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
-                                    override fun actionPerformed(e: AnActionEvent) {
+                    actionButton(
+                        object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                rootPanel.apply {
+                                    removeAll()
+                                    addToCenter(CoderGatewayConnectorWizardWrapperView {
                                         rootPanel.apply {
                                             removeAll()
-                                            addToCenter(CoderGatewayConnectorWizardWrapperView {
-                                                rootPanel.apply {
-                                                    removeAll()
-                                                    addToCenter(contentPanel)
-                                                    updateUI()
-                                                }
-                                            }.component)
+                                            addToCenter(contentPanel)
                                             updateUI()
                                         }
-                                    }
-                                },
-                            ).gap(RightGap.SMALL)
-                        }
-                    }.horizontalAlign(HorizontalAlign.RIGHT)
+                                    }.component)
+                                    updateUI()
+                                }
+                            }
+                        },
+                    ).gap(RightGap.SMALL)
                 }.bottomGap(BottomGap.MEDIUM)
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
@@ -145,7 +142,8 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                                         "project_path" to connectionDetails.projectPath!!,
                                         "ide_product_code" to product.productCode,
                                         "ide_build_number" to "${connectionDetails.ideBuildNumber}",
-                                        "ide_download_link" to "${connectionDetails.downloadSource}"
+                                        "ide_download_link" to "${connectionDetails.downloadSource}",
+                                        "web_terminal_link" to "${connectionDetails.webTerminalLink}"
                                     )
                                 )
                             }
