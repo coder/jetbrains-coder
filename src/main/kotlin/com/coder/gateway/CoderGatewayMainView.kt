@@ -32,7 +32,7 @@ class CoderGatewayMainView : GatewayConnector {
     }
 
     override fun getDocumentationLink(): ActionLink {
-        return BrowserLink(null, "Learn more about Coder Workspaces", null, "https://coder.com/docs/coder/latest/workspaces")
+        return BrowserLink("Learn more about Coder Workspaces", "https://coder.com/docs/coder/latest/workspaces")
     }
 
     override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections {
