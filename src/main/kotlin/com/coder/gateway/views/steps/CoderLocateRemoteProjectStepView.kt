@@ -33,7 +33,7 @@ import com.jetbrains.gateway.ssh.DeployTargetOS.OSKind
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
-import com.jetbrains.gateway.ssh.guessOs
+import com.jetbrains.gateway.ssh.SshCommandsExecutor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -116,11 +116,12 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
             val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) withContext(Dispatchers.IO) { toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) } else withContext(Dispatchers.IO) {
                 try {
-                    RemoteCredentialsHolder().apply {
+                    val credentialsHolder = RemoteCredentialsHolder().apply {
                         setHost("coder.${selectedWorkspace.name}")
                         userName = "coder"
                         authType = AuthType.OPEN_SSH
-                    }.guessOs
+                    }
+                    SshCommandsExecutor.Companion.create(credentialsHolder).guessOs()
                 } catch (e: Exception) {
                     logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                     null
@@ -141,7 +142,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     IntelliJPlatformProduct.values()
                         .filter { it.showInGateway }
                         .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
-                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
+                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion) }
                 }
 
                 if (idesWithStatus.isEmpty()) {
@@ -187,7 +188,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     "project_path" to tfProject.text,
                     "ide_product_code" to selectedIDE.product.productCode,
                     "ide_build_number" to selectedIDE.buildNumber,
-                    "ide_download_link" to selectedIDE.source,
+                    "ide_download_link" to selectedIDE.download!!.toJson(),
                     "web_terminal_link" to "${terminalLink.url}"
                 )
             )

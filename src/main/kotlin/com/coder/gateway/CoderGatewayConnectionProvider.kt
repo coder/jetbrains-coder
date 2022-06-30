@@ -14,11 +14,11 @@ import com.intellij.ssh.config.unified.SshConfig
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
+import com.jetbrains.gateway.ssh.Download
 import com.jetbrains.gateway.ssh.IdeInfo
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import com.jetbrains.gateway.ssh.SshCommandsExecutor
 import com.jetbrains.gateway.ssh.SshDeployFlowUtil
-import com.jetbrains.gateway.ssh.SshDownloadMethod
 import com.jetbrains.gateway.ssh.SshMultistagePanelContext
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import kotlinx.coroutines.launch
@@ -71,8 +71,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     sshConfig = sshConfiguration
                     remoteProjectPath = projectPath
                     remoteCommandsExecutor = SshCommandsExecutor.Companion.create(credentials)
-                    downloadMethod = SshDownloadMethod.CustomizedLink
-                    customDownloadLink = ideDownloadLink
+                    download = Download.fromJson(ideDownloadLink)
                     ide = ideConfig
                 }
                 launch {
@@ -98,6 +97,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             )
 
             return object : GatewayConnectionHandle(clientLifetime) {
+                @Deprecated("Implement customComponentProvider instead to provide better UI/UX without default controls")
                 override fun createComponent(): JComponent {
                     return CoderGatewayConnectionComponent(clientLifetime, coderWorkspaceHostname)
                 }
