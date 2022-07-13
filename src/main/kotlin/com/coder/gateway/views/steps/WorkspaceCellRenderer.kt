@@ -9,6 +9,7 @@ import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import java.awt.Component
 import javax.swing.JList
@@ -23,11 +24,12 @@ class WorkspaceCellRenderer : ListCellRenderer<WorkspaceAgentModel> {
                     icon(iconForImageTag(workspace))
                     label(workspace.name).applyToComponent {
                         font = JBFont.h3()
-                    }
+                    }.resizableColumn().horizontalAlign(HorizontalAlign.FILL)
                     panel {
                         row {
                             icon(iconForStatus(workspace))
                             label(labelForStatus(workspace))
+                            cell()
                         }
                     }
                 }
@@ -43,7 +45,7 @@ class WorkspaceCellRenderer : ListCellRenderer<WorkspaceAgentModel> {
         }
     }
 
-    private fun iconForImageTag(workspace: WorkspaceAgentModel) = when (workspace?.agentOS) {
+    private fun iconForImageTag(workspace: WorkspaceAgentModel) = when (workspace.agentOS) {
         OS.LINUX -> CoderIcons.LINUX
         OS.WINDOWS -> CoderIcons.WINDOWS
         OS.MAC -> CoderIcons.MACOS
