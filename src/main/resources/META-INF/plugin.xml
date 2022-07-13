@@ -7,7 +7,10 @@
     <!-- Product and plugin compatibility requirements -->
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
-    <depends>com.jetbrains.gateway</depends>
+
+    <!-- TODO: enable this when https://youtrack.jetbrains.com/issue/GTW-1528/Plugin-depends-on-unknown-plugin-comjetbrainsgateway is fixed-->
+    <!-- depends>com.jetbrains.gateway</depends>-->
+
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.coder.gateway.sdk.CoderRestClientService"></applicationService>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"></applicationService>
