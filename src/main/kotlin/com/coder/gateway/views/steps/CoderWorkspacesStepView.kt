@@ -20,6 +20,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -44,7 +45,12 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 }
             }.bottomGap(BottomGap.MEDIUM)
             row {
-                scrollCell(workspacesView).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                scrollCell(workspacesView).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL).applyToComponent {
+                    border = JBUI.Borders.customLine(
+                        WelcomeScreenUIManager.getSeparatorColor(),
+                        1, 1, 1, 1
+                    )
+                }
                 cell()
             }.topGap(TopGap.NONE).resizableRow()
 

@@ -5,9 +5,11 @@ import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
+import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Component
 import javax.swing.JList
@@ -35,6 +37,11 @@ class WorkspaceCellRenderer : ListCellRenderer<WorkspaceAgentModel> {
                 }
             }
         }.apply {
+            border = JBUI.Borders.customLine(
+                WelcomeScreenUIManager.getSeparatorColor(),
+                0, 0, 1, 0
+            )
+
             if (isSelected) {
                 background = list.selectionBackground
                 foreground = list.selectionForeground
