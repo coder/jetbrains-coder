@@ -7,6 +7,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 
 data class WorkspaceAgentModel(
     val name: String,
+    val templateName: String,
 
     val jobStatus: ProvisionerJobStatus,
     val buildTransition: WorkspaceBuildTransition,
