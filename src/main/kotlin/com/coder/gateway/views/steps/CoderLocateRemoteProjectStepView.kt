@@ -146,7 +146,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     IntelliJPlatformProduct.values()
                         .filter { it.showInGateway }
                         .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
-                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
+                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion) }
                 }
 
                 if (idesWithStatus.isEmpty()) {
