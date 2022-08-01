@@ -92,6 +92,11 @@ tasks {
         compilerVersion.set(properties("instrumentationCompiler"))
     }
 
+    // TODO - this fails with linkage error, remove when it works
+    buildSearchableOptions {
+        isEnabled = false
+    }
+
     patchPluginXml {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))

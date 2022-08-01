@@ -30,10 +30,11 @@ import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
 import com.jetbrains.gateway.ssh.DeployTargetOS
 import com.jetbrains.gateway.ssh.DeployTargetOS.OSArch
 import com.jetbrains.gateway.ssh.DeployTargetOS.OSKind
+import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
-import com.jetbrains.gateway.ssh.guessOs
+import com.jetbrains.gateway.ssh.deploy.guessOs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -116,11 +117,15 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
             val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) withContext(Dispatchers.IO) { toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) } else withContext(Dispatchers.IO) {
                 try {
-                    RemoteCredentialsHolder().apply {
+                    val credentialsHolder = RemoteCredentialsHolder().apply {
                         setHost("coder.${selectedWorkspace.name}")
                         userName = "coder"
                         authType = AuthType.OPEN_SSH
-                    }.guessOs
+                    }
+                    HighLevelHostAccessor.create(
+                        credentialsHolder,
+                        true
+                    ).hostCommandExecutor.guessOs()
                 } catch (e: Exception) {
                     logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                     null
@@ -141,7 +146,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     IntelliJPlatformProduct.values()
                         .filter { it.showInGateway }
                         .flatMap { CachingProductsJsonWrapper.getAvailableIdes(it, workspaceOS) }
-                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.downloadLink, ide.presentableVersion) }
+                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion) }
                 }
 
                 if (idesWithStatus.isEmpty()) {
@@ -158,20 +163,20 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
         return when (os) {
             OS.LINUX -> when (arch) {
                 Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.Aarch64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.Unknown)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.UNKNOWN)
             }
 
             OS.WINDOWS -> when (arch) {
                 Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.Aarch64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.Unknown)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.UNKNOWN)
             }
 
             OS.MAC -> when (arch) {
                 Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.Aarch64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.Unknown)
+                Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.UNKNOWN)
             }
         }
     }
@@ -187,7 +192,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     "project_path" to tfProject.text,
                     "ide_product_code" to selectedIDE.product.productCode,
                     "ide_build_number" to selectedIDE.buildNumber,
-                    "ide_download_link" to selectedIDE.source,
+                    "ide_download_link" to selectedIDE.download!!.link,
                     "web_terminal_link" to "${terminalLink.url}"
                 )
             )
