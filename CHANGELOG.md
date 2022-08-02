@@ -7,7 +7,7 @@
 - `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
 
 ### Changed
-- links to documentation now point to latest Coder OSS
+- links to documentation now point to the latest Coder OSS
 - simplified main action link text from `Connect to Coder Workspaces` to `Connect to Coder`
 
 ## [2.0.0]
