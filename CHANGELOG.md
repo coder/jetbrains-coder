@@ -3,6 +3,8 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Fixed
+- `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
 
 ## [2.0.0]
 ### Added

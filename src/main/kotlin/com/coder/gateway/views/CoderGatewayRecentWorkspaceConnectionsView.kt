@@ -39,6 +39,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.Dimension
 import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
 
 class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Disposable {
@@ -62,36 +63,42 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                     label(CoderGatewayBundle.message("gateway.connector.recentconnections.title")).applyToComponent {
                         font = JBFont.h3().asBold()
                     }
-                    label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
-                    searchBar = cell(SearchTextField(false)).applyToComponent {
-                        minimumSize = Dimension(350, -1)
-                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                        addDocumentListener(object : DocumentAdapter() {
-                            override fun textChanged(e: DocumentEvent) {
-                                val toSearchFor = this@applyToComponent.text
-                                val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
-                                updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
-                            }
-                        })
-                    }.component
-
-                    actionButton(
-                        object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                rootPanel.apply {
-                                    removeAll()
-                                    addToCenter(CoderGatewayConnectorWizardWrapperView {
-                                        rootPanel.apply {
-                                            removeAll()
-                                            addToCenter(contentPanel)
-                                            updateUI()
+                    panel {
+                        indent {
+                            row {
+                                cell(JLabel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL)
+                                searchBar = cell(SearchTextField(false)).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
+                                    minimumSize = Dimension(350, -1)
+                                    textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                                    addDocumentListener(object : DocumentAdapter() {
+                                        override fun textChanged(e: DocumentEvent) {
+                                            val toSearchFor = this@applyToComponent.text
+                                            val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
+                                            updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
                                         }
-                                    }.component)
-                                    updateUI()
-                                }
+                                    })
+                                }.component
+
+                                actionButton(
+                                    object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
+                                        override fun actionPerformed(e: AnActionEvent) {
+                                            rootPanel.apply {
+                                                removeAll()
+                                                addToCenter(CoderGatewayConnectorWizardWrapperView {
+                                                    rootPanel.apply {
+                                                        removeAll()
+                                                        addToCenter(contentPanel)
+                                                        updateUI()
+                                                    }
+                                                }.component)
+                                                updateUI()
+                                            }
+                                        }
+                                    },
+                                ).gap(RightGap.SMALL)
                             }
-                        },
-                    ).gap(RightGap.SMALL)
+                        }
+                    }
                 }.bottomGap(BottomGap.MEDIUM)
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
