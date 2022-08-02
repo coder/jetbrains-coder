@@ -6,6 +6,9 @@
 ### Fixed
 - `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
 
+### Changed
+- links to documentation now point to latest Coder OSS
+
 ## [2.0.0]
 ### Added
 - support for Gateway 2022.2
