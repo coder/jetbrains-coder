@@ -11,6 +11,7 @@
 ### Changed
 - links to documentation now point to the latest Coder OSS
 - simplified main action link text from `Connect to Coder Workspaces` to `Connect to Coder`
+- minimum supported Gateway build is now 222.3739.24
 
 ## [2.0.0]
 ### Added
