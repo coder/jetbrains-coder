@@ -57,7 +57,7 @@ class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWiz
                 cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.login.comment.text"), false, -1, true))
             }
             row {
-                browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder/latest/workspaces")
+                browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
                 textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(model::coderURL).applyToComponent {

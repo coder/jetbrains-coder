@@ -8,6 +8,7 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
+import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
@@ -87,23 +88,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         cs.launch {
             val workspaceList = withContext(Dispatchers.IO) {
                 try {
-                    val workspaces = coderClient.workspaces()
-                    return@withContext workspaces.flatMap { workspace ->
-                        val agents = coderClient.workspaceAgents(workspace)
-                        val shouldContainAgentName = agents.size > 1
-                        agents.map { agent ->
-                            val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.name}" else workspace.name
-                            WorkspaceAgentModel(
-                                workspaceName,
-                                workspace.templateName,
-                                workspace.latestBuild.job.status,
-                                workspace.latestBuild.workspaceTransition,
-                                OS.from(agent.operatingSystem),
-                                Arch.from(agent.architecture),
-                                agent.directory
-                            )
-                        }
-                    }
+                    return@withContext coderClient.workspaces().collectAgents()
                 } catch (e: Exception) {
                     logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
                     emptyList()
@@ -112,6 +97,30 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
 
             // if we just run the update on the main dispatcher, the code will block because it cant get some AWT locks
             ApplicationManager.getApplication().invokeLater { listTableModelOfWorkspaces.updateItems(workspaceList) }
+        }
+    }
+
+    private fun List<Workspace>.collectAgents(): List<WorkspaceAgentModel> {
+        return this.flatMap { workspace ->
+            try {
+                val agents = coderClient.workspaceAgents(workspace)
+                val shouldContainAgentName = agents.size > 1
+                return@flatMap agents.map { agent ->
+                    val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.name}" else workspace.name
+                    WorkspaceAgentModel(
+                        workspaceName,
+                        workspace.templateName,
+                        workspace.latestBuild.job.status,
+                        workspace.latestBuild.workspaceTransition,
+                        OS.from(agent.operatingSystem),
+                        Arch.from(agent.architecture),
+                        agent.directory
+                    )
+                }
+            } catch (e: Exception) {
+                logger.error("Skipping workspace ${workspace.name} because we could not retrieve the agent(s). Reason: $e")
+                emptyList()
+            }
         }
     }
 

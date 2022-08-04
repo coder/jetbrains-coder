@@ -7,6 +7,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 import java.util.UUID
 
 interface CoderV2RestFacade {
@@ -21,7 +22,7 @@ interface CoderV2RestFacade {
      * Retrieves all workspaces the authenticated user has access to.
      */
     @GET("api/v2/workspaces")
-    fun workspaces(): Call<List<Workspace>>
+    fun workspaces(@Query("q") searchParams: String): Call<List<Workspace>>
 
     @GET("api/v2/buildinfo")
     fun buildInfo(): Call<BuildInfo>

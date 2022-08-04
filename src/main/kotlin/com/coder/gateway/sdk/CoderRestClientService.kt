@@ -80,7 +80,7 @@ class CoderRestClientService {
      * @throws WorkspaceResponseException if workspaces could not be retrieved.
      */
     fun workspaces(): List<Workspace> {
-        val workspacesResponse = retroRestClient.workspaces().execute()
+        val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
         if (!workspacesResponse.isSuccessful) {
             throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
         }

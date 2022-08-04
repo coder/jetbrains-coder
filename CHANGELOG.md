@@ -3,6 +3,14 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Fixed
+- `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
+- working Workspaces are now listed when there are issues with resolving agents
+- list only workspaces owned by the logged user
+
+### Changed
+- links to documentation now point to the latest Coder OSS
+- simplified main action link text from `Connect to Coder Workspaces` to `Connect to Coder`
 
 ## [2.0.0]
 ### Added
