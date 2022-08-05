@@ -5,7 +5,7 @@
 ## [Unreleased]
 ### Fixed
 - `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
-- working Workspaces are now listed when there are issues with resolving agents
+- working workspaces are now listed when there are issues with resolving agents
 - list only workspaces owned by the logged user
 
 ### Changed
