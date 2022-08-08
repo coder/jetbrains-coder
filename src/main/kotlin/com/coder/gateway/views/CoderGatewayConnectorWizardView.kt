@@ -1,7 +1,6 @@
 package com.coder.gateway.views
 
 import com.coder.gateway.models.CoderWorkspacesWizardModel
-import com.coder.gateway.views.steps.CoderAuthStepView
 import com.coder.gateway.views.steps.CoderLocateRemoteProjectStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.coder.gateway.views.steps.CoderWorkspacesWizardStep
@@ -29,7 +28,6 @@ class CoderGatewayConnectorWizardView(private val recentWorkspacesReset: () -> U
     private fun setupWizard() {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
 
-        registerStep(CoderAuthStepView { next() })
         registerStep(CoderWorkspacesStepView())
         registerStep(CoderLocateRemoteProjectStepView {
             nextButton.isVisible = false

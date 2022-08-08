@@ -54,7 +54,7 @@ class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWiz
                 }
             }.topGap(TopGap.SMALL).bottomGap(BottomGap.MEDIUM)
             row {
-                cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.login.comment.text"), false, -1, true))
+                cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"), false, -1, true))
             }
             row {
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
@@ -72,7 +72,7 @@ class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWiz
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
     }
 
-    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.auth.next.text")
+    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
     override val previousActionText = IdeBundle.message("button.back")
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
@@ -99,7 +99,7 @@ class CoderAuthStepView(private val nextAction: () -> Unit) : CoderWorkspacesWiz
         model.token = pastedToken
         model.buildVersion = coderClient.buildVersion
 
-        val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.login.cli.downloader.dialog.title"), false) {
+        val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
             override fun run(pi: ProgressIndicator) {
 
                 pi.apply {
