@@ -131,7 +131,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         try {
             coderClient.initClientSession(wizardModel.coderURL.toURL(), pastedToken)
         } catch (e: AuthenticationResponseException) {
-            CoderAuthStepView.logger.error("Could not authenticate on ${wizardModel.coderURL}. Reason $e")
+            logger.error("Could not authenticate on ${wizardModel.coderURL}. Reason $e")
             return
         }
         wizardModel.apply {
@@ -153,7 +153,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
                     val chmodOutput = ProcessExecutor().command("chmod", "+x", cli.toAbsolutePath().toString()).readOutput(true).execute().outputUTF8()
-                    CoderAuthStepView.logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
+                    logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
                     text = "Configuring coder cli..."
@@ -161,10 +161,10 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 }
 
                 val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", wizardModel.coderURL, "--token", wizardModel.token).readOutput(true).execute().outputUTF8()
-                CoderAuthStepView.logger.info("coder-cli login output: $loginOutput")
+                logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.8
                 val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                CoderAuthStepView.logger.info("Result of `${cli.toAbsolutePath()} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+                logger.info("Result of `${cli.toAbsolutePath()} config-ssh --yes --use-previous-options`: $sshConfigOutput")
                 pi.fraction = 1.0
             }
         }
