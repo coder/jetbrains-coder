@@ -3,6 +3,10 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Fixed
+
+- left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.
+  This provides consistency with other plugins compatible with Gateway
 
 ### Changed
 

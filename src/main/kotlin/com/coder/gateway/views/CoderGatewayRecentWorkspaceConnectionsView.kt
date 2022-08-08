@@ -13,7 +13,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
-import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.DocumentAdapter
@@ -28,7 +27,6 @@ import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayRecentConnections
 import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
@@ -37,17 +35,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.awt.Component
 import java.awt.Dimension
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
 
-class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Disposable {
+class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
-    private val rootPanel = BorderLayoutPanel()
-    private lateinit var contentPanel: DialogPanel
     private val recentWorkspacesContentPanel = JBScrollPane()
 
     private lateinit var searchBar: SearchTextField
@@ -57,7 +54,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
     override val recentsIcon = CoderIcons.LOGO_16
 
     override fun createRecentsView(lifetime: Lifetime): JComponent {
-        contentPanel = panel {
+        return panel {
             indent {
                 row {
                     label(CoderGatewayBundle.message("gateway.connector.recentconnections.title")).applyToComponent {
@@ -82,17 +79,7 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
                                 actionButton(
                                     object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
                                         override fun actionPerformed(e: AnActionEvent) {
-                                            rootPanel.apply {
-                                                removeAll()
-                                                addToCenter(CoderGatewayConnectorWizardWrapperView {
-                                                    rootPanel.apply {
-                                                        removeAll()
-                                                        addToCenter(contentPanel)
-                                                        updateUI()
-                                                    }
-                                                }.component)
-                                                updateUI()
-                                            }
+                                            setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
                                         }
                                     },
                                 ).gap(RightGap.SMALL)
@@ -110,8 +97,6 @@ class CoderGatewayRecentWorkspaceConnectionsView : GatewayRecentConnections, Dis
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             border = JBUI.Borders.empty(12, 0, 0, 12)
         }
-
-        return rootPanel.addToCenter(contentPanel)
     }
 
     override fun getRecentsTitle() = CoderGatewayBundle.message("gateway.connector.title")

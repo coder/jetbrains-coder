@@ -36,7 +36,7 @@ class CoderGatewayMainView : GatewayConnector {
     }
 
     override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections {
-        return CoderGatewayRecentWorkspaceConnectionsView()
+        return CoderGatewayRecentWorkspaceConnectionsView(setContentCallback)
     }
 
     override fun getTitle(): String {

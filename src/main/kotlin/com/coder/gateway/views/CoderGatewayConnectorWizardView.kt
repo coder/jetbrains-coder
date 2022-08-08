@@ -10,10 +10,11 @@ import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.jetbrains.gateway.api.GatewayUI
 import java.awt.Component
 import javax.swing.JButton
 
-class CoderGatewayConnectorWizardView(private val recentWorkspacesReset: () -> Unit) : BorderLayoutPanel(), Disposable {
+class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     private var steps = arrayListOf<CoderWorkspacesWizardStep>()
     private var currentStep = 0
     private val model = CoderWorkspacesWizardModel()
@@ -51,7 +52,7 @@ class CoderGatewayConnectorWizardView(private val recentWorkspacesReset: () -> U
 
     private fun previous() {
         if (currentStep == 0) {
-            recentWorkspacesReset()
+            GatewayUI.getInstance().reset()
         } else {
             remove(steps[currentStep].component)
             updateUI()
