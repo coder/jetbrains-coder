@@ -101,6 +101,8 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
                 }
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     loginAndLoadWorkspace()
+                }.applyToComponent {
+                    background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
                 }
                 cell()
             }
