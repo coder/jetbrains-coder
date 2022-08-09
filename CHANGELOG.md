@@ -7,6 +7,7 @@
 
 - left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.
   This provides consistency with other plugins compatible with Gateway
+- the "Select IDE and Project" button in the "Coder Workspaces" view is now disabled when no workspace is selected
 
 ### Changed
 

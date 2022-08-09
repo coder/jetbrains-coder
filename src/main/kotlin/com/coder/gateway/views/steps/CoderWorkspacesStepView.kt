@@ -59,7 +59,7 @@ import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
 
-class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
+class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var wizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
@@ -77,6 +77,9 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
         }
 
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+        selectionModel.addListSelectionListener {
+            enableNextButtonCallback(selectedObject != null)
+        }
     }
 
     override val component = panel {
@@ -118,6 +121,7 @@ class CoderWorkspacesStepView : CoderWorkspacesWizardStep, Disposable {
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
+        enableNextButtonCallback(false)
     }
 
     private fun loginAndLoadWorkspace() {
