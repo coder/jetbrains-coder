@@ -4,6 +4,11 @@ import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.models.WorkspaceAgentStatus
+import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
+import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
+import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
+import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
@@ -78,7 +83,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            enableNextButtonCallback(selectedObject != null)
+            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
         }
     }
 
@@ -221,26 +226,55 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun List<Workspace>.collectAgents(): List<WorkspaceAgentModel> {
-        return this.flatMap { workspace ->
-            try {
-                val agents = coderClient.workspaceAgents(workspace)
-                val shouldContainAgentName = agents.size > 1
-                return@flatMap agents.map { agent ->
-                    val workspaceName = if (shouldContainAgentName) "${workspace.name}.${agent.name}" else workspace.name
+        return this.flatMap { it.agentModels() }.toList()
+    }
+
+    private fun Workspace.agentModels(): List<WorkspaceAgentModel> {
+        return try {
+            val agents = coderClient.workspaceAgents(this)
+            when (agents.size) {
+                0 -> {
+                    listOf(
+                        WorkspaceAgentModel(
+                            this.name,
+                            this.templateName,
+                            WorkspaceAgentStatus.from(this),
+                            null,
+                            null,
+                            null
+                        )
+                    )
+                }
+
+                1 -> {
+                    listOf(
+                        WorkspaceAgentModel(
+                            this.name,
+                            this.templateName,
+                            WorkspaceAgentStatus.from(this),
+                            OS.from(agents[0].operatingSystem),
+                            Arch.from(agents[0].architecture),
+                            agents[0].directory
+                        )
+                    )
+                }
+
+                else -> agents.map { agent ->
+                    val workspaceName = "${this.name}.${agent.name}"
                     WorkspaceAgentModel(
                         workspaceName,
-                        workspace.templateName,
-                        workspace.latestBuild.job.status,
-                        workspace.latestBuild.workspaceTransition,
+                        this.templateName,
+                        WorkspaceAgentStatus.from(this),
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
                         agent.directory
                     )
                 }
-            } catch (e: Exception) {
-                logger.error("Skipping workspace ${workspace.name} because we could not retrieve the agent(s). Reason: $e")
-                emptyList()
+                    .toList()
             }
+        } catch (e: Exception) {
+            logger.error("Skipping workspace ${this.name} because we could not retrieve the agent(s). Reason: $e")
+            emptyList()
         }
     }
 
@@ -322,7 +356,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.statusLabel()
+            return workspace?.agentStatus?.label
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
@@ -339,31 +373,9 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             }
         }
 
-        private fun WorkspaceAgentModel.statusLabel() = when (this.jobStatus) {
-            ProvisionerJobStatus.PENDING -> "◍ Queued"
-            ProvisionerJobStatus.RUNNING -> when (this.buildTransition) {
-                WorkspaceBuildTransition.START -> "⦿ Starting"
-                WorkspaceBuildTransition.STOP -> "◍ Stopping"
-                WorkspaceBuildTransition.DELETE -> "⦸ Deleting"
-            }
-
-            ProvisionerJobStatus.SUCCEEDED -> when (this.buildTransition) {
-                WorkspaceBuildTransition.START -> "⦿ Running"
-                WorkspaceBuildTransition.STOP -> "◍ Stopped"
-                WorkspaceBuildTransition.DELETE -> "⦸ Deleted"
-            }
-
-            ProvisionerJobStatus.CANCELING -> "◍ Canceling action"
-            ProvisionerJobStatus.CANCELED -> "◍ Canceled action"
-            ProvisionerJobStatus.FAILED -> "ⓧ Failed"
-        }
-
-        private fun WorkspaceAgentModel.statusColor() = when (this.jobStatus) {
-            ProvisionerJobStatus.SUCCEEDED -> if (this.buildTransition == WorkspaceBuildTransition.START) Color.GREEN else Color.RED
-            ProvisionerJobStatus.RUNNING -> when (this.buildTransition) {
-                WorkspaceBuildTransition.START, WorkspaceBuildTransition.STOP, WorkspaceBuildTransition.DELETE -> Color.GRAY
-            }
-
+        private fun WorkspaceAgentModel.statusColor() = when (this.agentStatus) {
+            RUNNING -> Color.GREEN
+            STARTING, STOPPING, DELETING -> Color.GRAY
             else -> Color.RED
         }
     }

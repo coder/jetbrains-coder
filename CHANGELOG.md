@@ -3,6 +3,9 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Added
+- support for displaying working and non-working workspaces
+
 ### Fixed
 
 - left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.
@@ -30,8 +33,6 @@
 ## [2.0.0]
 ### Added
 - support for Gateway 2022.2
-
-
 
 ### Changed
 - Java 17 is now required to run the plugin
