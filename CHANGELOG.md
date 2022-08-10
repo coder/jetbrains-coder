@@ -5,6 +5,7 @@
 ## [Unreleased]
 ### Added
 - support for displaying working and non-working workspaces
+- better support for Light and Dark themes in the "Status" column 
 
 ### Fixed
 

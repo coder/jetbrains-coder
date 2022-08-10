@@ -33,6 +33,7 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AppIcon
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
 import com.intellij.ui.dsl.builder.BottomGap
@@ -374,9 +375,9 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
 
         private fun WorkspaceAgentModel.statusColor() = when (this.agentStatus) {
-            RUNNING -> Color.GREEN
-            STARTING, STOPPING, DELETING -> Color.GRAY
-            else -> Color.RED
+            RUNNING -> JBColor.GREEN
+            STARTING, STOPPING, DELETING -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
+            else -> JBColor.RED
         }
     }
 
