@@ -30,7 +30,6 @@ import java.time.format.DateTimeFormatter
 
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
-    private val sshConfigService = service<SshConfigManager>()
 
     private val connections = mutableSetOf<CoderConnectionMetadata>()
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
