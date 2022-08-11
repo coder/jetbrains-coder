@@ -290,8 +290,17 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     .toList()
             }
         } catch (e: Exception) {
-            logger.error("Skipping workspace ${this.name} because we could not retrieve the agent(s). Reason: $e")
-            emptyList()
+            logger.warn("Agent(s) for ${this.name} could not be retrieved. Reason: $e")
+            listOf(
+                WorkspaceAgentModel(
+                    this.name,
+                    this.templateName,
+                    WorkspaceAgentStatus.from(this),
+                    null,
+                    null,
+                    null
+                )
+            )
         }
     }
 
