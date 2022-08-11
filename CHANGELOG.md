@@ -3,6 +3,8 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Changed
+- workspace panel is now updated every 5 seconds
 
 ## [2.0.2]
 ### Added

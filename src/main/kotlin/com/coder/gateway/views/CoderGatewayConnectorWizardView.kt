@@ -51,6 +51,8 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     }
 
     private fun previous() {
+        steps[currentStep].onPrevious()
+
         if (currentStep == 0) {
             GatewayUI.getInstance().reset()
         } else {

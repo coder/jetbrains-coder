@@ -16,9 +16,7 @@ import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
-import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.Workspace
-import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 import com.coder.gateway.sdk.withPath
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -51,11 +49,13 @@ import com.intellij.util.ui.ListTableModel
 import com.intellij.util.ui.table.IconTableCellRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
-import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Icon
@@ -88,6 +88,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private var poller: Job? = null
+
     override val component = panel {
         indent {
             row {
@@ -105,10 +107,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
                 textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(wizardModel::coderURL).applyToComponent {
                     addActionListener {
+                        poller?.cancel()
                         loginAndLoadWorkspace()
                     }
                 }
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
+                    poller?.cancel()
                     loginAndLoadWorkspace()
                 }.applyToComponent {
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
@@ -211,18 +215,30 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun loadWorkspaces() {
-        cs.launch {
-            val workspaceList = withContext(Dispatchers.IO) {
-                try {
-                    return@withContext coderClient.workspaces().collectAgents()
-                } catch (e: Exception) {
-                    logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
-                    emptyList()
+        poller = cs.launch {
+            while (isActive) {
+                val workspaceList = withContext(Dispatchers.IO) {
+                    try {
+                        return@withContext coderClient.workspaces().collectAgents()
+                    } catch (e: Exception) {
+                        logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
+                        emptyList()
+                    }
+                }
+
+                val selectedWorkspace = withContext(Dispatchers.Main) {
+                    tableOfWorkspaces.selectedObject
+                }
+
+                // if we just run the update on the main dispatcher, the code will block because it cant get some AWT locks
+                ApplicationManager.getApplication().invokeLater {
+                    listTableModelOfWorkspaces.updateItems(workspaceList)
+                    if (selectedWorkspace != null) {
+                        tableOfWorkspaces.selectItem(selectedWorkspace)
+                    }
                 }
             }
-
-            // if we just run the update on the main dispatcher, the code will block because it cant get some AWT locks
-            ApplicationManager.getApplication().invokeLater { listTableModelOfWorkspaces.updateItems(workspaceList) }
+            delay(5000)
         }
     }
 
@@ -279,10 +295,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    override fun onPrevious() {
+        super.onPrevious()
+        poller?.cancel()
+    }
+
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val workspace = tableOfWorkspaces.selectedObject
         if (workspace != null) {
             wizardModel.selectedWorkspace = workspace
+            poller?.cancel()
             return true
         }
         return false
@@ -385,6 +407,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private fun ListTableModel<WorkspaceAgentModel>.updateItems(workspaces: Collection<WorkspaceAgentModel>) {
         while (this.rowCount > 0) this.removeRow(0)
         this.addRows(workspaces)
+    }
+
+    private fun TableView<WorkspaceAgentModel>.selectItem(workspace: WorkspaceAgentModel) {
+        this.items.forEachIndexed { index, workspaceAgentModel ->
+            if (workspaceAgentModel.name == workspace.name)
+                this.setRowSelectionInterval(index, index)
+        }
     }
 
     companion object {
