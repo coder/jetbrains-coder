@@ -9,6 +9,7 @@ import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
 import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
 import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
+import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
@@ -70,7 +71,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private var wizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
-    private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(WorkspaceIconColumnInfo(""), WorkspaceNameColumnInfo("Name"), WorkspaceTemplateNameColumnInfo("Template"), WorkspaceStatusColumnInfo("Status"))
+    private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
+        WorkspaceIconColumnInfo(""),
+        WorkspaceNameColumnInfo("Name"),
+        WorkspaceTemplateNameColumnInfo("Template"),
+        WorkspaceVersionColumnInfo("Version"),
+        WorkspaceStatusColumnInfo("Status")
+    )
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         rowSelectionAllowed = true
         columnSelectionAllowed = false
@@ -255,6 +262,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         WorkspaceAgentModel(
                             this.name,
                             this.templateName,
+                            WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
                             null,
                             null,
@@ -268,6 +276,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         WorkspaceAgentModel(
                             this.name,
                             this.templateName,
+                            WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
                             OS.from(agents[0].operatingSystem),
                             Arch.from(agents[0].architecture),
@@ -281,6 +290,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     WorkspaceAgentModel(
                         workspaceName,
                         this.templateName,
+                        WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
@@ -295,6 +305,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 WorkspaceAgentModel(
                     this.name,
                     this.templateName,
+                    WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
                     null,
                     null,
@@ -370,6 +381,25 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
+        }
+
+        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+            return object : DefaultTableCellRenderer() {
+                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                    super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+                    if (value is String) {
+                        text = value
+                    }
+                    font = JBFont.h3()
+                    return this
+                }
+            }
+        }
+    }
+
+    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
+            return workspace?.status?.label
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
