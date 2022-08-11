@@ -371,7 +371,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
+                    font = JBFont.h3().asBold()
                     return this
                 }
             }
@@ -441,7 +441,6 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             else -> JBColor.RED
         }
     }
-
 
     private fun ListTableModel<WorkspaceAgentModel>.updateItems(workspaces: Collection<WorkspaceAgentModel>) {
         while (this.rowCount > 0) this.removeRow(0)
