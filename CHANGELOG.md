@@ -5,6 +5,7 @@
 ## [Unreleased]
 ### Added
 - support for displaying workspace version
+- support for managing the lifecycle of a workspace, i.e. start and stop
 
 ### Changed
 - workspace panel is now updated every 5 seconds

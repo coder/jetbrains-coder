@@ -17,6 +17,7 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -171,13 +172,37 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
-            TODO("Not yet implemented")
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.startWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            startWorkspaceAction.isEnabled = false
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not build workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
         }
     }
 
     private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            TODO("Not yet implemented")
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            stopWorkspaceAction.isEnabled = false
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -310,6 +335,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 0 -> {
                     listOf(
                         WorkspaceAgentModel(
+                            this.id,
+                            this.name,
                             this.name,
                             this.templateName,
                             WorkspaceVersionStatus.from(this),
@@ -324,6 +351,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 1 -> {
                     listOf(
                         WorkspaceAgentModel(
+                            this.id,
+                            this.name,
                             this.name,
                             this.templateName,
                             WorkspaceVersionStatus.from(this),
@@ -338,6 +367,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 else -> agents.map { agent ->
                     val workspaceName = "${this.name}.${agent.name}"
                     WorkspaceAgentModel(
+                        this.id,
+                        this.name,
                         workspaceName,
                         this.templateName,
                         WorkspaceVersionStatus.from(this),
@@ -353,6 +384,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             logger.warn("Agent(s) for ${this.name} could not be retrieved. Reason: $e")
             listOf(
                 WorkspaceAgentModel(
+                    this.id,
+                    this.name,
                     this.name,
                     this.templateName,
                     WorkspaceVersionStatus.from(this),
