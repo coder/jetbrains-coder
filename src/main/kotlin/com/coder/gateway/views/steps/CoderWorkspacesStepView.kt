@@ -6,8 +6,10 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAgentStatus
 import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
+import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
 import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
 import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
+import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
@@ -19,8 +21,6 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
-import com.intellij.CommonBundle
-import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
@@ -81,7 +81,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceNameColumnInfo("Name"),
         WorkspaceTemplateNameColumnInfo("Template"),
         WorkspaceVersionColumnInfo("Version"),
-        WorkspaceStatusColumnInfo("Status"))
+        WorkspaceStatusColumnInfo("Status")
+    )
+
+    private val startWorkspaceAction = StartWorkspaceAction()
+    private val stopWorkspaceAction = StopWorkspaceAction()
 
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         setEnableAntialiasing(true)
@@ -98,16 +102,30 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
-        }
+            when (selectedObject?.agentStatus) {
+                RUNNING -> {
+                    startWorkspaceAction.isEnabled = false
+                    stopWorkspaceAction.isEnabled = true
+                }
 
+                STOPPED, FAILED -> {
+                    startWorkspaceAction.isEnabled = true
+                    stopWorkspaceAction.isEnabled = false
+                }
+
+                else -> {
+                    disableAllWorkspaceActions()
+                }
+            }
+        }
     }
-    
+
     private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
         .disableAddAction()
         .disableRemoveAction()
         .disableUpDownActions()
-        .addExtraAction(StartWorkspaceAction())
-        .addExtraAction(StopWorkspaceAction())
+        .addExtraAction(startWorkspaceAction)
+        .addExtraAction(stopWorkspaceAction)
 
     private var poller: Job? = null
 
@@ -163,8 +181,14 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private fun disableAllWorkspaceActions() {
+        startWorkspaceAction.isEnabled = false
+        stopWorkspaceAction.isEnabled = false
+    }
+
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
+        disableAllWorkspaceActions()
     }
 
     private fun loginAndLoadWorkspace() {
