@@ -6,9 +6,11 @@ import com.coder.gateway.sdk.ex.WorkspaceResourcesResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
+import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
@@ -20,8 +22,10 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.CookieManager
+import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.URL
 import java.time.Instant
+import java.util.UUID
 
 @Service(Service.Level.APP)
 class CoderRestClientService {
@@ -109,5 +113,25 @@ class CoderRestClientService {
         }
 
         return workspaceResourcesResponse.body()!!.flatMap { it.agents ?: emptyList() }
+    }
+
+    fun startWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
+        val buildRequest = CreateWorkspaceBuildRequest(null, "start", null, null, null)
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        if (buildResponse.code() != HTTP_CREATED) {
+            throw WorkspaceResponseException("Failed to build workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+        }
+
+        return buildResponse.body()!!
+    }
+
+    fun stopWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
+        val buildRequest = CreateWorkspaceBuildRequest(null, "stop", null, null, null)
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        if (buildResponse.code() != HTTP_CREATED) {
+            throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+        }
+
+        return buildResponse.body()!!
     }
 }
