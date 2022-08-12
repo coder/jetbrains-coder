@@ -151,13 +151,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
-    private inner class StartWorkspaceAction : AnActionButton("Start Workspace", "Start Workspace", CoderIcons.RUN) {
+    private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
             TODO("Not yet implemented")
         }
     }
 
-    private inner class StopWorkspaceAction : AnActionButton("Stop Workspace", "Stop Workspace", CoderIcons.STOP) {
+    private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
             TODO("Not yet implemented")
         }
