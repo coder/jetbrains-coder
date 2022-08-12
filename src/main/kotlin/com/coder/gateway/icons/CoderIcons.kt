@@ -9,6 +9,9 @@ object CoderIcons {
 
     val OPEN_TERMINAL = IconLoader.getIcon("open_terminal.svg", javaClass)
 
+    val RUN = IconLoader.getIcon("run.svg", javaClass)
+    val STOP = IconLoader.getIcon("stop.svg", javaClass)
+
     val WINDOWS = IconLoader.getIcon("windows.svg", javaClass)
     val MACOS = IconLoader.getIcon("macOS.svg", javaClass)
     val LINUX = IconLoader.getIcon("linux.svg", javaClass)

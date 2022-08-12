@@ -19,9 +19,12 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
+import com.intellij.CommonBundle
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
@@ -31,8 +34,10 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
+import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
 import com.intellij.ui.JBColor
+import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
 import com.intellij.ui.dsl.builder.BottomGap
@@ -76,8 +81,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceNameColumnInfo("Name"),
         WorkspaceTemplateNameColumnInfo("Template"),
         WorkspaceVersionColumnInfo("Version"),
-        WorkspaceStatusColumnInfo("Status")
-    )
+        WorkspaceStatusColumnInfo("Status"))
+
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         rowSelectionAllowed = true
         columnSelectionAllowed = false
@@ -93,7 +98,15 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
         }
+
     }
+    
+    private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
+        .disableAddAction()
+        .disableRemoveAction()
+        .disableUpDownActions()
+        .addExtraAction(StartWorkspaceAction())
+        .addExtraAction(StopWorkspaceAction())
 
     private var poller: Job? = null
 
@@ -127,7 +140,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 cell()
             }
             row {
-                scrollCell(tableOfWorkspaces).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                scrollCell(toolbar.createPanel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
             }.topGap(TopGap.NONE).resizableRow()
 
@@ -136,6 +149,18 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
+
+    private inner class StartWorkspaceAction : AnActionButton("Start Workspace", "Start Workspace", CoderIcons.RUN) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            TODO("Not yet implemented")
+        }
+    }
+
+    private inner class StopWorkspaceAction : AnActionButton("Stop Workspace", "Stop Workspace", CoderIcons.STOP) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            TODO("Not yet implemented")
+        }
+    }
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
