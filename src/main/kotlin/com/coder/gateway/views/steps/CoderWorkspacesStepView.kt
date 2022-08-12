@@ -84,6 +84,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceStatusColumnInfo("Status"))
 
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
+        setEnableAntialiasing(true)
         rowSelectionAllowed = true
         columnSelectionAllowed = false
         tableHeader.reorderingAllowed = false
