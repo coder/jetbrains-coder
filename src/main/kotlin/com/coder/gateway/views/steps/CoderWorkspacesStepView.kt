@@ -297,6 +297,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun loadWorkspaces() {
+        poller?.cancel()
+
         poller = cs.launch {
             while (isActive) {
                 val workspaceList = withContext(Dispatchers.IO) {
@@ -319,8 +321,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         tableOfWorkspaces.selectItem(selectedWorkspace)
                     }
                 }
+                delay(5000)
             }
-            delay(5000)
         }
     }
 
