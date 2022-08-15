@@ -53,7 +53,7 @@ class CoderRestClientService {
             .create()
 
         val interceptor = HttpLoggingInterceptor()
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BASIC)
         retroRestClient = Retrofit.Builder()
             .baseUrl(url.toString())
             .client(
