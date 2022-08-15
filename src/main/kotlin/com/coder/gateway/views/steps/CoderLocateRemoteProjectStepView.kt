@@ -111,7 +111,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         tfProject.text = if (selectedWorkspace.homeDirectory.isNullOrBlank()) "/home" else selectedWorkspace.homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
-        terminalLink.url = "${coderClient.coderURL}/@${coderClient.me.username}/${selectedWorkspace.name}.coder/terminal"
+        terminalLink.url = "${coderClient.coderURL}/@${coderClient.me.username}/${selectedWorkspace.name}/terminal"
 
         cs.launch {
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")

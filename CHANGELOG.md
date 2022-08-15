@@ -3,18 +3,26 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+
 ### Added
+
 - support for displaying workspace version
 - support for managing the lifecycle of a workspace, i.e. start and stop
 
+### Fixed
+
+- terminal link for workspaces with a single agent
+
 ### Changed
+
 - workspace panel is now updated every 5 seconds
 
 ## [2.0.2]
-### Added
-- support for displaying working and non-working workspaces
-- better support for Light and Dark themes in the "Status" column 
 
+### Added
+
+- support for displaying working and non-working workspaces
+- better support for Light and Dark themes in the "Status" column
 
 ### Fixed
 - left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.

@@ -348,28 +348,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     )
                 }
 
-                1 -> {
-                    listOf(
-                        WorkspaceAgentModel(
-                            this.id,
-                            this.name,
-                            this.name,
-                            this.templateName,
-                            WorkspaceVersionStatus.from(this),
-                            WorkspaceAgentStatus.from(this),
-                            OS.from(agents[0].operatingSystem),
-                            Arch.from(agents[0].architecture),
-                            agents[0].directory
-                        )
-                    )
-                }
-
                 else -> agents.map { agent ->
-                    val workspaceName = "${this.name}.${agent.name}"
+                    val workspaceWithAgentName = "${this.name}.${agent.name}"
                     WorkspaceAgentModel(
                         this.id,
                         this.name,
-                        workspaceName,
+                        workspaceWithAgentName,
                         this.templateName,
                         WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
@@ -377,8 +361,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         Arch.from(agent.architecture),
                         agent.directory
                     )
-                }
-                    .toList()
+                }.toList()
             }
         } catch (e: Exception) {
             logger.warn("Agent(s) for ${this.name} could not be retrieved. Reason: $e")
