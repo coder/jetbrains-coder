@@ -3,19 +3,16 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
-
 ### Added
-
 - support for displaying workspace version
 - support for managing the lifecycle of a workspace, i.e. start and stop
 
-### Fixed
-
-- terminal link for workspaces with a single agent
-
 ### Changed
-
 - workspace panel is now updated every 5 seconds
+- minimum supported Gateway build is now 222.3739.40
+
+### Fixed
+- terminal link for workspaces with a single agent
 
 ## [2.0.2]
 
@@ -25,6 +22,7 @@
 - better support for Light and Dark themes in the "Status" column
 
 ### Fixed
+
 - left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.
   This provides consistency with other plugins compatible with Gateway
 - the "Select IDE and Project" button in the "Coder Workspaces" view is now disabled when no workspace is selected
