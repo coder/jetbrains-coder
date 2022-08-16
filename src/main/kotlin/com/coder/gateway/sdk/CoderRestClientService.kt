@@ -101,13 +101,13 @@ class CoderRestClientService {
     }
 
     /**
-     * Retrieves the workspace agents. A workspace is a collection of objects like, VMs, containers, cloud DBs, etc...
-     * Agents run on compute hosts like VMs or containers.
+     * Retrieves the workspace agents a template declares.
+     * A workspace is a collection of objects like, VMs, containers, cloud DBs, etc...Agents run on compute hosts like VMs or containers.
      *
      * @throws WorkspaceResourcesResponseException if workspace resources could not be retrieved.
      */
-    fun workspaceAgents(workspace: Workspace): List<WorkspaceAgent> {
-        val workspaceResourcesResponse = retroRestClient.workspaceResourceByBuild(workspace.latestBuild.id).execute()
+    fun workspaceAgentsByTemplate(workspace: Workspace): List<WorkspaceAgent> {
+        val workspaceResourcesResponse = retroRestClient.templateVersionResources(workspace.latestBuild.templateVersionID).execute()
         if (!workspaceResourcesResponse.isSuccessful) {
             throw WorkspaceResourcesResponseException("Could not retrieve agents for ${workspace.name} workspace :${workspaceResourcesResponse.code()}, reason: ${workspaceResourcesResponse.message()}")
         }

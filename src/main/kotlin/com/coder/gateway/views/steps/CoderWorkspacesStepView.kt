@@ -332,7 +332,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private fun Workspace.agentModels(): List<WorkspaceAgentModel> {
         return try {
-            val agents = coderClient.workspaceAgents(this)
+            val agents = coderClient.workspaceAgentsByTemplate(this)
             when (agents.size) {
                 0 -> {
                     listOf(

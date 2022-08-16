@@ -9,6 +9,7 @@
 
 ### Changed
 - workspace panel is now updated every 5 seconds
+- combinations of workspace names and agent names are now listed even when a workspace is down 
 - minimum supported Gateway build is now 222.3739.40
 
 ### Fixed

@@ -31,8 +31,8 @@ interface CoderV2RestFacade {
     @GET("api/v2/buildinfo")
     fun buildInfo(): Call<BuildInfo>
 
-    @GET("api/v2/workspacebuilds/{buildID}/resources")
-    fun workspaceResourceByBuild(@Path("buildID") build: UUID): Call<List<WorkspaceResource>>
+    @GET("api/v2/templateversions/{templateID}/resources")
+    fun templateVersionResources(@Path("templateID") templateID: UUID): Call<List<WorkspaceResource>>
 
     /**
      * Queues a new build to occur for a workspace.
