@@ -3,15 +3,20 @@ package com.coder.gateway.sdk
 import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Path
+import java.nio.file.Paths
 
-class CoderCLIManager(private val url: URL, buildVersion: String) {
-    private val coderCLIDownloader = CoderCLIDownloader(buildVersion)
+class CoderCLIManager(url: URL, buildVersion: String) {
+    var remoteCliPath: URL
+    var localCliPath: Path
 
-    fun download(): Path? {
+    init {
         val os = getOS()
-        val cliName = getCoderCLIForOS(os, getArch()) ?: return null
-        val cliNameWitExt = if (os == OS.WINDOWS) "$cliName.exe" else cliName
-        return coderCLIDownloader.downloadCLI(URL(url.protocol, url.host, url.port, "/bin/$cliNameWitExt"), cliName, if (os == OS.WINDOWS) "exe" else "")
+        val ext = if (os == OS.WINDOWS) "exe" else ""
+        val cliName = getCoderCLIForOS(os, getArch())
+        val filename = if (ext.isBlank()) "${cliName}-${buildVersion}" else "${cliName}-${buildVersion}.${ext}"
+
+        remoteCliPath = URL(url.protocol, url.host, url.port, "/bin/$cliName")
+        localCliPath = Paths.get(System.getProperty("java.io.tmpdir"), filename)
     }
 
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String? {
@@ -25,12 +30,14 @@ class CoderCLIManager(private val url: URL, buildVersion: String) {
                 Arch.ARM64 -> "coder-windows-arm64"
                 else -> "coder-windows-amd64"
             }
+
             OS.LINUX -> when (arch) {
                 Arch.AMD64 -> "coder-linux-amd64"
                 Arch.ARM64 -> "coder-linux-arm64"
                 Arch.ARMV7 -> "coder-linux-armv7"
                 else -> "coder-linux-amd64"
             }
+
             OS.MAC -> when (arch) {
                 Arch.AMD64 -> "coder-darwin-amd64"
                 Arch.ARM64 -> "coder-darwin-arm64"

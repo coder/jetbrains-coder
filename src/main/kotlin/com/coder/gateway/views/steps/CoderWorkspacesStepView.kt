@@ -13,6 +13,7 @@ import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
+import com.coder.gateway.sdk.CoderCLIDownloader
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
@@ -76,7 +77,7 @@ import javax.swing.table.TableCellRenderer
 
 class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
-    private var wizardModel = CoderWorkspacesWizardModel()
+    private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
     private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
@@ -135,7 +136,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(wizardModel::coderURL).applyToComponent {
+                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
                         loginAndLoadWorkspace()
@@ -255,21 +256,26 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         // force bindings to be filled
         component.apply()
 
-        BrowserUtil.browse(wizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
+        BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
         val pastedToken = askToken()
 
         if (pastedToken.isNullOrBlank()) {
             return
         }
         try {
-            coderClient.initClientSession(wizardModel.coderURL.toURL(), pastedToken)
+            coderClient.initClientSession(localWizardModel.coderURL.toURL(), pastedToken)
         } catch (e: AuthenticationResponseException) {
-            logger.error("Could not authenticate on ${wizardModel.coderURL}. Reason $e")
+            logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
             return
         }
-        wizardModel.apply {
+
+        val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
+
+
+        localWizardModel.apply {
             token = pastedToken
             buildVersion = coderClient.buildVersion
+            localCliPath = cliManager.localCliPath.toAbsolutePath().toString()
         }
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
@@ -281,31 +287,26 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     fraction = 0.1
                 }
 
-                val cliManager = CoderCLIManager(wizardModel.coderURL.toURL(), wizardModel.buildVersion)
-                val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
+                CoderCLIDownloader().downloadCLI(cliManager.remoteCliPath, cliManager.localCliPath)
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
-                    val chmodOutput = ProcessExecutor().command("chmod", "+x", cli.toAbsolutePath().toString()).readOutput(true).execute().outputUTF8()
-                    logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
+                    val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
+                    logger.info("chmod +x ${cliManager.localCliPath.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
                     text = "Configuring coder cli..."
                     fraction = 0.5
                 }
 
-                val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", wizardModel.coderURL, "--token", wizardModel.token).readOutput(true).execute().outputUTF8()
+                val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
                 logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.8
-                val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                logger.info("Result of `${cli.toAbsolutePath()} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+                val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+                logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
                 pi.fraction = 1.0
             }
         }
 
-        wizardModel.apply {
-            coderURL = wizardModel.coderURL
-            token = wizardModel.token
-        }
         ProgressManager.getInstance().run(authTask)
         triggerWorkspacePolling()
     }
@@ -430,6 +431,29 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
+        if (localWizardModel.localCliPath.isNotBlank()) {
+            val configSSHTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.configssh.dialog.title"), false) {
+                override fun run(pi: ProgressIndicator) {
+                    pi.apply {
+                        text = "Configuring coder cli..."
+                        fraction = 0.1
+                    }
+                    val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+                    pi.fraction = 0.8
+                    logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+                    pi.fraction = 1.0
+                }
+            }
+            ProgressManager.getInstance().run(configSSHTask)
+        }
+
+        wizardModel.apply {
+            coderURL = localWizardModel.coderURL
+            token = localWizardModel.token
+            buildVersion = localWizardModel.buildVersion
+            localCliPath = localWizardModel.localCliPath
+        }
+
         val workspace = tableOfWorkspaces.selectedObject
         if (workspace != null) {
             wizardModel.selectedWorkspace = workspace
