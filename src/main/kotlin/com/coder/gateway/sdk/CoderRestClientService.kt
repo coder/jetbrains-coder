@@ -2,11 +2,13 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResourcesResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
+import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
@@ -115,6 +117,14 @@ class CoderRestClientService {
         return workspaceResourcesResponse.body()!!.flatMap { it.agents ?: emptyList() }
     }
 
+    private fun template(templateID: UUID): Template {
+        val templateResponse = retroRestClient.template(templateID).execute()
+        if (!templateResponse.isSuccessful) {
+            throw TemplateResponseException("Failed to retrieve template with id: $templateID, reason: ${templateResponse.message()}")
+        }
+        return templateResponse.body()!!
+    }
+
     fun startWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, "start", null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
@@ -130,6 +140,18 @@ class CoderRestClientService {
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
             throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+        }
+
+        return buildResponse.body()!!
+    }
+
+    fun updateWorkspace(workspaceID: UUID, workspaceName: String, lastWorkspaceTransition: String, templateID: UUID): WorkspaceBuild {
+        val template = template(templateID)
+
+        val buildRequest = CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null)
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        if (buildResponse.code() != HTTP_CREATED) {
+            throw WorkspaceResponseException("Failed to update workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
         }
 
         return buildResponse.body()!!

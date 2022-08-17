@@ -2,6 +2,7 @@ package com.coder.gateway.sdk.v2
 
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
+import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
@@ -39,4 +40,7 @@ interface CoderV2RestFacade {
      */
     @POST("api/v2/workspaces/{workspaceID}/builds")
     fun createWorkspaceBuild(@Path("workspaceID") workspaceID: UUID, @Body createWorkspaceBuildRequest: CreateWorkspaceBuildRequest): Call<WorkspaceBuild>
+
+    @GET("api/v2/templates/{templateID}")
+    fun template(@Path("templateID") templateID: UUID): Call<Template>
 }
