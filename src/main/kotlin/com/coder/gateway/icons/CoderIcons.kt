@@ -11,6 +11,7 @@ object CoderIcons {
 
     val RUN = IconLoader.getIcon("run.svg", javaClass)
     val STOP = IconLoader.getIcon("stop.svg", javaClass)
+    val UPDATE = IconLoader.getIcon("update.svg", javaClass)
 
     val WINDOWS = IconLoader.getIcon("windows.svg", javaClass)
     val MACOS = IconLoader.getIcon("macOS.svg", javaClass)

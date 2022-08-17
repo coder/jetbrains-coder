@@ -17,6 +17,7 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
@@ -107,6 +108,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private val startWorkspaceAction = StartWorkspaceAction()
     private val stopWorkspaceAction = StopWorkspaceAction()
+    private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
 
     private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
         .disableAddAction()
@@ -114,6 +116,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         .disableUpDownActions()
         .addExtraAction(startWorkspaceAction)
         .addExtraAction(stopWorkspaceAction)
+        .addExtraAction(updateWorkspaceTemplateAction)
 
     private var poller: Job? = null
 
@@ -175,6 +178,26 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private inner class UpdateWorkspaceTemplateAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.updateWorkspace(workspace.workspaceID, workspace.workspaceName, workspace.lastBuildTransition, workspace.templateID)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                        } catch (e: TemplateResponseException) {
+                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
@@ -203,16 +226,26 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             RUNNING -> {
                 startWorkspaceAction.isEnabled = false
                 stopWorkspaceAction.isEnabled = true
+                when (tableOfWorkspaces.selectedObject?.status) {
+                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
+                    else -> updateWorkspaceTemplateAction.isEnabled = false
+                }
+
             }
 
             STOPPED, FAILED -> {
                 startWorkspaceAction.isEnabled = true
                 stopWorkspaceAction.isEnabled = false
+                when (tableOfWorkspaces.selectedObject?.status) {
+                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
+                    else -> updateWorkspaceTemplateAction.isEnabled = false
+                }
             }
 
             else -> {
                 startWorkspaceAction.isEnabled = false
                 stopWorkspaceAction.isEnabled = false
+                updateWorkspaceTemplateAction.isEnabled = false
             }
         }
         ActivityTracker.getInstance().inc()
@@ -342,9 +375,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                             this.id,
                             this.name,
                             this.name,
+                            this.templateID,
                             this.templateName,
                             WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
+                            this.latestBuild.workspaceTransition.name.toLowerCase(),
                             null,
                             null,
                             null
@@ -358,9 +393,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         this.id,
                         this.name,
                         workspaceWithAgentName,
+                        this.templateID,
                         this.templateName,
                         WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
+                        this.latestBuild.workspaceTransition.name.toLowerCase(),
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
                         agent.directory
@@ -374,9 +411,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     this.id,
                     this.name,
                     this.name,
+                    this.templateID,
                     this.templateName,
                     WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
+                    this.latestBuild.workspaceTransition.name.toLowerCase(),
                     null,
                     null,
                     null
