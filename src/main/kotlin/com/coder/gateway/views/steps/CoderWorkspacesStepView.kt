@@ -22,6 +22,7 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
+import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
@@ -85,9 +86,6 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceStatusColumnInfo("Status")
     )
 
-    private val startWorkspaceAction = StartWorkspaceAction()
-    private val stopWorkspaceAction = StopWorkspaceAction()
-
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         setEnableAntialiasing(true)
         rowSelectionAllowed = true
@@ -103,23 +101,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
-            when (selectedObject?.agentStatus) {
-                RUNNING -> {
-                    startWorkspaceAction.isEnabled = false
-                    stopWorkspaceAction.isEnabled = true
-                }
-
-                STOPPED, FAILED -> {
-                    startWorkspaceAction.isEnabled = true
-                    stopWorkspaceAction.isEnabled = false
-                }
-
-                else -> {
-                    disableAllWorkspaceActions()
-                }
-            }
+            updateWorkspaceActions()
         }
     }
+
+    private val startWorkspaceAction = StartWorkspaceAction()
+    private val stopWorkspaceAction = StopWorkspaceAction()
 
     private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
         .disableAddAction()
@@ -178,7 +165,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     withContext(Dispatchers.IO) {
                         try {
                             coderClient.startWorkspace(workspace.workspaceID, workspace.workspaceName)
-                            startWorkspaceAction.isEnabled = false
+                            loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not build workspace ${workspace.name}, reason: $e")
                         }
@@ -196,7 +183,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     withContext(Dispatchers.IO) {
                         try {
                             coderClient.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
-                            stopWorkspaceAction.isEnabled = false
+                            loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
                         }
@@ -206,14 +193,29 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private fun disableAllWorkspaceActions() {
-        startWorkspaceAction.isEnabled = false
-        stopWorkspaceAction.isEnabled = false
-    }
-
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
-        disableAllWorkspaceActions()
+        updateWorkspaceActions()
+    }
+
+    private fun updateWorkspaceActions() {
+        when (tableOfWorkspaces.selectedObject?.agentStatus) {
+            RUNNING -> {
+                startWorkspaceAction.isEnabled = false
+                stopWorkspaceAction.isEnabled = true
+            }
+
+            STOPPED, FAILED -> {
+                startWorkspaceAction.isEnabled = true
+                stopWorkspaceAction.isEnabled = false
+            }
+
+            else -> {
+                startWorkspaceAction.isEnabled = false
+                stopWorkspaceAction.isEnabled = false
+            }
+        }
+        ActivityTracker.getInstance().inc()
     }
 
     private fun loginAndLoadWorkspace() {
@@ -272,7 +274,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             token = wizardModel.token
         }
         ProgressManager.getInstance().run(authTask)
-        loadWorkspaces()
+        triggerWorkspacePolling()
     }
 
     private fun askToken(): String? {
@@ -296,32 +298,32 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private fun loadWorkspaces() {
+    private fun triggerWorkspacePolling() {
         poller?.cancel()
 
         poller = cs.launch {
             while (isActive) {
-                val workspaceList = withContext(Dispatchers.IO) {
-                    try {
-                        return@withContext coderClient.workspaces().collectAgents()
-                    } catch (e: Exception) {
-                        logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
-                        emptyList()
-                    }
-                }
-
-                val selectedWorkspace = withContext(Dispatchers.Main) {
-                    tableOfWorkspaces.selectedObject
-                }
-
-                // if we just run the update on the main dispatcher, the code will block because it cant get some AWT locks
-                ApplicationManager.getApplication().invokeLater {
-                    listTableModelOfWorkspaces.updateItems(workspaceList)
-                    if (selectedWorkspace != null) {
-                        tableOfWorkspaces.selectItem(selectedWorkspace)
-                    }
-                }
+                loadWorkspaces()
                 delay(5000)
+            }
+        }
+    }
+
+    private suspend fun loadWorkspaces() {
+        val workspaceList = withContext(Dispatchers.IO) {
+            try {
+                return@withContext coderClient.workspaces().collectAgents()
+            } catch (e: Exception) {
+                logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
+                emptyList()
+            }
+        }
+
+        withContext(Dispatchers.Main) {
+            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+            listTableModelOfWorkspaces.items = workspaceList
+            if (selectedWorkspace != null) {
+                tableOfWorkspaces.selectItem(selectedWorkspace)
             }
         }
     }
@@ -510,15 +512,15 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private fun ListTableModel<WorkspaceAgentModel>.updateItems(workspaces: Collection<WorkspaceAgentModel>) {
-        while (this.rowCount > 0) this.removeRow(0)
-        this.addRows(workspaces)
-    }
-
-    private fun TableView<WorkspaceAgentModel>.selectItem(workspace: WorkspaceAgentModel) {
-        this.items.forEachIndexed { index, workspaceAgentModel ->
-            if (workspaceAgentModel.name == workspace.name)
-                this.setRowSelectionInterval(index, index)
+    private fun TableView<WorkspaceAgentModel>.selectItem(workspaceName: String?) {
+        if (workspaceName != null) {
+            this.items.forEachIndexed { index, workspaceAgentModel ->
+                if (workspaceAgentModel.name == workspaceName) {
+                    selectionModel.addSelectionInterval(convertRowIndexToView(index), convertRowIndexToView(index))
+                    // fix cell selection case
+                    columnModel.selectionModel.addSelectionInterval(0, columnCount - 1)
+                }
+            }
         }
     }
 
