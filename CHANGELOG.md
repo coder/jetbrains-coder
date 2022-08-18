@@ -3,6 +3,8 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+
+## [2.1.0]
 ### Added
 - support for displaying workspace version
 - support for managing the lifecycle of a workspace, i.e. start and stop and update workspace to the latest template version
@@ -17,18 +19,14 @@
 - no longer allow users to open a connection to a Windows or macOS workspace. It's not yet supported by Gateway
 
 ## [2.0.2]
-
 ### Added
-
 - support for displaying working and non-working workspaces
 - better support for Light and Dark themes in the "Status" column
 
 ### Fixed
-
 - left panel is no longer visible when a new connection is triggered from Coder's "Recent Workspaces" panel.
   This provides consistency with other plugins compatible with Gateway
 - the "Select IDE and Project" button in the "Coder Workspaces" view is now disabled when no workspace is selected
-
 
 ### Changed
 - the authentication view is now merged with the "Coder Workspaces" view allowing users to quickly change the host
@@ -39,7 +37,6 @@
 - working workspaces are now listed when there are issues with resolving agents
 - list only workspaces owned by the logged user
 
-
 ### Changed
 - links to documentation now point to the latest Coder OSS
 - simplified main action link text from `Connect to Coder Workspaces` to `Connect to Coder`
@@ -48,7 +45,6 @@
 ## [2.0.0]
 ### Added
 - support for Gateway 2022.2
-
 
 ### Changed
 - Java 17 is now required to run the plugin
