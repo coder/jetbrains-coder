@@ -10,7 +10,6 @@ import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.ssh.config.unified.SshConfig
-import com.intellij.ssh.config.unified.SshConfigManager
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
@@ -89,11 +88,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 }
             }
 
-            recentConnectionsService.addRecentConnection(
-                RecentWorkspaceConnection(
-                    coderWorkspaceHostname, projectPath, localTimeFormatter.format(LocalDateTime.now()), ideProductCode, ideBuildNumber, ideDownloadLink, webTerminalLink
-                )
-            )
+            recentConnectionsService.addRecentConnection(RecentWorkspaceConnection(coderWorkspaceHostname, projectPath, localTimeFormatter.format(LocalDateTime.now()), ideProductCode, ideBuildNumber, ideDownloadLink, webTerminalLink))
 
             return object : GatewayConnectionHandle(clientLifetime) {
                 override fun getTitle(): String {
