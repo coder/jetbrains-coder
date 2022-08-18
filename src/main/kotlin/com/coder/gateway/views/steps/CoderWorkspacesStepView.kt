@@ -24,6 +24,7 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
+import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -69,6 +70,7 @@ import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
@@ -88,6 +90,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceStatusColumnInfo("Status")
     )
 
+    private val notificationBand = JLabel()
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         setEnableAntialiasing(true)
         rowSelectionAllowed = true
@@ -102,7 +105,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
+            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
+            if (selectedObject?.agentOS != OS.LINUX) {
+                notificationBand.apply {
+                    isVisible = true
+                    icon = AllIcons.General.Information
+                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info")
+                }
+            } else {
+                notificationBand.isVisible = false
+            }
             updateWorkspaceActions()
         }
     }
@@ -154,7 +166,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 scrollCell(toolbar.createPanel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
             }.topGap(TopGap.NONE).resizableRow()
-
+            row {
+                cell(notificationBand).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
+                    font = JBFont.h4().asBold()
+                    isVisible = false
+                }
+            }
         }
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 

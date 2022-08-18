@@ -14,6 +14,7 @@
 
 ### Fixed
 - terminal link for workspaces with a single agent
+- no longer allow users to open a connection to a Windows or macOS workspace. It's not yet supported by Gateway
 
 ## [2.0.2]
 
