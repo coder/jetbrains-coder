@@ -11,11 +11,11 @@ class CoderCLIManager(url: URL, buildVersion: String) {
 
     init {
         val os = getOS()
-        val ext = if (os == OS.WINDOWS) "exe" else ""
         val cliName = getCoderCLIForOS(os, getArch())
-        val filename = if (ext.isBlank()) "${cliName}-${buildVersion}" else "${cliName}-${buildVersion}.${ext}"
+        val cliNameWithExt = if (os == OS.WINDOWS) "$cliName.exe" else cliName
+        val filename = if (os == OS.WINDOWS) "${cliName}-${buildVersion}.exe" else "${cliName}-${buildVersion}"
 
-        remoteCliPath = URL(url.protocol, url.host, url.port, "/bin/$cliName")
+        remoteCliPath = URL(url.protocol, url.host, url.port, "/bin/$cliNameWithExt")
         localCliPath = Paths.get(System.getProperty("java.io.tmpdir"), filename)
     }
 
