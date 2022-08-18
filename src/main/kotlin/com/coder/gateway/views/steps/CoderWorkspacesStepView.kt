@@ -6,23 +6,30 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAgentStatus
 import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
+import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
 import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
 import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
+import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
+import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
+import com.coder.gateway.sdk.CoderCLIDownloader
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.TemplateResponseException
+import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
-import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
 import com.coder.gateway.sdk.v2.models.Workspace
-import com.coder.gateway.sdk.v2.models.WorkspaceBuildTransition
 import com.coder.gateway.sdk.withPath
+import com.intellij.icons.AllIcons
+import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
@@ -32,8 +39,10 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
+import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
 import com.intellij.ui.JBColor
+import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
 import com.intellij.ui.dsl.builder.BottomGap
@@ -51,14 +60,17 @@ import com.intellij.util.ui.ListTableModel
 import com.intellij.util.ui.table.IconTableCellRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
-import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
@@ -67,11 +79,20 @@ import javax.swing.table.TableCellRenderer
 
 class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
-    private var wizardModel = CoderWorkspacesWizardModel()
+    private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
-    private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(WorkspaceIconColumnInfo(""), WorkspaceNameColumnInfo("Name"), WorkspaceTemplateNameColumnInfo("Template"), WorkspaceStatusColumnInfo("Status"))
+    private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
+        WorkspaceIconColumnInfo(""),
+        WorkspaceNameColumnInfo("Name"),
+        WorkspaceTemplateNameColumnInfo("Template"),
+        WorkspaceVersionColumnInfo("Version"),
+        WorkspaceStatusColumnInfo("Status")
+    )
+
+    private val notificationBand = JLabel()
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
+        setEnableAntialiasing(true)
         rowSelectionAllowed = true
         columnSelectionAllowed = false
         tableHeader.reorderingAllowed = false
@@ -84,9 +105,33 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING)
+            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
+            if (selectedObject?.agentOS != OS.LINUX) {
+                notificationBand.apply {
+                    isVisible = true
+                    icon = AllIcons.General.Information
+                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info")
+                }
+            } else {
+                notificationBand.isVisible = false
+            }
+            updateWorkspaceActions()
         }
     }
+
+    private val startWorkspaceAction = StartWorkspaceAction()
+    private val stopWorkspaceAction = StopWorkspaceAction()
+    private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
+
+    private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
+        .disableAddAction()
+        .disableRemoveAction()
+        .disableUpDownActions()
+        .addExtraAction(startWorkspaceAction)
+        .addExtraAction(stopWorkspaceAction)
+        .addExtraAction(updateWorkspaceTemplateAction)
+
+    private var poller: Job? = null
 
     override val component = panel {
         indent {
@@ -103,12 +148,14 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(wizardModel::coderURL).applyToComponent {
+                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
+                        poller?.cancel()
                         loginAndLoadWorkspace()
                     }
                 }
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
+                    poller?.cancel()
                     loginAndLoadWorkspace()
                 }.applyToComponent {
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
@@ -116,39 +163,139 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 cell()
             }
             row {
-                scrollCell(tableOfWorkspaces).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                scrollCell(toolbar.createPanel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
             }.topGap(TopGap.NONE).resizableRow()
-
+            row {
+                cell(notificationBand).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
+                    font = JBFont.h4().asBold()
+                    isVisible = false
+                }
+            }
         }
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
+    private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.startWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not build workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private inner class UpdateWorkspaceTemplateAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.updateWorkspace(workspace.workspaceID, workspace.workspaceName, workspace.lastBuildTransition, workspace.templateID)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                        } catch (e: TemplateResponseException) {
+                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            coderClient.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
+        if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
+            triggerWorkspacePolling()
+        }
+        updateWorkspaceActions()
+    }
+
+    private fun updateWorkspaceActions() {
+        when (tableOfWorkspaces.selectedObject?.agentStatus) {
+            RUNNING -> {
+                startWorkspaceAction.isEnabled = false
+                stopWorkspaceAction.isEnabled = true
+                when (tableOfWorkspaces.selectedObject?.status) {
+                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
+                    else -> updateWorkspaceTemplateAction.isEnabled = false
+                }
+
+            }
+
+            STOPPED, FAILED -> {
+                startWorkspaceAction.isEnabled = true
+                stopWorkspaceAction.isEnabled = false
+                when (tableOfWorkspaces.selectedObject?.status) {
+                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
+                    else -> updateWorkspaceTemplateAction.isEnabled = false
+                }
+            }
+
+            else -> {
+                startWorkspaceAction.isEnabled = false
+                stopWorkspaceAction.isEnabled = false
+                updateWorkspaceTemplateAction.isEnabled = false
+            }
+        }
+        ActivityTracker.getInstance().inc()
     }
 
     private fun loginAndLoadWorkspace() {
         // force bindings to be filled
         component.apply()
 
-        BrowserUtil.browse(wizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
+        BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
         val pastedToken = askToken()
 
         if (pastedToken.isNullOrBlank()) {
             return
         }
         try {
-            coderClient.initClientSession(wizardModel.coderURL.toURL(), pastedToken)
+            coderClient.initClientSession(localWizardModel.coderURL.toURL(), pastedToken)
         } catch (e: AuthenticationResponseException) {
-            logger.error("Could not authenticate on ${wizardModel.coderURL}. Reason $e")
+            logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
             return
         }
-        wizardModel.apply {
+
+        val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
+
+
+        localWizardModel.apply {
             token = pastedToken
             buildVersion = coderClient.buildVersion
+            localCliPath = cliManager.localCliPath.toAbsolutePath().toString()
         }
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
@@ -160,33 +307,28 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     fraction = 0.1
                 }
 
-                val cliManager = CoderCLIManager(wizardModel.coderURL.toURL(), wizardModel.buildVersion)
-                val cli = cliManager.download() ?: throw IllegalStateException("Could not download coder binary")
+                CoderCLIDownloader().downloadCLI(cliManager.remoteCliPath, cliManager.localCliPath)
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
-                    val chmodOutput = ProcessExecutor().command("chmod", "+x", cli.toAbsolutePath().toString()).readOutput(true).execute().outputUTF8()
-                    logger.info("chmod +x ${cli.toAbsolutePath()} $chmodOutput")
+                    val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
+                    logger.info("chmod +x ${cliManager.localCliPath.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
                     text = "Configuring coder cli..."
                     fraction = 0.5
                 }
 
-                val loginOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "login", wizardModel.coderURL, "--token", wizardModel.token).readOutput(true).execute().outputUTF8()
+                val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
                 logger.info("coder-cli login output: $loginOutput")
                 pi.fraction = 0.8
-                val sshConfigOutput = ProcessExecutor().command(cli.toAbsolutePath().toString(), "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                logger.info("Result of `${cli.toAbsolutePath()} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+                val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+                logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
                 pi.fraction = 1.0
             }
         }
 
-        wizardModel.apply {
-            coderURL = wizardModel.coderURL
-            token = wizardModel.token
-        }
         ProgressManager.getInstance().run(authTask)
-        loadWorkspaces()
+        triggerWorkspacePolling()
     }
 
     private fun askToken(): String? {
@@ -210,19 +352,33 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private fun loadWorkspaces() {
-        cs.launch {
-            val workspaceList = withContext(Dispatchers.IO) {
-                try {
-                    return@withContext coderClient.workspaces().collectAgents()
-                } catch (e: Exception) {
-                    logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
-                    emptyList()
-                }
-            }
+    private fun triggerWorkspacePolling() {
+        poller?.cancel()
 
-            // if we just run the update on the main dispatcher, the code will block because it cant get some AWT locks
-            ApplicationManager.getApplication().invokeLater { listTableModelOfWorkspaces.updateItems(workspaceList) }
+        poller = cs.launch {
+            while (isActive) {
+                loadWorkspaces()
+                delay(5000)
+            }
+        }
+    }
+
+    private suspend fun loadWorkspaces() {
+        val workspaceList = withContext(Dispatchers.IO) {
+            try {
+                return@withContext coderClient.workspaces().collectAgents()
+            } catch (e: Exception) {
+                logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
+                emptyList()
+            }
+        }
+
+        withContext(Dispatchers.Main) {
+            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+            listTableModelOfWorkspaces.items = workspaceList
+            if (selectedWorkspace != null) {
+                tableOfWorkspaces.selectItem(selectedWorkspace)
+            }
         }
     }
 
@@ -232,14 +388,19 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private fun Workspace.agentModels(): List<WorkspaceAgentModel> {
         return try {
-            val agents = coderClient.workspaceAgents(this)
+            val agents = coderClient.workspaceAgentsByTemplate(this)
             when (agents.size) {
                 0 -> {
                     listOf(
                         WorkspaceAgentModel(
+                            this.id,
                             this.name,
+                            this.name,
+                            this.templateID,
                             this.templateName,
+                            WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
+                            this.latestBuild.workspaceTransition.name.toLowerCase(),
                             null,
                             null,
                             null
@@ -247,42 +408,76 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     )
                 }
 
-                1 -> {
-                    listOf(
-                        WorkspaceAgentModel(
-                            this.name,
-                            this.templateName,
-                            WorkspaceAgentStatus.from(this),
-                            OS.from(agents[0].operatingSystem),
-                            Arch.from(agents[0].architecture),
-                            agents[0].directory
-                        )
-                    )
-                }
-
                 else -> agents.map { agent ->
-                    val workspaceName = "${this.name}.${agent.name}"
+                    val workspaceWithAgentName = "${this.name}.${agent.name}"
                     WorkspaceAgentModel(
-                        workspaceName,
+                        this.id,
+                        this.name,
+                        workspaceWithAgentName,
+                        this.templateID,
                         this.templateName,
+                        WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
+                        this.latestBuild.workspaceTransition.name.toLowerCase(),
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
                         agent.directory
                     )
-                }
-                    .toList()
+                }.toList()
             }
         } catch (e: Exception) {
-            logger.error("Skipping workspace ${this.name} because we could not retrieve the agent(s). Reason: $e")
-            emptyList()
+            logger.warn("Agent(s) for ${this.name} could not be retrieved. Reason: $e")
+            listOf(
+                WorkspaceAgentModel(
+                    this.id,
+                    this.name,
+                    this.name,
+                    this.templateID,
+                    this.templateName,
+                    WorkspaceVersionStatus.from(this),
+                    WorkspaceAgentStatus.from(this),
+                    this.latestBuild.workspaceTransition.name.toLowerCase(),
+                    null,
+                    null,
+                    null
+                )
+            )
         }
     }
 
+    override fun onPrevious() {
+        super.onPrevious()
+        poller?.cancel()
+    }
+
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
+        if (localWizardModel.localCliPath.isNotBlank()) {
+            val configSSHTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.configssh.dialog.title"), false) {
+                override fun run(pi: ProgressIndicator) {
+                    pi.apply {
+                        text = "Configuring coder cli..."
+                        fraction = 0.1
+                    }
+                    val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+                    pi.fraction = 0.8
+                    logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+                    pi.fraction = 1.0
+                }
+            }
+            ProgressManager.getInstance().run(configSSHTask)
+        }
+
+        wizardModel.apply {
+            coderURL = localWizardModel.coderURL
+            token = localWizardModel.token
+            buildVersion = localWizardModel.buildVersion
+            localCliPath = localWizardModel.localCliPath
+        }
+
         val workspace = tableOfWorkspaces.selectedObject
         if (workspace != null) {
             wizardModel.selectedWorkspace = workspace
+            poller?.cancel()
             return true
         }
         return false
@@ -329,7 +524,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
+                    font = JBFont.h3().asBold()
                     return this
                 }
             }
@@ -339,6 +534,25 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
+        }
+
+        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+            return object : DefaultTableCellRenderer() {
+                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                    super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+                    if (value is String) {
+                        text = value
+                    }
+                    font = JBFont.h3()
+                    return this
+                }
+            }
+        }
+    }
+
+    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
+            return workspace?.status?.label
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
@@ -381,10 +595,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-
-    private fun ListTableModel<WorkspaceAgentModel>.updateItems(workspaces: Collection<WorkspaceAgentModel>) {
-        while (this.rowCount > 0) this.removeRow(0)
-        this.addRows(workspaces)
+    private fun TableView<WorkspaceAgentModel>.selectItem(workspaceName: String?) {
+        if (workspaceName != null) {
+            this.items.forEachIndexed { index, workspaceAgentModel ->
+                if (workspaceAgentModel.name == workspaceName) {
+                    selectionModel.addSelectionInterval(convertRowIndexToView(index), convertRowIndexToView(index))
+                    // fix cell selection case
+                    columnModel.selectionModel.addSelectionInterval(0, columnCount - 1)
+                }
+            }
+        }
     }
 
     companion object {

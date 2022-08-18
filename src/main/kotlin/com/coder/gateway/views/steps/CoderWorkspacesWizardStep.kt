@@ -10,5 +10,10 @@ sealed interface CoderWorkspacesWizardStep {
     val previousActionText: String
 
     fun onInit(wizardModel: CoderWorkspacesWizardModel)
+
+    fun onPrevious() {
+
+    }
+
     fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean
 }
