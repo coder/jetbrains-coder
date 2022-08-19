@@ -120,4 +120,106 @@ In the `.github/workflows` directory, you can find definitions for the following
 - [Release](.github/workflows/release.yml)
   - Triggered on `Publish release` event.
   - Updates `CHANGELOG.md` file with the content provided with the release note.
-  - Pat
+  - Publishes the plugin to JetBrains Marketplace using the provided `PUBLISH_TOKEN`.
+  - Sets publish channel depending on the plugin version, i.e. `1.0.0-beta` -> `beta` channel.
+  - Patches the Changelog and commits.
+
+### Release flow
+
+When the main branch receives a new pull request or a direct push, the [Build](.github/workflows/build.yml) workflow runs builds the plugin and prepares a draft release.
+
+The draft release is a working copy of a release, which you can review before publishing.
+It includes a predefined title and git tag, the current plugin version, for example, `v2.1.0`.
+The changelog is provided automatically using the [gradle-changelog-plugin][gh:gradle-changelog-plugin].
+An artifact file is also built with the plugin attached. Every new Build overrides the previous draft to keep the *Releases* page clean.
+
+When you edit the draft and use the <kbd>Publish release</kbd> button, GitHub will tag the repository with the given version and add a new entry to the Releases tab.
+Next, it will notify users who are *watching* the repository, triggering the final [Release](.github/workflows/release.yml) workflow.
+
+### Plugin signing
+
+Plugin Signing is a mechanism introduced in the 2021.2 release cycle to increase security in [JetBrains Marketplace](https://plugins.jetbrains.com).
+
+JetBrains Marketplace signing is designed to ensure that plugins are not modified over the course of the publishing and delivery pipeline.
+
+The plugin signing configuration is disabled for coder-gateway. To find out how to generate signing certificates and how to configure the signing task,
+check the [Plugin Signing][docs:plugin-signing] section in the IntelliJ Platform Plugin SDK documentation.
+
+### Publishing the plugin
+
+[gradle-intellij-plugin][gh:gradle-intellij-plugin-docs] provides the `publishPlugin` Gradle task to upload the plugin artifacts. The [Release](.github/workflows/release.yml) workflow
+automates this process by running the task when a new release appears in the GitHub Releases section.
+
+> **Note**
+>
+> Set a suffix to the plugin version to publish it in the custom repository channel, i.e. `v1.0.0-beta` will push your plugin to the `beta` [release channel][docs:release-channel].
+
+The authorization process relies on the `PUBLISH_TOKEN` secret environment variable, specified in the _Secrets_ section of the repository _Settings_.
+
+You can get that token in your JetBrains Marketplace profile dashboard in the [My Tokens][jb:my-tokens] tab.
+
+## Changelog maintenance
+
+When releasing an update, it is essential to let users know what the new version offers.
+The best way to do this is to provide release notes.
+
+The changelog is a curated list that contains information about any new features, fixes, and deprecations.
+When they are provided, these lists are available in a few different places:
+
+- the [CHANGELOG.md](./CHANGELOG.md) file,
+- the [Releases page][gh:releases],
+- the *What's new* section of JetBrains Marketplace Plugin page,
+- and inside the Plugin Manager's item details.
+
+Coder Gateway follows the [Keep a Changelog][keep-a-changelog] approach for handling the project's changelog.
+
+The [Gradle Changelog Plugin][gh:gradle-changelog-plugin] takes care of propagating information provided within the [CHANGELOG.md](./CHANGELOG.md) to the [Gradle IntelliJ Plugin][gh:gradle-intellij-plugin].
+You only have to take care of writing down the actual changes in proper sections of the `[Unreleased]` section.
+
+You start with an almost empty changelog:
+
+```
+# YourPlugin Changelog
+
+## [Unreleased]
+### Added
+- Initial scaffold created from [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template)
+```
+
+Now proceed with providing more entries to the `Added` group, or any other one that suits your change the most (see [How do I make a good changelog?][keep-a-changelog-how] for more details).
+
+When releasing a plugin update, you don't have to care about bumping the `[Unreleased]` header to the upcoming version – it will be handled automatically on the Continuous Integration (CI) after you publish your plugin.
+GitHub Actions will swap it and provide you an empty section for the next release so that you can proceed with the development:
+
+```
+# YourPlugin Changelog
+
+## [Unreleased]
+
+## [0.0.1]
+### Added
+- An awesome feature
+
+### Fixed
+- One annoying bug
+```
+
+[docs:qodana-github-action]: https://www.jetbrains.com/help/qodana/qodana-intellij-github-action.html
+
+[docs:plugin-signing]: https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate
+
+[docs:release-channel]: https://plugins.jetbrains.com/docs/intellij/deployment.html?from=IJPluginTemplate#specifying-a-release-channel
+
+[gh:gradle-changelog-plugin]: https://github.com/JetBrains/gradle-changelog-plugin
+
+[gh:gradle-intellij-plugin]: https://github.com/JetBrains/gradle-intellij-plugin
+
+[gh:gradle-intellij-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
+
+[gh:releases]: https://github.com/coder/coder-jetbrains/releases
+
+[jb:my-tokens]: https://plugins.jetbrains.com/author/me/tokens
+
+[keep-a-changelog]: https://keepachangelog.com
+
+[keep-a-changelog-how]: https://keepachangelog.com/en/1.0.0/#how
