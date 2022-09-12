@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- support for remembering last opened Coder session
+
 ### Changed
 
 - minimum supported Gateway build is now 222.3739.54
