@@ -11,6 +11,7 @@
 ### Changed
 
 - minimum supported Gateway build is now 222.3739.54
+- some dialog titles
 
 ## [2.1.0]
 

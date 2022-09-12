@@ -55,7 +55,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             val clientLifetime = LifetimeDefinition()
-            clientLifetime.launchUnderBackgroundProgress("Coder Gateway Deploy", canBeCancelled = true, isIndeterminate = true, project = null) {
+            clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title"), canBeCancelled = true, isIndeterminate = true, project = null) {
                 val context = SshMultistagePanelContext(
                     HostDeployInputs.FullySpecified(
                         remoteProjectPath = projectPath,
