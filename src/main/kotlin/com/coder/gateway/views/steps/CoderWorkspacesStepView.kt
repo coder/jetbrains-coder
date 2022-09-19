@@ -28,11 +28,12 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.invokeAndWaitIfNeeded
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -72,16 +73,23 @@ import java.awt.Dimension
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JTable
+import javax.swing.JTextField
 import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
 
+private const val CODER_URL_KEY = "coder-url"
+
+private const val SESSION_TOKEN = "session-token"
+
 class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
-    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
+    private val coderClient: CoderRestClientService = service()
+    private val appPropertiesService: PropertiesComponent = service()
 
+    private var tfUrl: JTextField? = null
     private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
         WorkspaceIconColumnInfo(""),
         WorkspaceNameColumnInfo("Name"),
@@ -148,15 +156,15 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
+                tfUrl = textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
-                        loginAndLoadWorkspace()
+                        askTokenAndOpenSession()
                     }
-                }
+                }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     poller?.cancel()
-                    loginAndLoadWorkspace()
+                    askTokenAndOpenSession()
                 }.applyToComponent {
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
                 }
@@ -238,6 +246,17 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         enableNextButtonCallback(false)
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
             triggerWorkspacePolling()
+        } else {
+            val url = appPropertiesService.getValue(CODER_URL_KEY)
+            val token = appPropertiesService.getValue(SESSION_TOKEN)
+            if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
+                localWizardModel.coderURL = url
+                localWizardModel.token = token
+                tfUrl?.text = url
+
+                poller?.cancel()
+                loginAndLoadWorkspace(token)
+            }
         }
         updateWorkspaceActions()
     }
@@ -272,28 +291,31 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         ActivityTracker.getInstance().inc()
     }
 
-    private fun loginAndLoadWorkspace() {
+    private fun askTokenAndOpenSession() {
         // force bindings to be filled
         component.apply()
 
-        BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
         val pastedToken = askToken()
-
         if (pastedToken.isNullOrBlank()) {
             return
         }
+        loginAndLoadWorkspace(pastedToken)
+    }
+
+    private fun loginAndLoadWorkspace(token: String) {
         try {
-            coderClient.initClientSession(localWizardModel.coderURL.toURL(), pastedToken)
+            coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
         } catch (e: AuthenticationResponseException) {
             logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
             return
         }
-
+        appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
+        appPropertiesService.setValue(SESSION_TOKEN, token)
         val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
 
 
         localWizardModel.apply {
-            token = pastedToken
+            this.token = token
             buildVersion = coderClient.buildVersion
             localCliPath = cliManager.localCliPath.toAbsolutePath().toString()
         }
@@ -327,11 +349,14 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             }
         }
 
-        ProgressManager.getInstance().run(authTask)
+        cs.launch {
+            ProgressManager.getInstance().run(authTask)
+        }
         triggerWorkspacePolling()
     }
 
     private fun askToken(): String? {
+        BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
         return invokeAndWaitIfNeeded(ModalityState.any()) {
             lateinit var sessionTokenTextField: JBTextField
 
