@@ -4,24 +4,20 @@
 
 ## [Unreleased]
 
+## [2.1.1]
 ### Added
-
 - support for remembering last opened Coder session
 
 ### Changed
-
 - minimum supported Gateway build is now 222.3739.54
 - some dialog titles
 
 ## [2.1.0]
-
 ### Added
-
 - support for displaying workspace version
 - support for managing the lifecycle of a workspace, i.e. start and stop and update workspace to the latest template version
 
 ### Changed
-
 - workspace panel is now updated every 5 seconds
 - combinations of workspace names and agent names are now listed even when a workspace is down
 - minimum supported Gateway build is now 222.3739.40
