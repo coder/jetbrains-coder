@@ -46,7 +46,7 @@ class CoderRestClientService {
         val cookieJar = JavaNetCookieJar(CookieManager()).apply {
             saveFromResponse(
                 cookieUrl,
-                listOf(Cookie.parse(cookieUrl, "session_token=$token")!!)
+                listOf(Cookie.parse(cookieUrl, "coder_session_token=$token")!!)
             )
         }
         val gson: Gson = GsonBuilder()
@@ -55,7 +55,7 @@ class CoderRestClientService {
             .create()
 
         val interceptor = HttpLoggingInterceptor()
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BASIC)
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
         retroRestClient = Retrofit.Builder()
             .baseUrl(url.toString())
             .client(

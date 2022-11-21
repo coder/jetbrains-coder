@@ -3,12 +3,22 @@
 # coder-gateway Changelog
 
 ## [Unreleased]
+### Added
+
+- upgraded API models
+
+### Fixed
+
+- support for the new Coder auth cookies
 
 ## [2.1.1]
+
 ### Added
+
 - support for remembering last opened Coder session
 
 ### Changed
+
 - minimum supported Gateway build is now 222.3739.54
 - some dialog titles
 

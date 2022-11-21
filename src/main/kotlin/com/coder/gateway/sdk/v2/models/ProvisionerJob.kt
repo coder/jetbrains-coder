@@ -9,9 +9,12 @@ data class ProvisionerJob(
     @SerializedName("created_at") val createdAt: Instant,
     @SerializedName("started_at") val startedAt: Instant,
     @SerializedName("completed_at") val completedAt: Instant,
+    @SerializedName("canceled_at") val canceledAt: Instant,
     @SerializedName("error") val error: String,
     @SerializedName("status") val status: ProvisionerJobStatus,
     @SerializedName("worker_id") val workerID: UUID,
+    @SerializedName("file_id") val fileID: UUID,
+    @SerializedName("tags") val tags: Map<String, String>,
 )
 
 enum class ProvisionerJobStatus {
