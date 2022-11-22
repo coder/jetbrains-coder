@@ -17,14 +17,10 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
-import okhttp3.Cookie
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.JavaNetCookieJar
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.net.CookieManager
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.URL
 import java.time.Instant
@@ -43,26 +39,17 @@ class CoderRestClientService {
      * @throws [AuthenticationResponseException] if authentication failed.
      */
     fun initClientSession(url: URL, token: String): User {
-        val cookieUrl = url.toHttpUrlOrNull()!!
-        val cookieJar = JavaNetCookieJar(CookieManager()).apply {
-            saveFromResponse(
-                cookieUrl,
-                listOf(Cookie.parse(cookieUrl, "coder_session_token=$token")!!)
-            )
-        }
         val gson: Gson = GsonBuilder()
             .registerTypeAdapter(Instant::class.java, InstantConverter())
             .setPrettyPrinting()
             .create()
 
-        val interceptor = HttpLoggingInterceptor()
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BASIC)
         retroRestClient = Retrofit.Builder()
             .baseUrl(url.toString())
             .client(
                 OkHttpClient.Builder()
-                    .addInterceptor(interceptor)
-                    .cookieJar(cookieJar)
+                    .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
+                    .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
                     .build()
             )
             .addConverterFactory(GsonConverterFactory.create(gson))

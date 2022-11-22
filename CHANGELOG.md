@@ -5,11 +5,11 @@
 ## [Unreleased]
 ### Added
 
-- upgraded support to the latest Coder platform
+- upgraded support for the latest Coder REST API
 
 ### Fixed
 
-- support for the new Coder auth cookies
+- authentication flow is now done using HTTP headers
 
 ## [2.1.1]
 
