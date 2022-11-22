@@ -13,23 +13,50 @@ data class WorkspaceBuild(
     @SerializedName("created_at") val createdAt: Instant,
     @SerializedName("updated_at") val updatedAt: Instant,
     @SerializedName("workspace_id") val workspaceID: UUID,
+    @SerializedName("workspace_name") val workspaceName: String,
+    @SerializedName("workspace_owner_id") val workspaceOwnerID: UUID,
+    @SerializedName("workspace_owner_name") val workspaceOwnerName: String,
     @SerializedName("template_version_id") val templateVersionID: UUID,
     @SerializedName("build_number") val buildNumber: Int,
-    @SerializedName("name") val name: String,
-    @SerializedName("transition") val workspaceTransition: WorkspaceBuildTransition,
-    @SerializedName("owner_id") val ownerID: UUID,
+    @SerializedName("transition") val transition: WorkspaceTransition,
     @SerializedName("initiator_id") val initiatorID: UUID,
+    @SerializedName("initiator_name") val initiatorUsername: String,
     @SerializedName("job") val job: ProvisionerJob,
-    @SerializedName("deadline") val deadline: Instant,
+    @SerializedName("reason") val reason: BuildReason,
+    @SerializedName("resources") val resources: List<WorkspaceResource>,
+    @SerializedName("deadline") val deadline: Instant?,
+    @SerializedName("status") val status: WorkspaceStatus,
+    @SerializedName("daily_cost") val dailyCost: Int,
 )
 
-enum class WorkspaceBuildTransition {
-    @SerializedName("start")
-    START,
+enum class WorkspaceStatus {
+    @SerializedName("pending")
+    PENDING,
 
-    @SerializedName("stop")
-    STOP,
+    @SerializedName("starting")
+    STARTING,
 
-    @SerializedName("delete")
-    DELETE
+    @SerializedName("running")
+    RUNNING,
+
+    @SerializedName("stopping")
+    STOPPING,
+
+    @SerializedName("stopped")
+    STOPPED,
+
+    @SerializedName("failed")
+    FAILED,
+
+    @SerializedName("canceling")
+    CANCELING,
+
+    @SerializedName("canceled")
+    CANCELED,
+
+    @SerializedName("deleting")
+    DELETING,
+
+    @SerializedName("deleted")
+    DELETED
 }

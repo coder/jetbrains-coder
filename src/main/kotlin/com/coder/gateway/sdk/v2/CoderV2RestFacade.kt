@@ -4,9 +4,9 @@ import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
-import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
+import com.coder.gateway.sdk.v2.models.WorkspacesResponse
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -27,7 +27,7 @@ interface CoderV2RestFacade {
      * Retrieves all workspaces the authenticated user has access to.
      */
     @GET("api/v2/workspaces")
-    fun workspaces(@Query("q") searchParams: String): Call<List<Workspace>>
+    fun workspaces(@Query("q") searchParams: String): Call<WorkspacesResponse>
 
     @GET("api/v2/buildinfo")
     fun buildInfo(): Call<BuildInfo>

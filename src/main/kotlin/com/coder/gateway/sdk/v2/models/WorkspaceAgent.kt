@@ -11,14 +11,37 @@ data class WorkspaceAgent(
     @SerializedName("first_connected_at") val firstConnectedAt: Instant?,
     @SerializedName("last_connected_at") val lastConnectedAt: Instant?,
     @SerializedName("disconnected_at") val disconnectedAt: Instant?,
-    @SerializedName("status") val status: String,
+    @SerializedName("status") val status: WorkspaceAgentStatus,
     @SerializedName("name") val name: String,
     @SerializedName("resource_id") val resourceID: UUID,
-    @SerializedName("instance_id") val instanceID: String,
+    @SerializedName("instance_id") val instanceID: String?,
     @SerializedName("architecture") val architecture: String,
     @SerializedName("environment_variables") val envVariables: Map<String, String>,
     @SerializedName("operating_system") val operatingSystem: String,
-    @SerializedName("startup_script") val startupScript: String,
+    @SerializedName("startup_script") val startupScript: String?,
     @SerializedName("directory") val directory: String?,
-    @SerializedName("apps") val apps: List<WorkspaceApp>
+    @SerializedName("version") val version: String,
+    @SerializedName("apps") val apps: List<WorkspaceApp>,
+    @SerializedName("latency") val derpLatency: Map<String, DERPRegion>?,
+    @SerializedName("connection_timeout_seconds") val connectionTimeoutSeconds: Int,
+    @SerializedName("troubleshooting_url") val troubleshootingURL: String
+)
+
+enum class WorkspaceAgentStatus {
+    @SerializedName("connecting")
+    CONNECTING,
+
+    @SerializedName("connected")
+    CONNECTED,
+
+    @SerializedName("disconnected")
+    DISCONNECTED,
+
+    @SerializedName("timeout")
+    TIMEOUT
+}
+
+data class DERPRegion(
+    @SerializedName("preferred") val preferred: Boolean,
+    @SerializedName("latency_ms") val latencyMillis: Double
 )

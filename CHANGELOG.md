@@ -5,7 +5,7 @@
 ## [Unreleased]
 ### Added
 
-- upgraded API models
+- upgraded support to the latest Coder platform
 
 ### Fixed
 

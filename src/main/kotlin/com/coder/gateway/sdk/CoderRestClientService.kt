@@ -13,6 +13,7 @@ import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
@@ -55,7 +56,7 @@ class CoderRestClientService {
             .create()
 
         val interceptor = HttpLoggingInterceptor()
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BASIC)
         retroRestClient = Retrofit.Builder()
             .baseUrl(url.toString())
             .client(
@@ -91,7 +92,7 @@ class CoderRestClientService {
             throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
         }
 
-        return workspacesResponse.body()!!
+        return workspacesResponse.body()!!.workspaces
     }
 
     private fun buildInfo(): BuildInfo {
@@ -126,7 +127,7 @@ class CoderRestClientService {
     }
 
     fun startWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
-        val buildRequest = CreateWorkspaceBuildRequest(null, "start", null, null, null)
+        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
             throw WorkspaceResponseException("Failed to build workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
@@ -136,7 +137,7 @@ class CoderRestClientService {
     }
 
     fun stopWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
-        val buildRequest = CreateWorkspaceBuildRequest(null, "stop", null, null, null)
+        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
             throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
@@ -145,10 +146,10 @@ class CoderRestClientService {
         return buildResponse.body()!!
     }
 
-    fun updateWorkspace(workspaceID: UUID, workspaceName: String, lastWorkspaceTransition: String, templateID: UUID): WorkspaceBuild {
+    fun updateWorkspace(workspaceID: UUID, workspaceName: String, lastWorkspaceTransition: WorkspaceTransition, templateID: UUID): WorkspaceBuild {
         val template = template(templateID)
 
-        val buildRequest = CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null)
+        val buildRequest = CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
             throw WorkspaceResponseException("Failed to update workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
