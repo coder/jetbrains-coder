@@ -425,7 +425,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                             this.templateName,
                             WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
-                            this.latestBuild.workspaceTransition.name.toLowerCase(),
+                            this.latestBuild.transition,
                             null,
                             null,
                             null
@@ -443,7 +443,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         this.templateName,
                         WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
-                        this.latestBuild.workspaceTransition.name.toLowerCase(),
+                        this.latestBuild.transition,
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
                         agent.directory
@@ -461,7 +461,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     this.templateName,
                     WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
-                    this.latestBuild.workspaceTransition.name.toLowerCase(),
+                    this.latestBuild.transition,
                     null,
                     null,
                     null
