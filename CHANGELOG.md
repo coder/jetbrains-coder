@@ -6,6 +6,7 @@
 ### Added
 
 - upgraded support for the latest Coder REST API
+- support for latest Gateway 2022.2.x builds
 
 ### Fixed
 

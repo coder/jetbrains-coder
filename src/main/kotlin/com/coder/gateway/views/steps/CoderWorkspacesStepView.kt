@@ -480,6 +480,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             val configSSHTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.configssh.dialog.title"), false) {
                 override fun run(pi: ProgressIndicator) {
                     pi.apply {
+                        isIndeterminate = false
                         text = "Configuring coder cli..."
                         fraction = 0.1
                     }
