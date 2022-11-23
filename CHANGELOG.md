@@ -2,28 +2,28 @@
 
 # coder-gateway Changelog
 
-## [Unreleased]
-### Added
+## Unreleased
 
+## 2.1.2 - 2022-11-23
+
+### Added
 - upgraded support for the latest Coder REST API
 - support for latest Gateway 2022.2.x builds
 
 ### Fixed
-
 - authentication flow is now done using HTTP headers
 
-## [2.1.1]
+## 2.1.1
 
 ### Added
-
 - support for remembering last opened Coder session
 
 ### Changed
-
 - minimum supported Gateway build is now 222.3739.54
 - some dialog titles
 
-## [2.1.0]
+## 2.1.0
+
 ### Added
 - support for displaying workspace version
 - support for managing the lifecycle of a workspace, i.e. start and stop and update workspace to the latest template version
@@ -37,7 +37,8 @@
 - terminal link for workspaces with a single agent
 - no longer allow users to open a connection to a Windows or macOS workspace. It's not yet supported by Gateway
 
-## [2.0.2]
+## 2.0.2
+
 ### Added
 - support for displaying working and non-working workspaces
 - better support for Light and Dark themes in the "Status" column
@@ -50,7 +51,8 @@
 ### Changed
 - the authentication view is now merged with the "Coder Workspaces" view allowing users to quickly change the host
 
-## [2.0.1]
+## 2.0.1
+
 ### Fixed
 - `Recent Coder Workspaces` label overlaps with the search bar in the `Connections` view
 - working workspaces are now listed when there are issues with resolving agents
@@ -61,7 +63,8 @@
 - simplified main action link text from `Connect to Coder Workspaces` to `Connect to Coder`
 - minimum supported Gateway build is now 222.3739.24
 
-## [2.0.0]
+## 2.0.0
+
 ### Added
 - support for Gateway 2022.2
 
@@ -69,7 +72,8 @@
 - Java 17 is now required to run the plugin
 - adapted the code to the new SSH API provided by Gateway
 
-## [1.0.0]
+## 1.0.0
+
 ### Added
 - initial scaffold for Gateway plugin
 - browser based authentication on Coder environments
