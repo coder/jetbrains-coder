@@ -36,7 +36,7 @@ dependencies {
 // Configure project's dependencies
 repositories {
     mavenCentral()
-    maven(url = "https://www.jetbrains.com/intellij-repository/releases")
+    maven(url = "https://www.jetbrains.com/intellij-repository/snapshots")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
