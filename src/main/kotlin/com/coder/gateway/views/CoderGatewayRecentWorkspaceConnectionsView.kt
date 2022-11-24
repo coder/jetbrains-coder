@@ -37,6 +37,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.Dimension
+import java.util.Locale
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
@@ -70,7 +71,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                     addDocumentListener(object : DocumentAdapter() {
                                         override fun textChanged(e: DocumentEvent) {
                                             val toSearchFor = this@applyToComponent.text
-                                            val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.toLowerCase()?.contains(toSearchFor) ?: false || it.projectPath?.toLowerCase()?.contains(toSearchFor) ?: false }
+                                            val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false || it.projectPath?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false }
                                             updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
                                         }
                                     })

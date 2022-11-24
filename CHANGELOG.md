@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Added
+- support for Gateway 2022.3 RC
+
 ## 2.1.2 - 2022-11-23
 
 ### Added

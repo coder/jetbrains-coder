@@ -34,7 +34,6 @@ import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
-import com.jetbrains.gateway.ssh.deploy.guessOs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -42,6 +41,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
+import java.util.Locale
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JLabel
@@ -125,7 +125,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     HighLevelHostAccessor.create(
                         credentialsHolder,
                         true
-                    ).hostCommandExecutor.guessOs()
+                    ).guessOs()
                 } catch (e: Exception) {
                     logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                     null
@@ -235,7 +235,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 JPanel().apply {
                     layout = FlowLayout(FlowLayout.LEFT)
                     add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
-                    add(JLabel("${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.toLowerCase()}").apply {
+                    add(JLabel("${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(Locale.getDefault())}").apply {
                         foreground = UIUtil.getLabelDisabledForeground()
                     })
                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
