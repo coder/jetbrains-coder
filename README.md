@@ -121,12 +121,12 @@ In the `.github/workflows` directory, you can find definitions for the following
   - Triggered on `Publish release` event.
   - Updates `CHANGELOG.md` file with the content provided with the release note.
   - Publishes the plugin to JetBrains Marketplace using the provided `PUBLISH_TOKEN`.
-  - Sets publish channel depending on the plugin version, i.e. `1.0.0-beta` -> `beta` channel.
+  - Sets publish channel depending on the plugin version, i.e. `1.0.0-beta` -> `beta` channel. For now, both `main` and `eap` branches are published on default release channel. 
   - Patches the Changelog and commits.
 
 ### Release flow
 
-When the main branch receives a new pull request or a direct push, the [Build](.github/workflows/build.yml) workflow runs builds the plugin and prepares a draft release.
+When the `main` or `eap` branch receives a new pull request or a direct push, the [Build](.github/workflows/build.yml) workflow runs builds the plugin and prepares a draft release.
 
 The draft release is a working copy of a release, which you can review before publishing.
 It includes a predefined title and git tag, the current plugin version, for example, `v2.1.0`.
@@ -203,6 +203,28 @@ GitHub Actions will swap it and provide you an empty section for the next releas
 ### Fixed
 - One annoying bug
 ```
+
+## `main` vs `eap` branch
+
+Gateway API has not reached maturity. More often than not, there are API incompatibilities between
+the latest stable version of Gateway and EAP ones (Early Access Program). To provide support for both
+versions of Gateway we've decided:
+
+- to have two branches for releases: `main` and `eap`
+- `main` branch will provide support for the latest stable Gateway release, while `eap` will provide
+  support for releases in the EAP program.
+- both versions of the plugin will keep the MAJOR.MINOR.PATCH numbers in sync. When there is a fix
+  in the plugin's business code, these versions will change and the changes on the `main` branch will
+  have to be merged on the `eap` branch as well.
+- releases from `eap` branch are suffixed with `-eap.x`. `x` will allow releases for the same plugin
+  functionality but with support for a different Gateway EAP version. In other words, version `2.1.2`
+  of the plugin supports Gateway 2022.2 while version `2.1.2-eap.0` supports some builds in the Gateway
+  2022.3 EAP. `2.1.2-eap.1` might have to support a newer version of EAP.
+- when Gateway 2022.3 EAP is released in the stable channel then `eap` branch will have to be merged back
+  in the `main` branch, and it will start supporting the next EAP builds.
+- releases from both branches are published in the stable release channel. Jetbrains provides support for
+  different release channels (ex: `eap` or `beta`), but all of them except the stable channel have to be
+  manually configured by users in Gateway - which is super inconvenient.
 
 [docs:qodana-github-action]: https://www.jetbrains.com/help/qodana/qodana-intellij-github-action.html
 
