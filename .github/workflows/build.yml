@@ -151,6 +151,7 @@ jobs:
         run: |
           gh release create v${{ needs.build.outputs.version }} \
             --draft \
+            --target eap \
             --title "v${{ needs.build.outputs.version }}" \
             --notes "$(cat << 'EOM'
           ${{ needs.build.outputs.changelog }}
