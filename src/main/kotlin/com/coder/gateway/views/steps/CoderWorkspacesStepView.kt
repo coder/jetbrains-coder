@@ -13,7 +13,6 @@ import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
-import com.coder.gateway.sdk.CoderCLIDownloader
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
@@ -317,7 +316,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         localWizardModel.apply {
             this.token = token
             buildVersion = coderClient.buildVersion
-            localCliPath = cliManager.localCliPath.toAbsolutePath().toString()
+            localCliPath = cliManager.localCli.toAbsolutePath().toString()
         }
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
@@ -329,11 +328,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     fraction = 0.1
                 }
 
-                CoderCLIDownloader().downloadCLI(cliManager.remoteCliPath, cliManager.localCliPath)
+                cliManager.downloadCLI()
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
                     val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
-                    logger.info("chmod +x ${cliManager.localCliPath.toAbsolutePath()} $chmodOutput")
+                    logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
                     text = "Configuring coder cli..."
@@ -345,6 +344,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 pi.fraction = 0.8
                 val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
                 logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+
+                pi.apply {
+                    text = "Remove old coder cli versions..."
+                    fraction = 0.9
+                }
+                cliManager.removeOldCli()
+
                 pi.fraction = 1.0
             }
         }

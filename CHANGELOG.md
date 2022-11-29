@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Fixed
+- outdated Coder CLI binaries are cleaned up
+
 ## 2.1.2 - 2022-11-23
 
 ### Added
