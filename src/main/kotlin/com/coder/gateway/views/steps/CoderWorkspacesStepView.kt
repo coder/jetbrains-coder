@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
@@ -15,6 +16,7 @@ import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
+import com.coder.gateway.sdk.CoderSemVer
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -304,6 +306,24 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private fun loginAndLoadWorkspace(token: String) {
         try {
             coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
+            if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
+                notificationBand.apply {
+                    isVisible = true
+                    icon = AllIcons.General.Warning
+                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion)
+                }
+            } else {
+                val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
+                val testedCoderVersion = CoderSupportedVersions.maxCoderVersion
+
+                if (!testedCoderVersion.isCompatibleWith(coderVersion)) {
+                    notificationBand.apply {
+                        isVisible = true
+                        icon = AllIcons.General.Warning
+                        text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion)
+                    }
+                }
+            }
         } catch (e: AuthenticationResponseException) {
             logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
             return
