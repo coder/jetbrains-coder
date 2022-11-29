@@ -4,8 +4,15 @@
 
 ## Unreleased
 
+## 2.1.2-eap.0 - 2022-11-29
+
 ### Added
 - support for Gateway 2022.3 RC
+- upgraded support for the latest Coder REST API
+- support for latest Gateway 2022.2.x builds
+
+### Fixed
+- authentication flow is now done using HTTP headers
 
 ## 2.1.2 - 2022-11-23
 
