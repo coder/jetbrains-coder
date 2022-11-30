@@ -9,7 +9,7 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "version.CoderSupportedVersions"
 
 object CoderSupportedVersions : DynamicBundle(BUNDLE) {
-    val maxCoderVersion = CoderSemVer.parse(message("maxCoderVersion"))
+    val lastTestedVersion = CoderSemVer.parse(message("lastTestedCoderVersion"))
 
     @Suppress("SpreadOperator")
     @JvmStatic
