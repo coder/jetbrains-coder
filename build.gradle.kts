@@ -6,6 +6,8 @@ fun properties(key: String) = project.findProperty(key).toString()
 plugins {
     // Java support
     id("java")
+    // Groovy support
+    id("groovy")
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.7.21"
     // Gradle IntelliJ Plugin
@@ -31,6 +33,11 @@ dependencies {
     implementation("org.zeroturnaround:zt-exec:1.12") {
         exclude("org.slf4j")
     }
+
+    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.6"))
+    testImplementation("org.apache.groovy:groovy")
+    testImplementation(platform("org.spockframework:spock-bom:2.3-groovy-4.0"))
+    testImplementation("org.spockframework:spock-core")
 }
 
 // Configure project's dependencies
@@ -138,5 +145,9 @@ tasks {
         // Specify pre-release label to publish the plugin in a custom Release Channel automatically. Read more:
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
         channels.set(listOf(properties("pluginVersion").split('-').getOrElse(1) { "default" }.split('.').first()))
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
