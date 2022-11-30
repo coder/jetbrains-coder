@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Added
+- warning system when plugin might not be compatible with Coder REST API
+
 ### Fixed
 - outdated Coder CLI binaries are cleaned up
 
