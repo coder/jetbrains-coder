@@ -652,8 +652,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         private fun WorkspaceAgentModel.statusColor() = when (this.agentStatus) {
             RUNNING -> JBColor.GREEN
-            STARTING, STOPPING, DELETING -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
-            else -> JBColor.RED
+            FAILED -> JBColor.RED
+            else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
         }
     }
 

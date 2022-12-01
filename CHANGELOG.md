@@ -10,6 +10,7 @@
 
 ### Fixed
 - outdated Coder CLI binaries are cleaned up
+- workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
 
 ## 2.1.2 - 2022-11-23
 
