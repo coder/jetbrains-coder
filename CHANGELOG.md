@@ -6,6 +6,7 @@
 
 ### Added
 - warning system when plugin might not be compatible with Coder REST API
+- a `Create workspace` button which links to Coder's templates page
 
 ### Fixed
 - outdated Coder CLI binaries are cleaned up

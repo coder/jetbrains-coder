@@ -131,6 +131,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private val startWorkspaceAction = StartWorkspaceAction()
     private val stopWorkspaceAction = StopWorkspaceAction()
     private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
+    private val createWorkspaceAction = CreateWorkspaceAction()
 
     private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
         .disableAddAction()
@@ -139,6 +140,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         .addExtraAction(startWorkspaceAction)
         .addExtraAction(stopWorkspaceAction)
         .addExtraAction(updateWorkspaceTemplateAction)
+        .addExtraAction(createWorkspaceAction)
 
     private var poller: Job? = null
 
@@ -225,6 +227,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private inner class CreateWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates"))
+        }
+    }
+
     private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
@@ -263,6 +271,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun updateWorkspaceActions() {
+        createWorkspaceAction.isEnabled = true
+
         when (tableOfWorkspaces.selectedObject?.agentStatus) {
             RUNNING -> {
                 startWorkspaceAction.isEnabled = false
