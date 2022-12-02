@@ -3,6 +3,7 @@ package com.coder.gateway.sdk
 import com.intellij.openapi.diagnostic.Logger
 import java.io.InputStream
 import java.net.URL
+import java.nio.file.FileVisitOption
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -67,9 +68,14 @@ class CoderCLIManager(url: URL, buildVersion: String) {
     }
 
     fun removeOldCli() {
-        Files.walk(Path.of(tmpDir)).sorted().map { it.toFile() }.filter { it.name.contains(cliNamePrefix) && !it.name.contains(cliFileName) }.forEach {
-            logger.info("Removing $it because it is an old coder cli")
-            it.delete()
+        val tmpPath = Path.of(tmpDir)
+        if (Files.isReadable(tmpPath)) {
+            Files.walk(tmpPath, 1).use {
+                it.sorted().map { pt -> pt.toFile() }.filter { fl -> fl.name.contains(cliNamePrefix) && !fl.name.contains(cliFileName) }.forEach { fl ->
+                    logger.info("Removing $fl because it is an old coder cli")
+                    fl.delete()
+                }
+            }
         }
     }
 
