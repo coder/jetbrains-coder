@@ -21,7 +21,6 @@ plugins {
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
-val ktorVersion = properties("ktorVersion")
 dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // define a BOM and its version
@@ -98,7 +97,8 @@ tasks {
         compilerVersion.set(properties("instrumentationCompiler"))
     }
 
-    // TODO - this fails with linkage error, remove when it works
+    // TODO - this fails with linkage error, but we don't need it now
+    // because the plugin does not provide anything to search for in Preferences
     buildSearchableOptions {
         isEnabled = false
     }
@@ -127,6 +127,10 @@ tasks {
                 getOrNull(properties("pluginVersion")) ?: getLatest()
             }.toHTML()
         })
+    }
+
+    runIde {
+        autoReloadPlugins.set(true)
     }
 
     // Configure UI tests plugin
