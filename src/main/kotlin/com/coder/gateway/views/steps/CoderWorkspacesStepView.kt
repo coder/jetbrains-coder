@@ -6,12 +6,9 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAgentStatus
-import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
 import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
 import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
-import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
-import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
@@ -25,7 +22,6 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
-import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -72,7 +68,6 @@ import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Icon
-import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
@@ -99,7 +94,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceStatusColumnInfo("Status")
     )
 
-    private val notificationBand = JLabel()
+    private val notificationBanner = NotificationBanner()
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         setEnableAntialiasing(true)
         rowSelectionAllowed = true
@@ -116,13 +111,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
             if (selectedObject?.agentOS != OS.LINUX) {
-                notificationBand.apply {
+                notificationBanner.apply {
                     isVisible = true
-                    icon = AllIcons.General.Information
-                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info")
+                    showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
                 }
             } else {
-                notificationBand.isVisible = false
+                notificationBanner.component.isVisible = false
             }
             updateWorkspaceActions()
         }
@@ -141,6 +135,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         .addExtraAction(stopWorkspaceAction)
         .addExtraAction(updateWorkspaceTemplateAction)
         .addExtraAction(createWorkspaceAction)
+
 
     private var poller: Job? = null
 
@@ -174,15 +169,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 cell()
             }
             row {
-                scrollCell(toolbar.createPanel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                scrollCell(toolbar.createPanel().apply {
+                    add(notificationBanner.component.apply { isVisible = false }, "South")
+                }).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
-            }.topGap(TopGap.NONE).resizableRow()
-            row {
-                cell(notificationBand).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
-                    font = JBFont.h4().asBold()
-                    isVisible = false
-                }
-            }
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
         }
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 
@@ -317,20 +308,18 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         try {
             coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
             if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
-                notificationBand.apply {
-                    isVisible = true
-                    icon = AllIcons.General.Warning
-                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion)
+                notificationBanner.apply {
+                    component.isVisible = true
+                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
                 }
             } else {
                 val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
                 val testedCoderVersion = CoderSupportedVersions.lastTestedVersion
 
                 if (!testedCoderVersion.isCompatibleWith(coderVersion)) {
-                    notificationBand.apply {
-                        isVisible = true
-                        icon = AllIcons.General.Warning
-                        text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion)
+                    notificationBanner.apply {
+                        component.isVisible = true
+                        showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
                     }
                 }
             }
