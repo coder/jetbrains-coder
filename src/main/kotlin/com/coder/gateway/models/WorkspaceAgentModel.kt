@@ -4,6 +4,7 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import java.util.UUID
+import javax.swing.Icon
 
 data class WorkspaceAgentModel(
     val workspaceID: UUID,
@@ -11,6 +12,7 @@ data class WorkspaceAgentModel(
     val name: String,
     val templateID: UUID,
     val templateName: String,
+    val templateIcon: Icon,
     val status: WorkspaceVersionStatus,
     val agentStatus: WorkspaceAgentStatus,
     val lastBuildTransition: WorkspaceTransition,

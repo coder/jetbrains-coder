@@ -15,6 +15,7 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.CoderSemVer
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -83,6 +84,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = service()
+    private val iconDownloader: TemplateIconDownloader = service()
+
     private val appPropertiesService: PropertiesComponent = service()
 
     private var tfUrl: JTextField? = null
@@ -448,6 +451,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                             this.name,
                             this.templateID,
                             this.templateName,
+                            iconDownloader.load(this@agentModels.templateIcon, this.templateName),
                             WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
                             this.latestBuild.transition,
@@ -466,6 +470,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         workspaceWithAgentName,
                         this.templateID,
                         this.templateName,
+                        iconDownloader.load(this@agentModels.templateIcon, this.templateName),
                         WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
                         this.latestBuild.transition,
@@ -484,6 +489,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     this.name,
                     this.templateID,
                     this.templateName,
+                    iconDownloader.load(this@agentModels.templateIcon, this.templateName),
                     WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
                     this.latestBuild.transition,
@@ -550,12 +556,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 }
 
                 override fun getIcon(value: String, table: JTable?, row: Int): Icon {
-                    return when (OS.from(value)) {
-                        OS.LINUX -> CoderIcons.LINUX
-                        OS.WINDOWS -> CoderIcons.WINDOWS
-                        OS.MAC -> CoderIcons.MACOS
-                        else -> CoderIcons.UNKNOWN
-                    }
+                    return item?.templateIcon ?: CoderIcons.UNKNOWN
                 }
 
                 override fun isCenterAlignment() = true
