@@ -8,6 +8,9 @@
 - warning system when plugin might not be compatible with Coder REST API
 - a `Create workspace` button which links to Coder's templates page
 
+### Changed
+- redesigned the information&warning banner. Messages can now include hyperlinks
+
 ### Fixed
 - outdated Coder CLI binaries are cleaned up
 - workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
