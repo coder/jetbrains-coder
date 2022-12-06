@@ -7,7 +7,7 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 [![Coder Gateway Plugin Build](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml/badge.svg)](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml)
 
 <!-- Plugin description -->
-**Coder Gateway** connects your Jetbrains IDE to your [Coder Workspaces](https://coder.com/docs/coder-oss/latest/workspaces) so that you can develop from anywhere.
+**Coder Gateway** connects your JetBrains IDE to your [Coder Workspaces](https://coder.com/docs/coder-oss/latest/workspaces) so that you can develop from anywhere.
 
 **Manage less**
 
