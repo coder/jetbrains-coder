@@ -18,7 +18,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.components.Service
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -144,18 +143,5 @@ class CoderRestClientService {
         }
 
         return buildResponse.body()!!
-    }
-
-    fun getImageIcon(url: URL): ByteArray? {
-        val request = Request.Builder().url(url).build()
-        httpClient.newCall(request).execute().use {response ->
-            if (!response.isSuccessful) {
-                return null
-            }
-
-            response.body!!.byteStream().use {
-                return it.readAllBytes()
-            }
-        }
     }
 }

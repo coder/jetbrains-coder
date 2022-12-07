@@ -3,9 +3,9 @@ package com.coder.gateway.sdk
 import com.coder.gateway.icons.CoderIcons
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.util.IconUtil
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import com.intellij.ui.scale.ScaleContext
+import com.intellij.util.ImageLoader
+import com.intellij.util.ui.ImageUtil
 import java.net.URL
 import javax.swing.Icon
 import javax.swing.ImageIcon
@@ -13,40 +13,29 @@ import javax.swing.ImageIcon
 @Service(Service.Level.APP)
 class TemplateIconDownloader {
     private val coderClient: CoderRestClientService = service()
-    private val httpClient = OkHttpClient.Builder().build()
-    fun load(url: String, templateName: String): Icon {
-        if (url.isNullOrBlank()) {
+
+    fun load(path: String, templateName: String): Icon {
+        if (path.isBlank()) {
             return CoderIcons.UNKNOWN
         }
-        var byteArray: ByteArray? = null
 
-        if (url.startsWith("http")) {
-            byteArray = if (url.contains(coderClient.coderURL.host)) {
-                coderClient.getImageIcon(url.toURL())
-            } else {
-                getExternalImageIcon(url.toURL())
-            }
-        } else if (url.contains(coderClient.coderURL.host)) {
-            byteArray = coderClient.getImageIcon(coderClient.coderURL.withPath(url))
+        var url: URL? = null
+        if (path.startsWith("http")) {
+            url = path.toURL()
+        } else if (path.contains(coderClient.coderURL.host)) {
+            url = coderClient.coderURL.withPath(path)
         }
 
-        if (byteArray != null) {
-            return IconUtil.resizeSquared(ImageIcon(byteArray), 32)
+        if (url != null) {
+            var img = ImageLoader.loadFromUrl(url)
+            if (img != null) {
+                if (ImageUtil.getRealHeight(img) > 32 && ImageUtil.getRealWidth(img) > 32) {
+                    img = ImageUtil.resize(img, 32, ScaleContext.create())
+                }
+                return ImageIcon(img)
+            }
         }
 
         return CoderIcons.UNKNOWN
-    }
-
-    private fun getExternalImageIcon(url: URL): ByteArray? {
-        val request = Request.Builder().url(url).build()
-        httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                return null
-            }
-
-            response.body!!.byteStream().use {
-                return it.readAllBytes()
-            }
-        }
     }
 }
