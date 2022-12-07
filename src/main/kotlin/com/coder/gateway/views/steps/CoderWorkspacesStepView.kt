@@ -560,6 +560,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 }
 
                 override fun isCenterAlignment() = true
+
+                override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
+                    return super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
+                        border = JBUI.Borders.empty(10, 10)
+                    }
+                }
             }
         }
     }
