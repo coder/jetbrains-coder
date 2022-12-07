@@ -15,10 +15,6 @@ class TemplateIconDownloader {
     private val coderClient: CoderRestClientService = service()
 
     fun load(path: String, templateName: String): Icon {
-        if (path.isBlank()) {
-            return CoderIcons.UNKNOWN
-        }
-
         var url: URL? = null
         if (path.startsWith("http")) {
             url = path.toURL()
@@ -36,6 +32,49 @@ class TemplateIconDownloader {
             }
         }
 
-        return CoderIcons.UNKNOWN
+        return iconForChar(templateName.lowercase().first())
     }
+
+    private fun iconForChar(c: Char) = when (c) {
+        '0' -> CoderIcons.ZERO
+        '1' -> CoderIcons.ONE
+        '2' -> CoderIcons.TWO
+        '3' -> CoderIcons.THREE
+        '4' -> CoderIcons.FOUR
+        '5' -> CoderIcons.FIVE
+        '6' -> CoderIcons.SIX
+        '7' -> CoderIcons.SEVEN
+        '8' -> CoderIcons.EIGHT
+        '9' -> CoderIcons.NINE
+
+        'a' -> CoderIcons.A
+        'b' -> CoderIcons.B
+        'c' -> CoderIcons.C
+        'd' -> CoderIcons.D
+        'e' -> CoderIcons.E
+        'f' -> CoderIcons.F
+        'g' -> CoderIcons.G
+        'h' -> CoderIcons.H
+        'i' -> CoderIcons.I
+        'j' -> CoderIcons.J
+        'k' -> CoderIcons.K
+        'l' -> CoderIcons.L
+        'm' -> CoderIcons.M
+        'n' -> CoderIcons.N
+        'o' -> CoderIcons.O
+        'p' -> CoderIcons.P
+        'q' -> CoderIcons.Q
+        'r' -> CoderIcons.R
+        's' -> CoderIcons.S
+        't' -> CoderIcons.T
+        'u' -> CoderIcons.U
+        'v' -> CoderIcons.V
+        'w' -> CoderIcons.W
+        'x' -> CoderIcons.X
+        'y' -> CoderIcons.Y
+        'z' -> CoderIcons.Z
+
+        else -> CoderIcons.UNKNOWN
+    }
+
 }
