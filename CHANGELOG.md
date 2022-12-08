@@ -8,6 +8,7 @@
 - warning system when plugin might not be compatible with Coder REST API
 - a `Create workspace` button which links to Coder's templates page
 - workspace icons
+- quick toolbar action to open Coder Dashboard in the browser
 
 ### Changed
 - redesigned the information&warning banner. Messages can now include hyperlinks
