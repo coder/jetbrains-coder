@@ -28,6 +28,7 @@ import java.util.UUID
 
 @Service(Service.Level.APP)
 class CoderRestClientService {
+    private lateinit var httpClient: OkHttpClient
     private lateinit var retroRestClient: CoderV2RestFacade
     private lateinit var sessionToken: String
     lateinit var coderURL: URL
@@ -43,15 +44,14 @@ class CoderRestClientService {
             .registerTypeAdapter(Instant::class.java, InstantConverter())
             .setPrettyPrinting()
             .create()
+        httpClient = OkHttpClient.Builder()
+            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
+            .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
+            .build()
 
         retroRestClient = Retrofit.Builder()
             .baseUrl(url.toString())
-            .client(
-                OkHttpClient.Builder()
-                    .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
-                    .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
-                    .build()
-            )
+            .client(httpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(CoderV2RestFacade::class.java)
