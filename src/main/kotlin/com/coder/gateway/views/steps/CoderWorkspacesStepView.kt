@@ -325,7 +325,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 }
             } else {
                 val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
-                val testedCoderVersion = CoderSupportedVersions.lastTestedVersion
+                val testedCoderVersion = CoderSupportedVersions.maxCompatibleCoderVersion
 
                 if (!testedCoderVersion.isCompatibleWith(coderVersion)) {
                     notificationBanner.apply {

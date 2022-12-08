@@ -9,9 +9,9 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "version.CoderSupportedVersions"
 
 object CoderSupportedVersions : DynamicBundle(BUNDLE) {
-    val lastTestedVersion = CoderSemVer.parse(message("lastTestedCoderVersion"))
+    val maxCompatibleCoderVersion = CoderSemVer.parse(message("maxCompatibleCoderVersion"))
 
-    @Suppress("SpreadOperator")
     @JvmStatic
+    @Suppress("SpreadOperator")
     private fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any) = getMessage(key, *params)
 }
