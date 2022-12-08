@@ -89,16 +89,6 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             recentConnectionsService.addRecentConnection(RecentWorkspaceConnection(coderWorkspaceHostname, projectPath, localTimeFormatter.format(LocalDateTime.now()), ideProductCode, ideBuildNumber, ideDownloadLink, webTerminalLink))
-
-            return object : GatewayConnectionHandle(clientLifetime) {
-                override fun getTitle(): String {
-                    return "Connection to Coder Workspaces"
-                }
-
-                override fun hideToTrayOnStart(): Boolean {
-                    return false
-                }
-            }
         }
         return null
     }
