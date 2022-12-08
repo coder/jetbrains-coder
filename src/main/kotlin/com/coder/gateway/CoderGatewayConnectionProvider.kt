@@ -13,6 +13,7 @@ import com.intellij.ssh.config.unified.SshConfig
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
+import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.HostDeployInputs
 import com.jetbrains.gateway.ssh.IdeInfo
@@ -89,6 +90,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             recentConnectionsService.addRecentConnection(RecentWorkspaceConnection(coderWorkspaceHostname, projectPath, localTimeFormatter.format(LocalDateTime.now()), ideProductCode, ideBuildNumber, ideDownloadLink, webTerminalLink))
+            GatewayUI.getInstance().reset()
         }
         return null
     }
