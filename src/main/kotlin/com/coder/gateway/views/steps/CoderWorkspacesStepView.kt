@@ -125,6 +125,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private val goToDashboardAction = GoToDashboardAction()
     private val startWorkspaceAction = StartWorkspaceAction()
     private val stopWorkspaceAction = StopWorkspaceAction()
     private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
@@ -134,6 +135,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         .disableAddAction()
         .disableRemoveAction()
         .disableUpDownActions()
+        .addExtraAction(goToDashboardAction)
         .addExtraAction(startWorkspaceAction)
         .addExtraAction(stopWorkspaceAction)
         .addExtraAction(updateWorkspaceTemplateAction)
@@ -183,6 +185,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
+    private inner class GoToDashboardAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            BrowserUtil.browse(coderClient.coderURL)
+        }
+    }
+
     private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
@@ -221,12 +229,6 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private inner class CreateWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
-        override fun actionPerformed(p0: AnActionEvent) {
-            BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates"))
-        }
-    }
-
     private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
@@ -242,6 +244,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     }
                 }
             }
+        }
+    }
+
+    private inner class CreateWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates"))
         }
     }
 
@@ -265,8 +273,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun updateWorkspaceActions() {
-        createWorkspaceAction.isEnabled = true
-
+        goToDashboardAction.isEnabled = coderClient.isReady
+        createWorkspaceAction.isEnabled = coderClient.isReady
         when (tableOfWorkspaces.selectedObject?.agentStatus) {
             RUNNING -> {
                 startWorkspaceAction.isEnabled = false
@@ -380,6 +388,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         cs.launch {
             ProgressManager.getInstance().run(authTask)
         }
+        updateWorkspaceActions()
         triggerWorkspacePolling()
     }
 
