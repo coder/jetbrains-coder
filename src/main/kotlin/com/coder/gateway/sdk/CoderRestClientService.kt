@@ -16,7 +16,10 @@ import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.util.SystemInfo
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -43,7 +46,14 @@ class CoderRestClientService {
      */
     fun initClientSession(url: URL, token: String): User {
         val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
-        httpClient = OkHttpClient.Builder().addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }.addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) }).build()
+        val pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!! // this is the id from the plugin.xml
+
+        httpClient = OkHttpClient.Builder()
+            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
+            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion.version} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
+            // this should always be last if we want to see previous interceptors logged
+            .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
+            .build()
 
         retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient).addConverterFactory(GsonConverterFactory.create(gson)).build().create(CoderV2RestFacade::class.java)
 
