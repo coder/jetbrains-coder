@@ -1,8 +1,11 @@
 package com.coder.gateway.sdk
 
+import spock.lang.Unroll
+
+@Unroll
 class CoderSemVerTest extends spock.lang.Specification {
 
-    def 'semver versions are valid'() {
+    def "#semver is valid"() {
         expect:
         CoderSemVer.isValidVersion(semver)
 
@@ -40,7 +43,7 @@ class CoderSemVerTest extends spock.lang.Specification {
                    '1.0.0-0A.is.legal']
     }
 
-    def 'semver versions are parsed and correct major and minor values are extracted'() {
+    def "#semver version is parsed and correct major, minor and patch values are extracted"() {
         expect:
         CoderSemVer.parse(semver) == expectedCoderSemVer
 
@@ -79,7 +82,7 @@ class CoderSemVerTest extends spock.lang.Specification {
         '1.0.0-0A.is.legal'                                      || new CoderSemVer(1L, 0L, 0L)
     }
 
-    def 'semver like versions that start with a `v` are considered valid'() {
+    def "#semver is considered valid even when it starts with `v`"() {
         expect:
         CoderSemVer.isValidVersion(semver)
 
@@ -117,7 +120,7 @@ class CoderSemVerTest extends spock.lang.Specification {
                    'v1.0.0-0A.is.legal']
     }
 
-    def 'semver like versions that start with a `v` are parsed and correct major and minor values are extracted'() {
+    def "#semver is parsed and correct major, minor and patch values are extracted even though the version starts with a `v`"() {
         expect:
         CoderSemVer.parse(semver) == expectedCoderSemVer
 
@@ -154,5 +157,125 @@ class CoderSemVerTest extends spock.lang.Specification {
         'v1.0.0+0.build.1-rc.10000aaa-kk-0.1'                     || new CoderSemVer(1L, 0L, 0L)
         'v2147483647.2147483647.2147483647'                       || new CoderSemVer(2147483647L, 2147483647L, 2147483647L)
         'v1.0.0-0A.is.legal'                                      || new CoderSemVer(1L, 0L, 0L)
+    }
+
+    def "#firstVersion is > than #secondVersion"() {
+        expect:
+        firstVersion <=> secondVersion == 1
+
+        where:
+        firstVersion             | secondVersion
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(0, 0, 0)
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(0, 0, 1)
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(0, 1, 0)
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(0, 1, 1)
+
+        new CoderSemVer(2, 0, 0) | new CoderSemVer(1, 0, 0)
+        new CoderSemVer(2, 0, 0) | new CoderSemVer(1, 3, 0)
+        new CoderSemVer(2, 0, 0) | new CoderSemVer(1, 0, 3)
+        new CoderSemVer(2, 0, 0) | new CoderSemVer(1, 3, 3)
+
+
+        new CoderSemVer(0, 1, 0) | new CoderSemVer(0, 0, 1)
+        new CoderSemVer(0, 2, 0) | new CoderSemVer(0, 1, 0)
+        new CoderSemVer(0, 2, 0) | new CoderSemVer(0, 1, 2)
+
+        new CoderSemVer(0, 0, 2) | new CoderSemVer(0, 0, 1)
+    }
+
+    def "#firstVersion is == #secondVersion"() {
+        expect:
+        firstVersion <=> secondVersion == 0
+
+        where:
+        firstVersion             | secondVersion
+        new CoderSemVer(0, 0, 0) | new CoderSemVer(0, 0, 0)
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(1, 0, 0)
+        new CoderSemVer(1, 1, 0) | new CoderSemVer(1, 1, 0)
+        new CoderSemVer(1, 1, 1) | new CoderSemVer(1, 1, 1)
+        new CoderSemVer(0, 1, 0) | new CoderSemVer(0, 1, 0)
+        new CoderSemVer(0, 1, 1) | new CoderSemVer(0, 1, 1)
+        new CoderSemVer(0, 0, 1) | new CoderSemVer(0, 0, 1)
+
+    }
+
+    def "#firstVersion is < than #secondVersion"() {
+        expect:
+        firstVersion <=> secondVersion == -1
+
+        where:
+        firstVersion             | secondVersion
+        new CoderSemVer(0, 0, 0) | new CoderSemVer(1, 0, 0)
+        new CoderSemVer(0, 0, 1) | new CoderSemVer(1, 0, 0)
+        new CoderSemVer(0, 1, 0) | new CoderSemVer(1, 0, 0)
+        new CoderSemVer(0, 1, 1) | new CoderSemVer(1, 0, 0)
+
+        new CoderSemVer(1, 0, 0) | new CoderSemVer(2, 0, 0)
+        new CoderSemVer(1, 3, 0) | new CoderSemVer(2, 0, 0)
+        new CoderSemVer(1, 0, 3) | new CoderSemVer(2, 0, 0)
+        new CoderSemVer(1, 3, 3) | new CoderSemVer(2, 0, 0)
+
+
+        new CoderSemVer(0, 0, 1) | new CoderSemVer(0, 1, 0)
+        new CoderSemVer(0, 1, 0) | new CoderSemVer(0, 2, 0)
+        new CoderSemVer(0, 1, 2) | new CoderSemVer(0, 2, 0)
+
+        new CoderSemVer(0, 0, 1) | new CoderSemVer(0, 0, 2)
+    }
+
+    def 'in closed range comparison returns true when the version is equal to the left side of the range'() {
+        expect:
+        new CoderSemVer(1, 2, 3).isInClosedRange(new CoderSemVer(1, 2, 3), new CoderSemVer(7, 8, 9))
+    }
+
+    def 'in closed range comparison returns true when the version is equal to the right side of the range'() {
+        expect:
+        new CoderSemVer(7, 8, 9).isInClosedRange(new CoderSemVer(1, 2, 3), new CoderSemVer(7, 8, 9))
+    }
+
+    def "in closed range comparison returns false when #buildVersion is lower than the left side of the range"() {
+        expect:
+        buildVersion.isInClosedRange(new CoderSemVer(1, 2, 3), new CoderSemVer(7, 8, 9)) == false
+
+        where:
+        buildVersion << [
+                new CoderSemVer(0, 0, 0),
+                new CoderSemVer(0, 0, 1),
+                new CoderSemVer(0, 1, 0),
+                new CoderSemVer(1, 0, 0),
+                new CoderSemVer(0, 1, 1),
+                new CoderSemVer(1, 1, 1),
+                new CoderSemVer(1, 2, 1),
+                new CoderSemVer(0, 2, 3),
+        ]
+    }
+
+    def "in closed range comparison returns false when #buildVersion is higher than the right side of the range"() {
+        expect:
+        buildVersion.isInClosedRange(new CoderSemVer(1, 2, 3), new CoderSemVer(7, 8, 9)) == false
+
+        where:
+        buildVersion << [
+                new CoderSemVer(7, 8, 10),
+                new CoderSemVer(7, 9, 0),
+                new CoderSemVer(8, 0, 0),
+                new CoderSemVer(8, 8, 9),
+        ]
+    }
+
+    def "in closed range comparison returns true when #buildVersion is higher than the left side of the range but lower then the right side"() {
+        expect:
+        buildVersion.isInClosedRange(new CoderSemVer(1, 2, 3), new CoderSemVer(7, 8, 9)) == true
+
+        where:
+        buildVersion << [
+                new CoderSemVer(1, 2, 4),
+                new CoderSemVer(1, 3, 0),
+                new CoderSemVer(2, 0, 0),
+                new CoderSemVer(7, 8, 8),
+                new CoderSemVer(7, 7, 10),
+                new CoderSemVer(6, 9, 10),
+
+        ]
     }
 }
