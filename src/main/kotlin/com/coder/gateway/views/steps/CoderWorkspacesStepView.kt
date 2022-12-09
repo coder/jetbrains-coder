@@ -325,9 +325,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 }
             } else {
                 val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
-                val testedCoderVersion = CoderSupportedVersions.maxCompatibleCoderVersion
-
-                if (!testedCoderVersion.isCompatibleWith(coderVersion)) {
+                if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
                     notificationBanner.apply {
                         component.isVisible = true
                         showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))

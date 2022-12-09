@@ -9,6 +9,7 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "version.CoderSupportedVersions"
 
 object CoderSupportedVersions : DynamicBundle(BUNDLE) {
+    val minCompatibleCoderVersion = CoderSemVer.parse(message("minCompatibleCoderVersion"))
     val maxCompatibleCoderVersion = CoderSemVer.parse(message("maxCompatibleCoderVersion"))
 
     @JvmStatic

@@ -9,6 +9,7 @@ class CoderSemVer(private val major: Long = 0, private val minor: Long = 0, priv
         require(patch >= 0) { "Coder minor version must be a positive number" }
     }
 
+    fun isInClosedRange(start: CoderSemVer, endInclusive: CoderSemVer) = this in start..endInclusive
     fun isCompatibleWith(other: CoderSemVer): Boolean {
         // in the initial development phase minor changes when there are API incompatibilities
         if (this.major == 0L) {
