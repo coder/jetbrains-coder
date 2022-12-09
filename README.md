@@ -226,6 +226,16 @@ versions of Gateway we've decided:
   different release channels (ex: `eap` or `beta`), but all of them except the stable channel have to be
   manually configured by users in Gateway - which is super inconvenient.
 
+## Supported Coder versions
+
+`Coder Gateway` includes checks for compatibility with a specified version range. A warning is raised when
+the Coder deployment build version is outside of compatibility range:
+![Compatibility Check with Coder deployment](.github/readme/compatibility_check.png)
+
+The range needs to be manually updated as often as possible. The lowest bound is specified by `minCompatibleCoderVersion`
+property in the [CoderSupportedVersions.properties](src/main/resources/version/CoderSupportedVersions.properties)
+while `maxCompatibleCoderVersion` specifies the upper bound.
+
 [docs:qodana-github-action]: https://www.jetbrains.com/help/qodana/qodana-intellij-github-action.html
 
 [docs:plugin-signing]: https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate
