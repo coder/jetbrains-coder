@@ -10,14 +10,6 @@ class CoderSemVer(private val major: Long = 0, private val minor: Long = 0, priv
     }
 
     fun isInClosedRange(start: CoderSemVer, endInclusive: CoderSemVer) = this in start..endInclusive
-    fun isCompatibleWith(other: CoderSemVer): Boolean {
-        // in the initial development phase minor changes when there are API incompatibilities
-        if (this.major == 0L) {
-            if (other.major > 0) return false
-            return this.minor == other.minor
-        }
-        return this.major <= other.major
-    }
 
 
     override fun toString(): String {
