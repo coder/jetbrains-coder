@@ -1,7 +1,5 @@
 package com.coder.gateway.sdk
 
-import spock.lang.Ignore
-
 class CoderSemVerTest extends spock.lang.Specification {
 
     def 'semver versions are valid'() {
@@ -156,59 +154,5 @@ class CoderSemVerTest extends spock.lang.Specification {
         'v1.0.0+0.build.1-rc.10000aaa-kk-0.1'                     || new CoderSemVer(1L, 0L, 0L)
         'v2147483647.2147483647.2147483647'                       || new CoderSemVer(2147483647L, 2147483647L, 2147483647L)
         'v1.0.0-0A.is.legal'                                      || new CoderSemVer(1L, 0L, 0L)
-    }
-
-    @Ignore
-    def 'two initial development versions are compatible when first minor is equal to the second minor'() {
-        expect:
-        new CoderSemVer(0, 1).isCompatibleWith(new CoderSemVer(0, 1))
-    }
-
-    @Ignore
-    def 'two initial development versions are not compatible when first minor is less than the second minor'() {
-        expect:
-        !new CoderSemVer(0, 1).isCompatibleWith(new CoderSemVer(0, 2))
-    }
-
-    @Ignore
-    def 'two initial development versions are not compatible when first minor is bigger than the second minor'() {
-        expect:
-        !new CoderSemVer(0, 2).isCompatibleWith(new CoderSemVer(0, 1))
-    }
-
-    @Ignore
-    def 'versions are not compatible when one version is initial phase of development and the other is not, even though the minor is the same'() {
-        expect:
-        !new CoderSemVer(0, 2).isCompatibleWith(new CoderSemVer(1, 2))
-
-        and:
-        !new CoderSemVer(1, 2).isCompatibleWith(new CoderSemVer(0, 2))
-    }
-
-    @Ignore
-    def 'two versions which are not in development phase are compatible when first major is less or equal to the other, regardless of the minor'() {
-        expect: 'versions compatible when same major and same minor'
-        new CoderSemVer(1, 1).isCompatibleWith(new CoderSemVer(1, 1))
-
-        and: 'they are also compatible when major is the same but minor is different'
-        new CoderSemVer(1, 1).isCompatibleWith(new CoderSemVer(1, 2))
-
-        and: 'they are also compatible when first major is less than the second major but with same minor'
-        new CoderSemVer(1, 1).isCompatibleWith(new CoderSemVer(2, 1))
-
-        and: 'they are also compatible when first major is less than the second major and also with a different minor'
-        new CoderSemVer(1, 1).isCompatibleWith(new CoderSemVer(2, 2))
-    }
-
-    @Ignore
-    def 'two versions which are not in development phase are not compatible when first major is greater than the second major, regardless of the minor'() {
-        expect: 'versions are not compatible when first major is bigger than the second but with same minor'
-        !new CoderSemVer(2, 1).isCompatibleWith(new CoderSemVer(1, 1))
-
-        and: 'they are also not compatible when minor first minor is less than the second minor'
-        !new CoderSemVer(2, 1).isCompatibleWith(new CoderSemVer(1, 2))
-
-        and: 'also also not compatible when minor first minor is bigger than the second minor'
-        !new CoderSemVer(2, 3).isCompatibleWith(new CoderSemVer(1, 2))
     }
 }
