@@ -6,8 +6,10 @@ fun properties(key: String) = project.findProperty(key).toString()
 plugins {
     // Java support
     id("java")
+    // Groovy support
+    id("groovy")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.7.21"
+    id("org.jetbrains.kotlin.jvm") version "1.7.22"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.10.0"
     // Gradle Changelog Plugin
@@ -19,7 +21,6 @@ plugins {
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
-val ktorVersion = properties("ktorVersion")
 dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // define a BOM and its version
@@ -31,6 +32,11 @@ dependencies {
     implementation("org.zeroturnaround:zt-exec:1.12") {
         exclude("org.slf4j")
     }
+
+    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.6"))
+    testImplementation("org.apache.groovy:groovy")
+    testImplementation(platform("org.spockframework:spock-bom:2.3-groovy-4.0"))
+    testImplementation("org.spockframework:spock-core")
 }
 
 // Configure project's dependencies
@@ -91,7 +97,8 @@ tasks {
         compilerVersion.set(properties("instrumentationCompiler"))
     }
 
-    // TODO - this fails with linkage error, remove when it works
+    // TODO - this fails with linkage error, but we don't need it now
+    // because the plugin does not provide anything to search for in Preferences
     buildSearchableOptions {
         isEnabled = false
     }
@@ -122,6 +129,10 @@ tasks {
         })
     }
 
+    runIde {
+        autoReloadPlugins.set(true)
+    }
+
     // Configure UI tests plugin
     // Read more: https://github.com/JetBrains/intellij-ui-test-robot
     runIdeForUiTests {
@@ -134,5 +145,9 @@ tasks {
     publishPlugin {
         dependsOn("patchChangelog")
         token.set(System.getenv("PUBLISH_TOKEN"))
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }

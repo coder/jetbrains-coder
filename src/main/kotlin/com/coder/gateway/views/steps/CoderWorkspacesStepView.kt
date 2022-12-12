@@ -1,22 +1,21 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAgentStatus
-import com.coder.gateway.models.WorkspaceAgentStatus.DELETING
 import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
 import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
-import com.coder.gateway.models.WorkspaceAgentStatus.STARTING
 import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
-import com.coder.gateway.models.WorkspaceAgentStatus.STOPPING
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
-import com.coder.gateway.sdk.CoderCLIDownloader
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
+import com.coder.gateway.sdk.CoderSemVer
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -24,7 +23,6 @@ import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
-import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -71,7 +69,6 @@ import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
 import javax.swing.Icon
-import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
@@ -87,6 +84,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = service()
+    private val iconDownloader: TemplateIconDownloader = service()
+
     private val appPropertiesService: PropertiesComponent = service()
 
     private var tfUrl: JTextField? = null
@@ -98,7 +97,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         WorkspaceStatusColumnInfo("Status")
     )
 
-    private val notificationBand = JLabel()
+    private val notificationBanner = NotificationBanner()
     private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
         setEnableAntialiasing(true)
         rowSelectionAllowed = true
@@ -115,29 +114,33 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
             if (selectedObject?.agentOS != OS.LINUX) {
-                notificationBand.apply {
+                notificationBanner.apply {
                     isVisible = true
-                    icon = AllIcons.General.Information
-                    text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info")
+                    showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
                 }
             } else {
-                notificationBand.isVisible = false
+                notificationBanner.component.isVisible = false
             }
             updateWorkspaceActions()
         }
     }
 
+    private val goToDashboardAction = GoToDashboardAction()
     private val startWorkspaceAction = StartWorkspaceAction()
     private val stopWorkspaceAction = StopWorkspaceAction()
     private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
+    private val createWorkspaceAction = CreateWorkspaceAction()
 
     private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
         .disableAddAction()
         .disableRemoveAction()
         .disableUpDownActions()
+        .addExtraAction(goToDashboardAction)
         .addExtraAction(startWorkspaceAction)
         .addExtraAction(stopWorkspaceAction)
         .addExtraAction(updateWorkspaceTemplateAction)
+        .addExtraAction(createWorkspaceAction)
+
 
     private var poller: Job? = null
 
@@ -171,20 +174,22 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 cell()
             }
             row {
-                scrollCell(toolbar.createPanel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                scrollCell(toolbar.createPanel().apply {
+                    add(notificationBanner.component.apply { isVisible = false }, "South")
+                }).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
                 cell()
-            }.topGap(TopGap.NONE).resizableRow()
-            row {
-                cell(notificationBand).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
-                    font = JBFont.h4().asBold()
-                    isVisible = false
-                }
-            }
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
         }
     }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
+
+    private inner class GoToDashboardAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            BrowserUtil.browse(coderClient.coderURL)
+        }
+    }
 
     private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -242,6 +247,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
+    private inner class CreateWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates"))
+        }
+    }
+
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
@@ -262,6 +273,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private fun updateWorkspaceActions() {
+        goToDashboardAction.isEnabled = coderClient.isReady
+        createWorkspaceAction.isEnabled = coderClient.isReady
         when (tableOfWorkspaces.selectedObject?.agentStatus) {
             RUNNING -> {
                 startWorkspaceAction.isEnabled = false
@@ -305,6 +318,20 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private fun loginAndLoadWorkspace(token: String) {
         try {
             coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
+            if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
+                notificationBanner.apply {
+                    component.isVisible = true
+                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
+                }
+            } else {
+                val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
+                if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
+                    notificationBanner.apply {
+                        component.isVisible = true
+                        showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
+                    }
+                }
+            }
         } catch (e: AuthenticationResponseException) {
             logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
             return
@@ -317,7 +344,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         localWizardModel.apply {
             this.token = token
             buildVersion = coderClient.buildVersion
-            localCliPath = cliManager.localCliPath.toAbsolutePath().toString()
+            localCliPath = cliManager.localCli.toAbsolutePath().toString()
         }
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
@@ -329,11 +356,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     fraction = 0.1
                 }
 
-                CoderCLIDownloader().downloadCLI(cliManager.remoteCliPath, cliManager.localCliPath)
+                cliManager.downloadCLI()
                 if (getOS() != OS.WINDOWS) {
                     pi.fraction = 0.4
                     val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
-                    logger.info("chmod +x ${cliManager.localCliPath.toAbsolutePath()} $chmodOutput")
+                    logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
                     text = "Configuring coder cli..."
@@ -345,6 +372,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 pi.fraction = 0.8
                 val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
                 logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+
+                pi.apply {
+                    text = "Remove old coder cli versions..."
+                    fraction = 0.9
+                }
+                cliManager.removeOldCli()
+
                 pi.fraction = 1.0
             }
         }
@@ -352,6 +386,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         cs.launch {
             ProgressManager.getInstance().run(authTask)
         }
+        updateWorkspaceActions()
         triggerWorkspacePolling()
     }
 
@@ -423,6 +458,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                             this.name,
                             this.templateID,
                             this.templateName,
+                            iconDownloader.load(this@agentModels.templateIcon, this.name),
                             WorkspaceVersionStatus.from(this),
                             WorkspaceAgentStatus.from(this),
                             this.latestBuild.transition,
@@ -441,6 +477,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         workspaceWithAgentName,
                         this.templateID,
                         this.templateName,
+                        iconDownloader.load(this@agentModels.templateIcon, workspaceWithAgentName),
                         WorkspaceVersionStatus.from(this),
                         WorkspaceAgentStatus.from(this),
                         this.latestBuild.transition,
@@ -459,6 +496,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     this.name,
                     this.templateID,
                     this.templateName,
+                    iconDownloader.load(this@agentModels.templateIcon, this.name),
                     WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
                     this.latestBuild.transition,
@@ -525,15 +563,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 }
 
                 override fun getIcon(value: String, table: JTable?, row: Int): Icon {
-                    return when (OS.from(value)) {
-                        OS.LINUX -> CoderIcons.LINUX
-                        OS.WINDOWS -> CoderIcons.WINDOWS
-                        OS.MAC -> CoderIcons.MACOS
-                        else -> CoderIcons.UNKNOWN
-                    }
+                    return item?.templateIcon ?: CoderIcons.UNKNOWN
                 }
 
                 override fun isCenterAlignment() = true
+
+                override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
+                    return super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
+                        border = JBUI.Borders.empty(10, 10)
+                    }
+                }
             }
         }
     }
@@ -616,8 +655,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         private fun WorkspaceAgentModel.statusColor() = when (this.agentStatus) {
             RUNNING -> JBColor.GREEN
-            STARTING, STOPPING, DELETING -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
-            else -> JBColor.RED
+            FAILED -> JBColor.RED
+            else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
         }
     }
 

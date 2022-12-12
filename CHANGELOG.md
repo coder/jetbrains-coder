@@ -4,6 +4,46 @@
 
 ## Unreleased
 
+Bug fixes and enhancements included in `2.1.3` release:
+
+### Added
+- warning system when plugin might not be compatible with Coder REST API
+- a `Create workspace` button which links to Coder's templates page
+- workspace icons
+- quick toolbar action to open Coder Dashboard in the browser
+- custom user agent for the HTTP client
+
+### Changed
+- redesigned the information&warning banner. Messages can now include hyperlinks
+
+### Removed
+- connection handle window is no longer displayed
+
+### Fixed
+- outdated Coder CLI binaries are cleaned up
+- workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
+- typos in plugin description
+
+## 2.1.3 - 2022-12-09
+
+### Added
+- warning system when plugin might not be compatible with Coder REST API
+- a `Create workspace` button which links to Coder's templates page
+- workspace icons
+- quick toolbar action to open Coder Dashboard in the browser
+- custom user agent for the HTTP client
+
+### Changed
+- redesigned the information&warning banner. Messages can now include hyperlinks
+
+### Removed
+- connection handle window is no longer displayed
+
+### Fixed
+- outdated Coder CLI binaries are cleaned up
+- workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
+- typos in plugin description
+
 ## 2.1.2-eap.0 - 2022-11-29
 
 ### Added

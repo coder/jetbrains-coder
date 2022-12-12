@@ -7,7 +7,7 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 [![Coder Gateway Plugin Build](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml/badge.svg)](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml)
 
 <!-- Plugin description -->
-**Coder Gateway** connects your Jetbrains IDE to your [Coder Workspaces](https://coder.com/docs/coder-oss/latest/workspaces) so that you can develop from anywhere.
+**Coder Gateway** connects your JetBrains IDE to your [Coder Workspaces](https://coder.com/docs/coder-oss/latest/workspaces) so that you can develop from anywhere.
 
 **Manage less**
 
@@ -225,6 +225,16 @@ versions of Gateway we've decided:
 - releases from both branches are published in the stable release channel. Jetbrains provides support for
   different release channels (ex: `eap` or `beta`), but all of them except the stable channel have to be
   manually configured by users in Gateway - which is super inconvenient.
+
+## Supported Coder versions
+
+`Coder Gateway` includes checks for compatibility with a specified version range. A warning is raised when
+the Coder deployment build version is outside of compatibility range:
+![Compatibility Check with Coder deployment](.github/readme/compatibility_check.png)
+
+The range needs to be manually updated as often as possible. The lowest bound is specified by `minCompatibleCoderVersion`
+property in the [CoderSupportedVersions.properties](src/main/resources/version/CoderSupportedVersions.properties)
+while `maxCompatibleCoderVersion` specifies the upper bound.
 
 [docs:qodana-github-action]: https://www.jetbrains.com/help/qodana/qodana-intellij-github-action.html
 

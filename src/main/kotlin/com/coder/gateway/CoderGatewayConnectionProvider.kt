@@ -5,7 +5,6 @@ package com.coder.gateway
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
@@ -13,6 +12,7 @@ import com.intellij.ssh.config.unified.SshConfig
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
+import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.HostDeployInputs
 import com.jetbrains.gateway.ssh.IdeInfo
@@ -30,7 +30,6 @@ import java.time.format.DateTimeFormatter
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
 
-    private val connections = mutableSetOf<CoderConnectionMetadata>()
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
 
     override suspend fun connect(parameters: Map<String, String>, requestor: ConnectionRequestor): GatewayConnectionHandle? {
@@ -42,11 +41,6 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         val webTerminalLink = parameters["web_terminal_link"]!!
 
         if (coderWorkspaceHostname != null && projectPath != null) {
-            val connection = CoderConnectionMetadata(coderWorkspaceHostname)
-            if (connection in connections) {
-                logger.warn("There is already a connection started on ${connection.workspaceHostname}")
-                return null
-            }
             val sshConfiguration = SshConfig(true).apply {
                 setHost(coderWorkspaceHostname)
                 setUsername("coder")
@@ -89,16 +83,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             recentConnectionsService.addRecentConnection(RecentWorkspaceConnection(coderWorkspaceHostname, projectPath, localTimeFormatter.format(LocalDateTime.now()), ideProductCode, ideBuildNumber, ideDownloadLink, webTerminalLink))
-
-            return object : GatewayConnectionHandle(clientLifetime) {
-                override fun getTitle(): String {
-                    return "Connection to Coder Workspaces"
-                }
-
-                override fun hideToTrayOnStart(): Boolean {
-                    return false
-                }
-            }
+            GatewayUI.getInstance().reset()
         }
         return null
     }
@@ -106,10 +91,4 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     override fun isApplicable(parameters: Map<String, String>): Boolean {
         return parameters["type"] == "coder"
     }
-
-    companion object {
-        val logger = Logger.getInstance(CoderGatewayConnectionProvider::class.java.simpleName)
-    }
 }
-
-internal data class CoderConnectionMetadata(val workspaceHostname: String)
