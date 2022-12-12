@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+## 2.1.3-eap.0 - 2022-12-12
 Bug fixes and enhancements included in `2.1.3` release:
 
 ### Added
