@@ -569,9 +569,10 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 override fun isCenterAlignment() = true
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
-                    return super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
+                    super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
                         border = JBUI.Borders.empty(10, 10)
                     }
+                    return this
                 }
             }
         }
@@ -590,6 +591,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3().asBold()
+                    border = JBUI.Borders.empty()
                     return this
                 }
             }
@@ -609,6 +611,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3()
+                    border = JBUI.Borders.empty()
                     return this
                 }
             }
@@ -628,6 +631,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3()
+                    border = JBUI.Borders.empty()
                     return this
                 }
             }
@@ -647,6 +651,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3()
+                    border = JBUI.Borders.empty()
                     foreground = (table.model as ListTableModel<WorkspaceAgentModel>).getRowValue(row).statusColor()
                     return this
                 }
