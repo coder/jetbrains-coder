@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Added
+- ability to open a template in the Dashboard
+
+### Changed
+- renamed the plugin from `Coder Gateway` to `Gateway`
+
 ## 2.1.3 - 2022-12-09
 
 ### Added
