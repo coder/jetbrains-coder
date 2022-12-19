@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Added
+- ability to open a template in the Dashboard
+
 ## 2.1.3 - 2022-12-09
 
 ### Added

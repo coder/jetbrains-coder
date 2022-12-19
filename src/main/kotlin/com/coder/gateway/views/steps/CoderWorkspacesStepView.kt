@@ -68,6 +68,11 @@ import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
+import java.awt.event.MouseMotionListener
+import java.awt.font.TextAttribute
+import java.awt.font.TextAttribute.UNDERLINE_ON
 import javax.swing.Icon
 import javax.swing.JTable
 import javax.swing.JTextField
@@ -79,6 +84,8 @@ import javax.swing.table.TableCellRenderer
 private const val CODER_URL_KEY = "coder-url"
 
 private const val SESSION_TOKEN = "session-token"
+
+private const val MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW = "MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW"
 
 class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -123,6 +130,49 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             }
             updateWorkspaceActions()
         }
+
+        addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {
+                if (e?.source is TableView<*>) {
+                    val tblView = e.source as TableView<WorkspaceAgentModel>
+                    val col = tblView.selectedColumn
+                    val workspace = tblView.selectedObject
+
+                    if (col == 2 && workspace != null) {
+                        BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates/${workspace.templateName}"))
+                    }
+                }
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+            }
+
+            override fun mouseReleased(e: MouseEvent?) {
+            }
+
+            override fun mouseEntered(e: MouseEvent?) {
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+            }
+        })
+        addMouseMotionListener(object : MouseMotionListener {
+            override fun mouseMoved(e: MouseEvent?) {
+                if (e?.source is TableView<*>) {
+                    val tblView = e.source as TableView<WorkspaceAgentModel>
+                    val row = tblView.rowAtPoint(e.point)
+                    if (tblView.columnAtPoint(e.point) == 2 && row in 0 until tblView.listTableModel.rowCount) {
+                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, row)
+                    } else {
+                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, -1)
+                    }
+                }
+
+            }
+
+            override fun mouseDragged(e: MouseEvent?) {
+            }
+        })
     }
 
     private val goToDashboardAction = GoToDashboardAction()
@@ -570,7 +620,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
-                        border = JBUI.Borders.empty(10, 10)
+                        border = JBUI.Borders.empty(10)
                     }
                     return this
                 }
@@ -604,14 +654,27 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+            val simpleH3 = JBFont.h3()
+
+            val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
+            h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
+            val underlinedH3 = JBFont.h3().deriveFont(h3AttributesWithUnderlining)
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
                     border = JBUI.Borders.empty()
+
+                    if (table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) != null) {
+                        val mouseOverRow = table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) as Int
+                        if (mouseOverRow >= 0 && mouseOverRow == row) {
+                            font = underlinedH3
+                            return this
+                        }
+                    }
+                    font = simpleH3
                     return this
                 }
             }
