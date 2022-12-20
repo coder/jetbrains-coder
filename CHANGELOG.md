@@ -10,6 +10,9 @@
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
 
+### Fixed
+- icon rendering on macOS
+
 ## 2.1.3 - 2022-12-09
 
 ### Added
