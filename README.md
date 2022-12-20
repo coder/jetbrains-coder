@@ -7,23 +7,29 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 [![Coder Gateway Plugin Build](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml/badge.svg)](https://github.com/coder/coder-jetbrains/actions/workflows/build.yml)
 
 <!-- Plugin description -->
-**Coder Gateway** connects your JetBrains IDE to your [Coder Workspaces](https://coder.com/docs/coder-oss/latest/workspaces) so that you can develop from anywhere.
+**Coder Gateway** connects your JetBrains IDE to [Coder](https://coder.com/docs/coder-oss/) workspaces so that you can develop from anywhere.
 
 **Manage less**
 
 - Ensure your entire team is using the same tools and resources
+  - Rollout critical updates to your developers with one command
+- Automatically shut down expensive cloud resources
 - Keep your source code and data behind your firewall
 
 **Code more**
 
 - Build and test faster
-    - Leveraging cloud CPUs, RAM, network speeds, etc.
-- Access your environment from any place
+  - Leveraging cloud CPUs, RAM, network speeds, etc.
+- Access your environment from any place on any client (even an iPad)
 - Onboard instantly then stay up to date continuously
 
 <!-- Plugin description end -->
 
 ## Getting Started
+
+![Install this plugin from the JetBrains Marketplace](https://plugins.jetbrains.com/plugin/19620-coder-gateway)
+
+## Manually Building
 
 To manually install a local build:
 
