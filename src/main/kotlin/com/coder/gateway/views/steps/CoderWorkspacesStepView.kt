@@ -64,6 +64,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
@@ -399,11 +400,19 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
             override fun run(pi: ProgressIndicator) {
+                pi.apply {
+                    isIndeterminate = false
+                    text = "Retrieving Workspaces..."
+                    fraction = 0.1
+                }
+                runBlocking {
+                    loadWorkspaces()
+                }
 
                 pi.apply {
                     isIndeterminate = false
-                    text = "Downloading coder cli..."
-                    fraction = 0.1
+                    text = "Downloading Coder CLI..."
+                    fraction = 0.3
                 }
 
                 cliManager.downloadCLI()
@@ -413,7 +422,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
-                    text = "Configuring coder cli..."
+                    text = "Configuring Coder CLI..."
                     fraction = 0.5
                 }
 
@@ -424,7 +433,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
 
                 pi.apply {
-                    text = "Remove old coder cli versions..."
+                    text = "Remove old Coder CLI versions..."
                     fraction = 0.9
                 }
                 cliManager.removeOldCli()
@@ -467,33 +476,48 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         poller = cs.launch {
             while (isActive) {
-                loadWorkspaces()
                 delay(5000)
+                loadWorkspaces()
             }
         }
     }
 
     private suspend fun loadWorkspaces() {
-        val workspaceList = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
             try {
-                return@withContext coderClient.workspaces().collectAgents()
+                val ws = coderClient.workspaces()
+                val timeAfterRequestingWorkspaces = System.currentTimeMillis()
+                logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
+                ws.resolveAndDisplayAgents()
             } catch (e: Exception) {
                 logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
-                emptyList()
-            }
-        }
-
-        withContext(Dispatchers.Main) {
-            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
-            listTableModelOfWorkspaces.items = workspaceList
-            if (selectedWorkspace != null) {
-                tableOfWorkspaces.selectItem(selectedWorkspace)
             }
         }
     }
 
-    private fun List<Workspace>.collectAgents(): List<WorkspaceAgentModel> {
-        return this.flatMap { it.agentModels() }.toList()
+    private fun List<Workspace>.resolveAndDisplayAgents() {
+        this.forEach { workspace ->
+            cs.launch(Dispatchers.IO) {
+                val timeBeforeRequestingAgents = System.currentTimeMillis()
+                workspace.agentModels().forEach { am ->
+                    withContext(Dispatchers.Main) {
+                        val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+                        if (listTableModelOfWorkspaces.indexOf(am) >= 0) {
+                            val index = listTableModelOfWorkspaces.indexOf(am)
+                            listTableModelOfWorkspaces.setItem(index, am)
+                        } else {
+                            listTableModelOfWorkspaces.addRow(am)
+                        }
+                        if (selectedWorkspace != null) {
+                            tableOfWorkspaces.selectItem(selectedWorkspace)
+                        }
+                    }
+                }
+                val timeAfterRequestingAgents = System.currentTimeMillis()
+                logger.info("Retrieving the agents for ${workspace.name} took: ${timeAfterRequestingAgents - timeBeforeRequestingAgents} millis")
+            }
+        }
     }
 
     private fun Workspace.agentModels(): List<WorkspaceAgentModel> {

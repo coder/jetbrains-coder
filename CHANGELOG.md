@@ -9,6 +9,7 @@
 
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
+- workspaces and agents are now resolved and displayed progressively
 
 ### Fixed
 - icon rendering on macOS
