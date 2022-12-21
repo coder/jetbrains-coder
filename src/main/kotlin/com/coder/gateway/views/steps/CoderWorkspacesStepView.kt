@@ -64,10 +64,16 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
+import java.awt.event.MouseMotionListener
+import java.awt.font.TextAttribute
+import java.awt.font.TextAttribute.UNDERLINE_ON
 import javax.swing.Icon
 import javax.swing.JTable
 import javax.swing.JTextField
@@ -79,6 +85,8 @@ import javax.swing.table.TableCellRenderer
 private const val CODER_URL_KEY = "coder-url"
 
 private const val SESSION_TOKEN = "session-token"
+
+private const val MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW = "MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW"
 
 class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -123,6 +131,49 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             }
             updateWorkspaceActions()
         }
+
+        addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {
+                if (e?.source is TableView<*>) {
+                    val tblView = e.source as TableView<WorkspaceAgentModel>
+                    val col = tblView.selectedColumn
+                    val workspace = tblView.selectedObject
+
+                    if (col == 2 && workspace != null) {
+                        BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates/${workspace.templateName}"))
+                    }
+                }
+            }
+
+            override fun mousePressed(e: MouseEvent?) {
+            }
+
+            override fun mouseReleased(e: MouseEvent?) {
+            }
+
+            override fun mouseEntered(e: MouseEvent?) {
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+            }
+        })
+        addMouseMotionListener(object : MouseMotionListener {
+            override fun mouseMoved(e: MouseEvent?) {
+                if (e?.source is TableView<*>) {
+                    val tblView = e.source as TableView<WorkspaceAgentModel>
+                    val row = tblView.rowAtPoint(e.point)
+                    if (tblView.columnAtPoint(e.point) == 2 && row in 0 until tblView.listTableModel.rowCount) {
+                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, row)
+                    } else {
+                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, -1)
+                    }
+                }
+
+            }
+
+            override fun mouseDragged(e: MouseEvent?) {
+            }
+        })
     }
 
     private val goToDashboardAction = GoToDashboardAction()
@@ -349,11 +400,19 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
             override fun run(pi: ProgressIndicator) {
+                pi.apply {
+                    isIndeterminate = false
+                    text = "Retrieving Workspaces..."
+                    fraction = 0.1
+                }
+                runBlocking {
+                    loadWorkspaces()
+                }
 
                 pi.apply {
                     isIndeterminate = false
-                    text = "Downloading coder cli..."
-                    fraction = 0.1
+                    text = "Downloading Coder CLI..."
+                    fraction = 0.3
                 }
 
                 cliManager.downloadCLI()
@@ -363,7 +422,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
                 }
                 pi.apply {
-                    text = "Configuring coder cli..."
+                    text = "Configuring Coder CLI..."
                     fraction = 0.5
                 }
 
@@ -374,7 +433,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
 
                 pi.apply {
-                    text = "Remove old coder cli versions..."
+                    text = "Remove old Coder CLI versions..."
                     fraction = 0.9
                 }
                 cliManager.removeOldCli()
@@ -417,33 +476,48 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
         poller = cs.launch {
             while (isActive) {
-                loadWorkspaces()
                 delay(5000)
+                loadWorkspaces()
             }
         }
     }
 
     private suspend fun loadWorkspaces() {
-        val workspaceList = withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
             try {
-                return@withContext coderClient.workspaces().collectAgents()
+                val ws = coderClient.workspaces()
+                val timeAfterRequestingWorkspaces = System.currentTimeMillis()
+                logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
+                ws.resolveAndDisplayAgents()
             } catch (e: Exception) {
                 logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
-                emptyList()
-            }
-        }
-
-        withContext(Dispatchers.Main) {
-            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
-            listTableModelOfWorkspaces.items = workspaceList
-            if (selectedWorkspace != null) {
-                tableOfWorkspaces.selectItem(selectedWorkspace)
             }
         }
     }
 
-    private fun List<Workspace>.collectAgents(): List<WorkspaceAgentModel> {
-        return this.flatMap { it.agentModels() }.toList()
+    private fun List<Workspace>.resolveAndDisplayAgents() {
+        this.forEach { workspace ->
+            cs.launch(Dispatchers.IO) {
+                val timeBeforeRequestingAgents = System.currentTimeMillis()
+                workspace.agentModels().forEach { am ->
+                    withContext(Dispatchers.Main) {
+                        val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+                        if (listTableModelOfWorkspaces.indexOf(am) >= 0) {
+                            val index = listTableModelOfWorkspaces.indexOf(am)
+                            listTableModelOfWorkspaces.setItem(index, am)
+                        } else {
+                            listTableModelOfWorkspaces.addRow(am)
+                        }
+                        if (selectedWorkspace != null) {
+                            tableOfWorkspaces.selectItem(selectedWorkspace)
+                        }
+                    }
+                }
+                val timeAfterRequestingAgents = System.currentTimeMillis()
+                logger.info("Retrieving the agents for ${workspace.name} took: ${timeAfterRequestingAgents - timeBeforeRequestingAgents} millis")
+            }
+        }
     }
 
     private fun Workspace.agentModels(): List<WorkspaceAgentModel> {
@@ -569,9 +643,10 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 override fun isCenterAlignment() = true
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
-                    return super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
-                        border = JBUI.Borders.empty(10, 10)
+                    super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
+                        border = JBUI.Borders.empty(10)
                     }
+                    return this
                 }
             }
         }
@@ -590,6 +665,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3().asBold()
+                    border = JBUI.Borders.empty()
                     return this
                 }
             }
@@ -602,13 +678,27 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+            val simpleH3 = JBFont.h3()
+
+            val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
+            h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
+            val underlinedH3 = JBFont.h3().deriveFont(h3AttributesWithUnderlining)
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
+                    border = JBUI.Borders.empty()
+
+                    if (table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) != null) {
+                        val mouseOverRow = table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) as Int
+                        if (mouseOverRow >= 0 && mouseOverRow == row) {
+                            font = underlinedH3
+                            return this
+                        }
+                    }
+                    font = simpleH3
                     return this
                 }
             }
@@ -628,6 +718,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3()
+                    border = JBUI.Borders.empty()
                     return this
                 }
             }
@@ -647,6 +738,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         text = value
                     }
                     font = JBFont.h3()
+                    border = JBUI.Borders.empty()
                     foreground = (table.model as ListTableModel<WorkspaceAgentModel>).getRowValue(row).statusColor()
                     return this
                 }
