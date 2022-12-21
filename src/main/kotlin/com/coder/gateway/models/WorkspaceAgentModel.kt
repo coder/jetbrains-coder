@@ -19,4 +19,28 @@ data class WorkspaceAgentModel(
     val agentOS: OS?,
     val agentArch: Arch?,
     val homeDirectory: String?
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as WorkspaceAgentModel
+
+        if (workspaceID != other.workspaceID) return false
+        if (workspaceName != other.workspaceName) return false
+        if (name != other.name) return false
+        if (templateID != other.templateID) return false
+        if (templateName != other.templateName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = workspaceID.hashCode()
+        result = 31 * result + workspaceName.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + templateID.hashCode()
+        result = 31 * result + templateName.hashCode()
+        return result
+    }
+}
