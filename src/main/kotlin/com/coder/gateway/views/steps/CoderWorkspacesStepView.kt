@@ -656,6 +656,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             return workspace?.name
         }
 
+        override fun getComparator(): Comparator<WorkspaceAgentModel>? {
+            return Comparator { a, b ->
+                if (a === b) 0
+                if (a == null) -1
+                if (b == null) 1
+
+                a.name.compareTo(b.name, ignoreCase = true)
+            }
+        }
+
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
@@ -674,6 +684,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
+        }
+
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel>? {
+            return Comparator { a, b ->
+                if (a === b) 0
+                if (a == null) -1
+                if (b == null) 1
+
+                a.templateName.compareTo(b.templateName, ignoreCase = true)
+            }
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
@@ -727,6 +747,16 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.agentStatus?.label
+        }
+
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel>? {
+            return Comparator { a, b ->
+                if (a === b) 0
+                if (a == null) -1
+                if (b == null) 1
+
+                a.agentStatus.label.compareTo(b.agentStatus.label, ignoreCase = true)
+            }
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {

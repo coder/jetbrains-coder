@@ -6,6 +6,7 @@
 
 ### Added
 - ability to open a template in the Dashboard
+- ability to sort by workspace name, or by template name or by workspace status
 
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
