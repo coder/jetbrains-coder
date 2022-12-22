@@ -42,6 +42,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
 import com.intellij.ui.JBColor
+import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
@@ -643,7 +644,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
-                        border = JBUI.Borders.empty(10)
+                        border = JBUI.Borders.empty(8, 8)
                     }
                     return this
                 }
@@ -651,12 +652,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private inner class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.name
         }
 
-        override fun getComparator(): Comparator<WorkspaceAgentModel>? {
+        override fun getComparator(): Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
                 if (a === b) 0
                 if (a == null) -1
@@ -673,20 +674,21 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3().asBold()
-                    border = JBUI.Borders.empty()
+
+                    font = RelativeFont.BOLD.derive(this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font)
+                    border = JBUI.Borders.empty(0, 8)
                     return this
                 }
             }
         }
     }
 
-    private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private inner class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
         }
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel>? {
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
                 if (a === b) 0
                 if (a == null) -1
@@ -697,7 +699,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
-            val simpleH3 = JBFont.h3()
+            val simpleH3 = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
 
             val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
             h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
@@ -708,7 +710,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    border = JBUI.Borders.empty()
+                    border = JBUI.Borders.empty(0, 8)
 
                     if (table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) != null) {
                         val mouseOverRow = table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) as Int
@@ -724,7 +726,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private inner class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.status?.label
         }
@@ -736,20 +738,20 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
-                    border = JBUI.Borders.empty()
+                    font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
+                    border = JBUI.Borders.empty(0, 8)
                     return this
                 }
             }
         }
     }
 
-    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private inner class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.agentStatus?.label
         }
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel>? {
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
                 if (a === b) 0
                 if (a == null) -1
@@ -766,8 +768,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     if (value is String) {
                         text = value
                     }
-                    font = JBFont.h3()
-                    border = JBUI.Borders.empty()
+                    font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
+                    border = JBUI.Borders.empty(0, 8)
                     foreground = (table.model as ListTableModel<WorkspaceAgentModel>).getRowValue(row).statusColor()
                     return this
                 }
