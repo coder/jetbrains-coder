@@ -122,7 +122,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
-            if (selectedObject?.agentOS != OS.LINUX) {
+            if (selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))

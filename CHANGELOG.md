@@ -14,6 +14,7 @@
 ### Fixed
 - icon rendering on `macOS`
 - `darwin` agents are now recognized as `macOS`
+- unsupported OS warning is displayed only for running workspaces
 
 ## 2.1.3 - 2022-12-09
 
