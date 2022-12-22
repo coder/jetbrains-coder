@@ -36,6 +36,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
@@ -57,6 +58,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.ListTableModel
 import com.intellij.util.ui.table.IconTableCellRenderer
+import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -64,7 +66,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
@@ -123,7 +124,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
             if (selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
-                    isVisible = true
+                    component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
                 }
             } else {
@@ -391,62 +392,56 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         appPropertiesService.setValue(SESSION_TOKEN, token)
         val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
 
-
         localWizardModel.apply {
             this.token = token
             buildVersion = coderClient.buildVersion
             localCliPath = cliManager.localCli.toAbsolutePath().toString()
         }
 
-        val authTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), false) {
-            override fun run(pi: ProgressIndicator) {
-                pi.apply {
-                    isIndeterminate = false
-                    text = "Retrieving Workspaces..."
-                    fraction = 0.1
-                }
-                runBlocking {
-                    loadWorkspaces()
-                }
-
-                pi.apply {
-                    isIndeterminate = false
-                    text = "Downloading Coder CLI..."
-                    fraction = 0.3
-                }
-
-                cliManager.downloadCLI()
-                if (getOS() != OS.WINDOWS) {
-                    pi.fraction = 0.4
-                    val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
-                    logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
-                }
-                pi.apply {
-                    text = "Configuring Coder CLI..."
-                    fraction = 0.5
-                }
-
-                val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
-                logger.info("coder-cli login output: $loginOutput")
-                pi.fraction = 0.8
-                val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
-
-                pi.apply {
-                    text = "Remove old Coder CLI versions..."
-                    fraction = 0.9
-                }
-                cliManager.removeOldCli()
-
-                pi.fraction = 1.0
+        LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), canBeCancelled = false, isIndeterminate = true) {
+            this.indicator.apply {
+                isIndeterminate = false
+                text = "Retrieving Workspaces..."
+                fraction = 0.1
             }
-        }
 
-        cs.launch {
-            ProgressManager.getInstance().run(authTask)
+            withContext(Dispatchers.IO) {
+                loadWorkspaces()
+            }
+
+            this.indicator.apply {
+                isIndeterminate = false
+                text = "Downloading Coder CLI..."
+                fraction = 0.3
+            }
+
+            cliManager.downloadCLI()
+            if (getOS() != OS.WINDOWS) {
+                this.indicator.fraction = 0.4
+                val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
+                logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
+            }
+            this.indicator.apply {
+                text = "Configuring Coder CLI..."
+                fraction = 0.5
+            }
+
+            val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
+            logger.info("coder-cli login output: $loginOutput")
+            this.indicator.fraction = 0.8
+            val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
+            logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+
+            this.indicator.apply {
+                text = "Remove old Coder CLI versions..."
+                fraction = 0.9
+            }
+            cliManager.removeOldCli()
+
+            this.indicator.fraction = 1.0
+            updateWorkspaceActions()
+            triggerWorkspacePolling()
         }
-        updateWorkspaceActions()
-        triggerWorkspacePolling()
     }
 
     private fun askToken(): String? {
@@ -483,94 +478,39 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     private suspend fun loadWorkspaces() {
-        withContext(Dispatchers.IO) {
+        val ws = withContext(Dispatchers.IO) {
             val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
             try {
                 val ws = coderClient.workspaces()
+                val ams = ws.flatMap { it.toAgentModels() }.toSet()
                 val timeAfterRequestingWorkspaces = System.currentTimeMillis()
                 logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
-                ws.resolveAndDisplayAgents()
+                return@withContext ams
             } catch (e: Exception) {
                 logger.error("Could not retrieve workspaces for ${coderClient.me.username} on ${coderClient.coderURL}. Reason: $e")
+                emptySet()
+            }
+        }
+        withContext(Dispatchers.Main) {
+            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+            listTableModelOfWorkspaces.items = ws.toList()
+            if (selectedWorkspace != null) {
+                tableOfWorkspaces.selectItem(selectedWorkspace)
             }
         }
     }
 
-    private fun List<Workspace>.resolveAndDisplayAgents() {
-        this.forEach { workspace ->
-            cs.launch(Dispatchers.IO) {
-                val timeBeforeRequestingAgents = System.currentTimeMillis()
-                workspace.agentModels().forEach { am ->
-                    withContext(Dispatchers.Main) {
-                        val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
-                        if (listTableModelOfWorkspaces.indexOf(am) >= 0) {
-                            val index = listTableModelOfWorkspaces.indexOf(am)
-                            listTableModelOfWorkspaces.setItem(index, am)
-                        } else {
-                            listTableModelOfWorkspaces.addRow(am)
-                        }
-                        if (selectedWorkspace != null) {
-                            tableOfWorkspaces.selectItem(selectedWorkspace)
-                        }
-                    }
-                }
-                val timeAfterRequestingAgents = System.currentTimeMillis()
-                logger.info("Retrieving the agents for ${workspace.name} took: ${timeAfterRequestingAgents - timeBeforeRequestingAgents} millis")
-            }
-        }
-    }
-
-    private fun Workspace.agentModels(): List<WorkspaceAgentModel> {
-        return try {
-            val agents = coderClient.workspaceAgentsByTemplate(this)
-            when (agents.size) {
-                0 -> {
-                    listOf(
-                        WorkspaceAgentModel(
-                            this.id,
-                            this.name,
-                            this.name,
-                            this.templateID,
-                            this.templateName,
-                            iconDownloader.load(this@agentModels.templateIcon, this.name),
-                            WorkspaceVersionStatus.from(this),
-                            WorkspaceAgentStatus.from(this),
-                            this.latestBuild.transition,
-                            null,
-                            null,
-                            null
-                        )
-                    )
-                }
-
-                else -> agents.map { agent ->
-                    val workspaceWithAgentName = "${this.name}.${agent.name}"
-                    WorkspaceAgentModel(
-                        this.id,
-                        this.name,
-                        workspaceWithAgentName,
-                        this.templateID,
-                        this.templateName,
-                        iconDownloader.load(this@agentModels.templateIcon, workspaceWithAgentName),
-                        WorkspaceVersionStatus.from(this),
-                        WorkspaceAgentStatus.from(this),
-                        this.latestBuild.transition,
-                        OS.from(agent.operatingSystem),
-                        Arch.from(agent.architecture),
-                        agent.directory
-                    )
-                }.toList()
-            }
-        } catch (e: Exception) {
-            logger.warn("Agent(s) for ${this.name} could not be retrieved. Reason: $e")
-            listOf(
-                WorkspaceAgentModel(
+    private fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
+        return when (this.latestBuild.resources.size) {
+            0 -> {
+                val wm = WorkspaceAgentModel(
                     this.id,
                     this.name,
                     this.name,
                     this.templateID,
                     this.templateName,
-                    iconDownloader.load(this@agentModels.templateIcon, this.name),
+                    this.templateIcon,
+                    null,
                     WorkspaceVersionStatus.from(this),
                     WorkspaceAgentStatus.from(this),
                     this.latestBuild.transition,
@@ -578,7 +518,68 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     null,
                     null
                 )
-            )
+                cs.launch(Dispatchers.IO) {
+                    wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                    withContext(Dispatchers.Main) {
+                        tableOfWorkspaces.updateUI()
+                    }
+                }
+                setOf(wm)
+            }
+
+            else -> {
+                val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+                    val workspaceWithAgentName = "${this.name}.${agent.name}"
+                    val wm = WorkspaceAgentModel(
+                        this.id,
+                        this.name,
+                        workspaceWithAgentName,
+                        this.templateID,
+                        this.templateName,
+                        this.templateIcon,
+                        null,
+                        WorkspaceVersionStatus.from(this),
+                        WorkspaceAgentStatus.from(this),
+                        this.latestBuild.transition,
+                        OS.from(agent.operatingSystem),
+                        Arch.from(agent.architecture),
+                        agent.directory
+                    )
+                    cs.launch(Dispatchers.IO) {
+                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                        withContext(Dispatchers.Main) {
+                            tableOfWorkspaces.updateUI()
+                        }
+                    }
+                    wm
+                }.toSet()
+
+                if (wam.isNullOrEmpty()) {
+                    val wm = WorkspaceAgentModel(
+                        this.id,
+                        this.name,
+                        this.name,
+                        this.templateID,
+                        this.templateName,
+                        this.templateIcon,
+                        null,
+                        WorkspaceVersionStatus.from(this),
+                        WorkspaceAgentStatus.from(this),
+                        this.latestBuild.transition,
+                        null,
+                        null,
+                        null
+                    )
+                    cs.launch(Dispatchers.IO) {
+                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                        withContext(Dispatchers.Main) {
+                            tableOfWorkspaces.updateUI()
+                        }
+                    }
+                    return setOf(wm)
+                }
+                return wam
+            }
         }
     }
 
@@ -627,7 +628,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.agentOS?.name
+            return workspace?.templateName
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {

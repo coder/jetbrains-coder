@@ -13,6 +13,7 @@ import javax.swing.Icon
 @Service(Service.Level.APP)
 class TemplateIconDownloader {
     private val coderClient: CoderRestClientService = service()
+    private val cache = mutableMapOf<Pair<String, String>, Icon>()
 
     fun load(path: String, templateName: String): Icon {
         var url: URL? = null
@@ -23,9 +24,15 @@ class TemplateIconDownloader {
         }
 
         if (url != null) {
+            val cachedIcon = cache[Pair(templateName, path)]
+            if (cachedIcon != null) {
+                return cachedIcon
+            }
             var img = ImageLoader.loadFromUrl(url)
             if (img != null) {
-                return IconUtil.toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
+                val icon = IconUtil.toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
+                cache[Pair(templateName, path)] = icon
+                return icon
             }
         }
 
