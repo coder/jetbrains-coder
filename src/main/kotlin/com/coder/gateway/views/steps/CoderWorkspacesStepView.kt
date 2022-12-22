@@ -319,7 +319,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 tfUrl?.text = url
 
                 poller?.cancel()
-                loginAndLoadWorkspace(token)
+                try {
+                    coderClient.initClientSession(url.toURL(), token)
+                    loginAndLoadWorkspace(token)
+                } catch (e: AuthenticationResponseException) {
+                    // probably the token is expired
+                    askTokenAndOpenSession()
+                }
             }
         }
         updateWorkspaceActions()
