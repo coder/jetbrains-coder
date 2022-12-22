@@ -6,13 +6,17 @@
 
 ### Added
 - ability to open a template in the Dashboard
+- ability to sort by workspace name, or by template name or by workspace status
+- a new token is requested when the one persisted is expired
 
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
 - workspaces and agents are now resolved and displayed progressively
 
 ### Fixed
-- icon rendering on macO
+- icon rendering on `macOS`
+- `darwin` agents are now recognized as `macOS`
+- unsupported OS warning is displayed only for running workspaces
 
 ## 2.1.3-eap.0 - 2022-12-12
 Bug fixes and enhancements included in `2.1.3` release:

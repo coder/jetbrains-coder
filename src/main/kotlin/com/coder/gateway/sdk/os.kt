@@ -24,7 +24,7 @@ enum class OS {
                     LINUX
                 }
 
-                os.contains("mac", true) -> {
+                os.contains("mac", true) || os.contains("darwin", true) -> {
                     MAC
                 }
 
