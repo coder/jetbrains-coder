@@ -405,9 +405,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 fraction = 0.1
             }
 
-            withContext(Dispatchers.IO) {
-                loadWorkspaces()
-            }
+            loadWorkspaces()
 
             this.indicator.apply {
                 isIndeterminate = false
