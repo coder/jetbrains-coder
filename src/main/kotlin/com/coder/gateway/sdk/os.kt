@@ -1,11 +1,13 @@
 package com.coder.gateway.sdk
 
+import java.util.Locale
+
 fun getOS(): OS? {
     return OS.from(System.getProperty("os.name"))
 }
 
 fun getArch(): Arch? {
-    return Arch.from(System.getProperty("os.arch").toLowerCase())
+    return Arch.from(System.getProperty("os.arch").lowercase(Locale.getDefault()))
 }
 
 enum class OS {
@@ -22,7 +24,7 @@ enum class OS {
                     LINUX
                 }
 
-                os.contains("mac", true) -> {
+                os.contains("mac", true) || os.contains("darwin", true) -> {
                     MAC
                 }
 
