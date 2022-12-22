@@ -15,7 +15,7 @@ class TemplateIconDownloader {
     private val coderClient: CoderRestClientService = service()
     private val cache = mutableMapOf<Pair<String, String>, Icon>()
 
-    fun load(path: String, templateName: String): Icon {
+    fun load(path: String, workspaceName: String): Icon {
         var url: URL? = null
         if (path.startsWith("http")) {
             url = path.toURL()
@@ -24,19 +24,19 @@ class TemplateIconDownloader {
         }
 
         if (url != null) {
-            val cachedIcon = cache[Pair(templateName, path)]
+            val cachedIcon = cache[Pair(workspaceName, path)]
             if (cachedIcon != null) {
                 return cachedIcon
             }
             var img = ImageLoader.loadFromUrl(url)
             if (img != null) {
                 val icon = IconUtil.toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
-                cache[Pair(templateName, path)] = icon
+                cache[Pair(workspaceName, path)] = icon
                 return icon
             }
         }
 
-        return iconForChar(templateName.lowercase().first())
+        return iconForChar(workspaceName.lowercase().first())
     }
 
     private fun iconForChar(c: Char) = when (c) {

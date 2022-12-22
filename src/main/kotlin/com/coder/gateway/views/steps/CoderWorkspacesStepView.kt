@@ -523,7 +523,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     null
                 )
                 cs.launch(Dispatchers.IO) {
-                    wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                    wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
                     withContext(Dispatchers.Main) {
                         tableOfWorkspaces.updateUI()
                     }
@@ -550,7 +550,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         agent.directory
                     )
                     cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
                         withContext(Dispatchers.Main) {
                             tableOfWorkspaces.updateUI()
                         }
@@ -575,7 +575,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                         null
                     )
                     cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.templateName)
+                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
                         withContext(Dispatchers.Main) {
                             tableOfWorkspaces.updateUI()
                         }
