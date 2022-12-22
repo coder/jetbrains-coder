@@ -41,7 +41,6 @@ import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
-import com.intellij.ui.JBColor
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
@@ -773,19 +772,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
+                        foreground = WorkspaceAgentStatus.from(value).statusColor()
                     }
                     font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
-                    foreground = (table.model as ListTableModel<WorkspaceAgentModel>).getRowValue(row).statusColor()
                     return this
                 }
             }
-        }
-
-        private fun WorkspaceAgentModel.statusColor() = when (this.agentStatus) {
-            RUNNING -> JBColor.GREEN
-            FAILED -> JBColor.RED
-            else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
         }
     }
 
