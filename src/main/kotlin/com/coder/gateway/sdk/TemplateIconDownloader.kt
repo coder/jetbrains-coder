@@ -19,7 +19,7 @@ class TemplateIconDownloader {
         var url: URL? = null
         if (path.startsWith("http")) {
             url = path.toURL()
-        } else if (path.contains(coderClient.coderURL.host)) {
+        } else if (!path.contains(":") && !path.contains("//")) {
             url = coderClient.coderURL.withPath(path)
         }
 
