@@ -12,7 +12,8 @@
 - workspaces and agents are now resolved and displayed progressively
 
 ### Fixed
-- icon rendering on macOS
+- icon rendering on `macOS`
+- `darwin` agents are now recognized as `macOS`
 
 ## 2.1.3 - 2022-12-09
 
