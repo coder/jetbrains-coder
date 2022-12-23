@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.1.4 - 2022-12-23
+
 ### Added
 - ability to open a template in the Dashboard
 - ability to sort by workspace name, or by template name or by workspace status
