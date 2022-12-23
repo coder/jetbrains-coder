@@ -5,7 +5,6 @@ import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
-import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
 import retrofit2.Call
 import retrofit2.http.Body
@@ -31,9 +30,6 @@ interface CoderV2RestFacade {
 
     @GET("api/v2/buildinfo")
     fun buildInfo(): Call<BuildInfo>
-
-    @GET("api/v2/templateversions/{templateID}/resources")
-    fun templateVersionResources(@Path("templateID") templateID: UUID): Call<List<WorkspaceResource>>
 
     /**
      * Queues a new build to occur for a workspace.
