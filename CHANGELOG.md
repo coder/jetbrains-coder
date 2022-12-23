@@ -8,6 +8,7 @@
 - ability to open a template in the Dashboard
 - ability to sort by workspace name, or by template name or by workspace status
 - a new token is requested when the one persisted is expired
+- support for re-using already installed IDE backends
 
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
