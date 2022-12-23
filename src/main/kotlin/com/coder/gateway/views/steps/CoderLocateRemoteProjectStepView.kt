@@ -6,7 +6,11 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.views.LazyBrowserLink
+import com.coder.gateway.withProjectPath
+import com.coder.gateway.withWebTerminalLink
+import com.coder.gateway.withWorkspaceHostname
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -115,17 +119,17 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         cs.launch {
             logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) withContext(Dispatchers.IO) { toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) } else withContext(Dispatchers.IO) {
+            val hostAccessor = HighLevelHostAccessor.create(
+                RemoteCredentialsHolder().apply {
+                    setHost("coder.${selectedWorkspace.name}")
+                    userName = "coder"
+                    authType = AuthType.OPEN_SSH
+                },
+                true
+            )
+            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
                 try {
-                    val credentialsHolder = RemoteCredentialsHolder().apply {
-                        setHost("coder.${selectedWorkspace.name}")
-                        userName = "coder"
-                        authType = AuthType.OPEN_SSH
-                    }
-                    HighLevelHostAccessor.create(
-                        credentialsHolder,
-                        true
-                    ).guessOs()
+                    hostAccessor.guessOs()
                 } catch (e: Exception) {
                     logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                     null
@@ -142,6 +146,9 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 }
             } else {
                 logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
+                val installedIdes = withContext(Dispatchers.IO) {
+                    hostAccessor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
+                }
                 val idesWithStatus = withContext(Dispatchers.IO) {
                     IntelliJPlatformProduct.values()
                         .filter { it.showInGateway }
@@ -149,9 +156,17 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                         .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
                 }
 
+                if (installedIdes.isEmpty()) {
+                    logger.info("No IDE is installed in workspace ${selectedWorkspace.name}")
+                } else {
+                    ideComboBoxModel.addAll(installedIdes)
+                    cbIDE.selectedIndex = 0
+                }
+
                 if (idesWithStatus.isEmpty()) {
                     logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
                 } else {
+
                     ideComboBoxModel.addAll(idesWithStatus)
                     cbIDE.selectedIndex = 0
                 }
@@ -183,18 +198,13 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val selectedIDE = cbIDE.selectedItem ?: return false
-
         cs.launch {
             GatewayUI.getInstance().connect(
-                mapOf(
-                    "type" to "coder",
-                    "coder_workspace_hostname" to "coder.${wizardModel.selectedWorkspace?.name}",
-                    "project_path" to tfProject.text,
-                    "ide_product_code" to selectedIDE.product.productCode,
-                    "ide_build_number" to selectedIDE.buildNumber,
-                    "ide_download_link" to selectedIDE.download!!.link,
-                    "web_terminal_link" to "${terminalLink.url}"
-                )
+                selectedIDE
+                    .toWorkspaceParams()
+                    .withWorkspaceHostname("coder.${wizardModel.selectedWorkspace?.name}")
+                    .withProjectPath(tfProject.text)
+                    .withWebTerminalLink("${terminalLink.url}")
             )
         }
         return true

@@ -7,6 +7,7 @@ import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.coder.gateway.toWorkspaceParams
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
@@ -128,17 +129,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         icon(product.icon)
                         cell(ActionLink(connectionDetails.projectPath!!) {
                             cs.launch {
-                                GatewayUI.getInstance().connect(
-                                    mapOf(
-                                        "type" to "coder",
-                                        "coder_workspace_hostname" to "${connectionDetails.coderWorkspaceHostname}",
-                                        "project_path" to connectionDetails.projectPath!!,
-                                        "ide_product_code" to product.productCode,
-                                        "ide_build_number" to "${connectionDetails.ideBuildNumber}",
-                                        "ide_download_link" to "${connectionDetails.downloadSource}",
-                                        "web_terminal_link" to "${connectionDetails.webTerminalLink}"
-                                    )
-                                )
+                                GatewayUI.getInstance().connect(connectionDetails.toWorkspaceParams())
                             }
                         })
                         label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)

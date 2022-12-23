@@ -3,11 +3,30 @@
 # coder-gateway Changelog
 
 ## Unreleased
+Bug fixes and enhancements included in `2.1.4` release:
 
 ### Added
 - ability to open a template in the Dashboard
 - ability to sort by workspace name, or by template name or by workspace status
 - a new token is requested when the one persisted is expired
+- support for re-using already installed IDE backends
+
+### Changed
+- renamed the plugin from `Coder Gateway` to `Gateway`
+- workspaces and agents are now resolved and displayed progressively
+
+### Fixed
+- icon rendering on `macOS`
+- `darwin` agents are now recognized as `macOS`
+- unsupported OS warning is displayed only for running workspaces
+
+## 2.1.4 - 2022-12-23
+
+### Added
+- ability to open a template in the Dashboard
+- ability to sort by workspace name, or by template name or by workspace status
+- a new token is requested when the one persisted is expired
+- support for re-using already installed IDE backends
 
 ### Changed
 - renamed the plugin from `Coder Gateway` to `Gateway`
