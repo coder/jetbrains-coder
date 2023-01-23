@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Fixed
+- support for `Remote Development` in the Jetbrains IDE's
+
 ## 2.1.4-eap.0 - 2022-12-23
 Bug fixes and enhancements included in `2.1.4` release:
 

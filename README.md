@@ -27,7 +27,7 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 
 ## Getting Started
 
-![Install this plugin from the JetBrains Marketplace](https://plugins.jetbrains.com/plugin/19620-coder-gateway)
+[Install this plugin from the JetBrains Marketplace](https://plugins.jetbrains.com/plugin/19620-coder/)
 
 ## Manually Building
 
@@ -141,6 +141,8 @@ An artifact file is also built with the plugin attached. Every new Build overrid
 
 When you edit the draft and use the <kbd>Publish release</kbd> button, GitHub will tag the repository with the given version and add a new entry to the Releases tab.
 Next, it will notify users who are *watching* the repository, triggering the final [Release](.github/workflows/release.yml) workflow.
+
+> **IMPORTANT:**  `pluginVersion` from `gradle.properties` needs to be manually increased after a release.
 
 ### Plugin signing
 
