@@ -40,6 +40,7 @@ import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -146,16 +147,18 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 }
             } else {
                 logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
-                val installedIdes = withContext(Dispatchers.IO) {
+                val installedIdesJob = async(Dispatchers.IO) {
                     hostAccessor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
                 }
-                val idesWithStatus = withContext(Dispatchers.IO) {
+                val idesWithStatusJob = async(Dispatchers.IO) {
                     IntelliJPlatformProduct.values()
                         .filter { it.showInGateway }
                         .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
                         .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
                 }
 
+                val installedIdes = installedIdesJob.await()
+                val idesWithStatus = idesWithStatusJob.await()
                 if (installedIdes.isEmpty()) {
                     logger.info("No IDE is installed in workspace ${selectedWorkspace.name}")
                 } else {
