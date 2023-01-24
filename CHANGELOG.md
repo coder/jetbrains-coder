@@ -4,8 +4,10 @@
 
 ## Unreleased
 
+## 2.1.5 - 2023-01-24
+
 ### Fixed
-- support for `Remote Development` in the Jetbrains IDE's  
+- support for `Remote Development` in the Jetbrains IDE's
 
 ## 2.1.4 - 2022-12-23
 
