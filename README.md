@@ -4,7 +4,7 @@
 Discord"](https://img.shields.io/badge/join-us%20on%20Discord-gray.svg?longCache=true&logo=discord&colorB=purple)](https://discord.gg/coder)
 [![Twitter
 Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=social)](https://twitter.com/coderhq)
-[![Coder Gateway Plugin Build](https://github.com/coder/jetbrains-coder/actions/workflows/build.yml/badge.svg)](https://github.com/coder/jetbrains-coderjetbrains/actions/workflows/build.yml)
+[![Coder Gateway Plugin Build](https://github.com/coder/jetbrains-coder/actions/workflows/build.yml/badge.svg)](https://github.com/coder/jetbrains-coder/actions/workflows/build.yml)
 
 <!-- Plugin description -->
 **Coder Gateway** connects your JetBrains IDE to [Coder](https://coder.com/docs/coder-oss/) workspaces so that you can develop from anywhere.
