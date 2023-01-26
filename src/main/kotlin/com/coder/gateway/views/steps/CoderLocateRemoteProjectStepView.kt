@@ -113,6 +113,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
+        ideComboBoxModel.removeAllElements()
         wizard = wizardModel
         val selectedWorkspace = wizardModel.selectedWorkspace
         if (selectedWorkspace == null) {
