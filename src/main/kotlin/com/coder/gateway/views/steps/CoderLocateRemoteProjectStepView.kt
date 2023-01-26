@@ -129,7 +129,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             try {
                 retrieveIDES(selectedWorkspace)
             } catch (e: Exception) {
-                when(e) {
+                when (e) {
                     is InterruptedException -> Unit
                     is CancellationException -> Unit
                     else -> {
