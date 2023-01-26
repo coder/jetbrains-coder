@@ -3,6 +3,7 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
+import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
@@ -38,10 +39,13 @@ import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Component
@@ -66,6 +70,8 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     private lateinit var cbIDE: IDEComboBox
     private lateinit var tfProject: JBTextField
     private lateinit var terminalLink: LazyBrowserLink
+
+    private lateinit var ideResolvingJob: Job
 
     override val component = panel {
         indent {
@@ -118,61 +124,73 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
         terminalLink.url = "${coderClient.coderURL}/@${coderClient.me.username}/${selectedWorkspace.name}/terminal"
 
-        cs.launch {
-            logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-            val hostAccessor = HighLevelHostAccessor.create(
-                RemoteCredentialsHolder().apply {
-                    setHost("coder.${selectedWorkspace.name}")
-                    userName = "coder"
-                    authType = AuthType.OPEN_SSH
-                },
-                true
-            )
-            val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
-                try {
-                    hostAccessor.guessOs()
-                } catch (e: Exception) {
-                    logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
-                    null
-                }
-            }
-            if (workspaceOS == null) {
-                disableNextAction()
-                cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
-                    override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
-                        background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                        icon = UIUtil.getBalloonErrorIcon()
-                        append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
+        ideResolvingJob = cs.launch {
+            try {
+                retrieveIDES(selectedWorkspace)
+            } catch (e: Exception) {
+                when(e) {
+                    is InterruptedException -> Unit
+                    is CancellationException -> Unit
+                    else -> {
+                        logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
+                        withContext(Dispatchers.Main) {
+                            disableNextAction()
+                            cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
+                                override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
+                                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                                    icon = UIUtil.getBalloonErrorIcon()
+                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
-                val installedIdesJob = async(Dispatchers.IO) {
-                    hostAccessor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
-                }
-                val idesWithStatusJob = async(Dispatchers.IO) {
-                    IntelliJPlatformProduct.values()
-                        .filter { it.showInGateway }
-                        .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
-                        .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
-                }
+            }
+        }
+    }
 
-                val installedIdes = installedIdesJob.await()
-                val idesWithStatus = idesWithStatusJob.await()
-                if (installedIdes.isEmpty()) {
-                    logger.info("No IDE is installed in workspace ${selectedWorkspace.name}")
-                } else {
-                    ideComboBoxModel.addAll(installedIdes)
-                    cbIDE.selectedIndex = 0
-                }
+    private suspend fun retrieveIDES(selectedWorkspace: WorkspaceAgentModel) {
+        logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
+        val hostAccessor = HighLevelHostAccessor.create(
+            RemoteCredentialsHolder().apply {
+                setHost("coder.${selectedWorkspace.name}")
+                userName = "coder"
+                authType = AuthType.OPEN_SSH
+            },
+            true
+        )
+        val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
+            hostAccessor.guessOs()
+        }
 
-                if (idesWithStatus.isEmpty()) {
-                    logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
-                } else {
+        logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
+        val installedIdesJob = cs.async(Dispatchers.IO) {
+            hostAccessor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
+        }
+        val idesWithStatusJob = cs.async(Dispatchers.IO) {
+            IntelliJPlatformProduct.values()
+                .filter { it.showInGateway }
+                .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
+                .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
+        }
 
-                    ideComboBoxModel.addAll(idesWithStatus)
-                    cbIDE.selectedIndex = 0
-                }
+        val installedIdes = installedIdesJob.await()
+        val idesWithStatus = idesWithStatusJob.await()
+        if (installedIdes.isEmpty()) {
+            logger.info("No IDE is installed in workspace ${selectedWorkspace.name}")
+        } else {
+            withContext(Dispatchers.Main) {
+                ideComboBoxModel.addAll(installedIdes)
+                cbIDE.selectedIndex = 0
+            }
+        }
+
+        if (idesWithStatus.isEmpty()) {
+            logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
+        } else {
+            withContext(Dispatchers.Main) {
+                ideComboBoxModel.addAll(idesWithStatus)
+                cbIDE.selectedIndex = 0
             }
         }
     }
@@ -211,6 +229,13 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             )
         }
         return true
+    }
+
+    override fun onPrevious() {
+        super.onPrevious()
+        cs.launch {
+            ideResolvingJob.cancelAndJoin()
+        }
     }
 
     override fun dispose() {
