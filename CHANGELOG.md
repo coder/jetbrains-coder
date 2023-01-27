@@ -4,7 +4,15 @@
 
 ## Unreleased
 
+### Fixed
+- improved resiliency and error handling when resolving installed IDE's
+
 ## 2.1.5-eap.0 - 2023-01-24
+
+### Fixed
+- support for `Remote Development` in the Jetbrains IDE's
+
+## 2.1.5 - 2023-01-24
 
 ### Fixed
 - support for `Remote Development` in the Jetbrains IDE's
