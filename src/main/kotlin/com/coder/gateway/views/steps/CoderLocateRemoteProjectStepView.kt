@@ -220,6 +220,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val selectedIDE = cbIDE.selectedItem ?: return false
+        logger.info("Going to launch the IDE")
         cs.launch {
             GatewayUI.getInstance().connect(
                 selectedIDE
@@ -234,6 +235,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
     override fun onPrevious() {
         super.onPrevious()
+        logger.info("Going back to Workspace view")
         cs.launch {
             ideResolvingJob.cancelAndJoin()
         }
@@ -241,10 +243,6 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
     override fun dispose() {
         cs.cancel()
-    }
-
-    companion object {
-        val logger = Logger.getInstance(CoderLocateRemoteProjectStepView::class.java.simpleName)
     }
 
     private class IDEComboBox(model: ComboBoxModel<IdeWithStatus>) : ComboBox<IdeWithStatus>(model) {
@@ -283,5 +281,9 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 panel { }
             }
         }
+    }
+
+    companion object {
+        val logger = Logger.getInstance(CoderLocateRemoteProjectStepView::class.java.simpleName)
     }
 }

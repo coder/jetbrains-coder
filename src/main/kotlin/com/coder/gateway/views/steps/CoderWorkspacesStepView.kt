@@ -589,6 +589,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     override fun onPrevious() {
         super.onPrevious()
+        logger.info("Going back to the main view")
         poller?.cancel()
     }
 
@@ -621,6 +622,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         if (workspace != null) {
             wizardModel.selectedWorkspace = workspace
             poller?.cancel()
+            logger.info("Opening IDE and Project Location window for ${workspace.name}")
             return true
         }
         return false
