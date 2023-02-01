@@ -17,11 +17,16 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.ComponentValidator
+import com.intellij.openapi.ui.ValidationInfo
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
+import com.intellij.ssh.SshException
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RowLayout
@@ -30,6 +35,8 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.update.MergingUpdateQueue
+import com.intellij.util.ui.update.Update
 import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
 import com.jetbrains.gateway.ssh.DeployTargetOS
@@ -43,13 +50,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.time.withTimeout
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
+import java.time.Duration
 import java.util.Locale
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
@@ -58,6 +69,7 @@ import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
+import javax.swing.event.DocumentEvent
 
 class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -68,10 +80,10 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     private lateinit var titleLabel: JLabel
     private lateinit var wizard: CoderWorkspacesWizardModel
     private lateinit var cbIDE: IDEComboBox
-    private lateinit var tfProject: JBTextField
+    private var tfProject = JBTextField()
     private lateinit var terminalLink: LazyBrowserLink
-
     private lateinit var ideResolvingJob: Job
+    private val pathValidationJobs = MergingUpdateQueue("remote-path-validation", 1000, true, tfProject)
 
     override val component = panel {
         indent {
@@ -92,9 +104,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
             row {
                 label("Project directory:")
-                tfProject = textField()
-                    .resizableColumn()
-                    .horizontalAlign(HorizontalAlign.FILL).component
+                cell(tfProject).resizableColumn().horizontalAlign(HorizontalAlign.FILL).component
                 cell()
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
             row {
@@ -113,6 +123,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
+        cbIDE.renderer = IDECellRenderer()
         ideComboBoxModel.removeAllElements()
         wizard = wizardModel
         val selectedWorkspace = wizardModel.selectedWorkspace
@@ -127,11 +138,30 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         ideResolvingJob = cs.launch {
             try {
-                retrieveIDES(selectedWorkspace)
+                val executor = withTimeout(Duration.ofSeconds(60)) { createRemoteExecutor() }
+                retrieveIDES(executor, selectedWorkspace)
+                if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                    installRemotePathValidator(executor)
+                }
             } catch (e: Exception) {
                 when (e) {
                     is InterruptedException -> Unit
                     is CancellationException -> Unit
+                    is TimeoutCancellationException,
+                    is SshException -> {
+                        logger.error("Can't connect to workspace ${selectedWorkspace.name}. Reason: $e")
+                        withContext(Dispatchers.Main) {
+                            disableNextAction()
+                            cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
+                                override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
+                                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                                    icon = UIUtil.getBalloonErrorIcon()
+                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ssh.error.text"))
+                                }
+                            }
+                        }
+                    }
+
                     else -> {
                         logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                         withContext(Dispatchers.Main) {
@@ -140,7 +170,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                                 override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
                                     icon = UIUtil.getBalloonErrorIcon()
-                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
+                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text"))
                                 }
                             }
                         }
@@ -150,23 +180,56 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
         }
     }
 
-    private suspend fun retrieveIDES(selectedWorkspace: WorkspaceAgentModel) {
-        logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
-        val hostAccessor = HighLevelHostAccessor.create(
+    private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
+        var disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderLocateRemoteProjectStepView.javaClass.name)
+        ComponentValidator(disposable).installOn(tfProject)
+
+        tfProject.document.addDocumentListener(object : DocumentAdapter() {
+            override fun textChanged(event: DocumentEvent) {
+                pathValidationJobs.queue(Update.create("validate-remote-path") {
+                    runBlocking {
+                        try {
+                            val isPathPresent = executor.isPathPresentOnRemote(tfProject.text)
+                            if (!isPathPresent) {
+                                ComponentValidator.getInstance(tfProject).ifPresent {
+                                    it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
+                                }
+                            } else {
+                                ComponentValidator.getInstance(tfProject).ifPresent {
+                                    it.updateInfo(null)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            ComponentValidator.getInstance(tfProject).ifPresent {
+                                it.updateInfo(ValidationInfo("Can't validate directory: ${tfProject.text}", tfProject))
+                            }
+                        }
+                    }
+                })
+            }
+        })
+    }
+
+    private suspend fun createRemoteExecutor(): HighLevelHostAccessor {
+        return HighLevelHostAccessor.create(
             RemoteCredentialsHolder().apply {
-                setHost("coder.${selectedWorkspace.name}")
+                setHost("coder.${wizard.selectedWorkspace?.name}")
                 userName = "coder"
                 authType = AuthType.OPEN_SSH
             },
             true
         )
+    }
+
+    private suspend fun retrieveIDES(executor: HighLevelHostAccessor, selectedWorkspace: WorkspaceAgentModel) {
+        logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
         val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
-            hostAccessor.guessOs()
+            executor.guessOs()
         }
 
         logger.info("Resolved OS and Arch for ${selectedWorkspace.name} is: $workspaceOS")
         val installedIdesJob = cs.async(Dispatchers.IO) {
-            hostAccessor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
+            executor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
         }
         val idesWithStatusJob = cs.async(Dispatchers.IO) {
             IntelliJPlatformProduct.values()
