@@ -170,7 +170,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                                 override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
                                     icon = UIUtil.getBalloonErrorIcon()
-                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text", selectedWorkspace.name))
+                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text"))
                                 }
                             }
                         }
