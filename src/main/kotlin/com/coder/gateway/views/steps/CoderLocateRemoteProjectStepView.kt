@@ -138,7 +138,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         ideResolvingJob = cs.launch {
             try {
-                val executor = withTimeout(Duration.ofSeconds(30)) { createRemoteExecutor() }
+                val executor = withTimeout(Duration.ofSeconds(60)) { createRemoteExecutor() }
                 retrieveIDES(executor, selectedWorkspace)
                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                     installRemotePathValidator(executor)
