@@ -23,6 +23,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
+import com.intellij.ssh.SshException
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.DocumentAdapter
@@ -49,14 +50,17 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.time.withTimeout
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
+import java.time.Duration
 import java.util.Locale
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
@@ -134,7 +138,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         ideResolvingJob = cs.launch {
             try {
-                val executor = withContext(Dispatchers.IO) { createRemoteExecutor() }
+                val executor = withTimeout(Duration.ofSeconds(30)) { createRemoteExecutor() }
                 retrieveIDES(executor, selectedWorkspace)
                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                     installRemotePathValidator(executor)
@@ -143,6 +147,21 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 when (e) {
                     is InterruptedException -> Unit
                     is CancellationException -> Unit
+                    is TimeoutCancellationException,
+                    is SshException -> {
+                        logger.error("Can't connect to workspace ${selectedWorkspace.name}. Reason: $e")
+                        withContext(Dispatchers.Main) {
+                            disableNextAction()
+                            cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
+                                override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
+                                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                                    icon = UIUtil.getBalloonErrorIcon()
+                                    append("Can't connect to the workspace. Please make sure Coder Agent is running!")
+                                }
+                            }
+                        }
+                    }
+
                     else -> {
                         logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                         withContext(Dispatchers.Main) {
