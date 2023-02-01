@@ -156,7 +156,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                                 override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
                                     icon = UIUtil.getBalloonErrorIcon()
-                                    append("Can't connect to the workspace. Please make sure Coder Agent is running!")
+                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ssh.error.text"))
                                 }
                             }
                         }
