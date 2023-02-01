@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Fixed
+- improved resiliency and error handling when resolving installed IDE's
+
 ## 2.1.6 - 2023-02-01
 
 ### Fixed
