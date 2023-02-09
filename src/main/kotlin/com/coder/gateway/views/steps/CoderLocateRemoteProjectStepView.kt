@@ -7,6 +7,7 @@ import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.withPath
 import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.views.LazyBrowserLink
 import com.coder.gateway.withProjectPath
@@ -134,7 +135,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         tfProject.text = if (selectedWorkspace.homeDirectory.isNullOrBlank()) "/home" else selectedWorkspace.homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
-        terminalLink.url = "${coderClient.coderURL}/@${coderClient.me.username}/${selectedWorkspace.name}/terminal"
+        terminalLink.url = coderClient.coderURL.withPath("/@${coderClient.me.username}/${selectedWorkspace.name}/terminal").toString()
 
         ideResolvingJob = cs.launch {
             try {
