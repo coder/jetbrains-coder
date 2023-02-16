@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Fixed
+- terminal link is now correct when host ends in `/`
+
 ## 2.1.6-eap.0 - 2023-02-02
 
 ### Fixed

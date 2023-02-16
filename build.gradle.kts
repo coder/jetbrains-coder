@@ -9,7 +9,7 @@ plugins {
     // Groovy support
     id("groovy")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.7.22"
+    id("org.jetbrains.kotlin.jvm") version "1.8.10"
     // Gradle IntelliJ Plugin
     id("org.jetbrains.intellij") version "1.10.1"
     // Gradle Changelog Plugin
@@ -33,7 +33,7 @@ dependencies {
         exclude("org.slf4j")
     }
 
-    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.8"))
+    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.9"))
     testImplementation("org.apache.groovy:groovy")
     testImplementation(platform("org.spockframework:spock-bom:2.3-groovy-4.0"))
     testImplementation("org.spockframework:spock-core")
