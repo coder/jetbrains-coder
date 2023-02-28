@@ -321,9 +321,20 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 try {
                     coderClient.initClientSession(url.toURL(), token)
                     loginAndLoadWorkspace(token)
-                } catch (e: AuthenticationResponseException) {
-                    // probably the token is expired
-                    askTokenAndOpenSession()
+                } catch (e: Exception) {
+                    when (e) {
+                        is AuthenticationResponseException -> {
+                            // probably the token is expired
+                            askTokenAndOpenSession()
+                        }
+
+                        else -> {
+                            logger.warn("An exception was encountered while opening ${localWizardModel.coderURL}. Reason: ${e.message}")
+                            localWizardModel = CoderWorkspacesWizardModel()
+                            tfUrl?.text = localWizardModel.coderURL
+                        }
+                    }
+
                 }
             }
         }
