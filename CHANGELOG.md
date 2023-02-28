@@ -7,15 +7,43 @@
 ### Fixed
 - terminal link is now correct when host ends in `/`
 
+## 2.1.6-eap.0 - 2023-02-02
+
+### Fixed
+- improved resiliency and error handling when resolving installed IDE's
+
 ## 2.1.6 - 2023-02-01
 
 ### Fixed
 - improved resiliency and error handling when resolving installed IDE's
 
+## 2.1.5-eap.0 - 2023-01-24
+
+### Fixed
+- support for `Remote Development` in the Jetbrains IDE's
+
 ## 2.1.5 - 2023-01-24
 
 ### Fixed
 - support for `Remote Development` in the Jetbrains IDE's
+
+## 2.1.4-eap.0 - 2022-12-23
+Bug fixes and enhancements included in `2.1.4` release:
+
+### Added
+- ability to open a template in the Dashboard
+- ability to sort by workspace name, or by template name or by workspace status
+- a new token is requested when the one persisted is expired
+- support for re-using already installed IDE backends
+
+### Changed
+- renamed the plugin from `Coder Gateway` to `Gateway`
+- workspaces and agents are now resolved and displayed progressively
+
+### Fixed
+- icon rendering on `macOS`
+- `darwin` agents are now recognized as `macOS`
+- unsupported OS warning is displayed only for running workspaces
 
 ## 2.1.4 - 2022-12-23
 
@@ -33,6 +61,27 @@
 - icon rendering on `macOS`
 - `darwin` agents are now recognized as `macOS`
 - unsupported OS warning is displayed only for running workspaces
+
+## 2.1.3-eap.0 - 2022-12-12
+Bug fixes and enhancements included in `2.1.3` release:
+
+### Added
+- warning system when plugin might not be compatible with Coder REST API
+- a `Create workspace` button which links to Coder's templates page
+- workspace icons
+- quick toolbar action to open Coder Dashboard in the browser
+- custom user agent for the HTTP client
+
+### Changed
+- redesigned the information&warning banner. Messages can now include hyperlinks
+
+### Removed
+- connection handle window is no longer displayed
+
+### Fixed
+- outdated Coder CLI binaries are cleaned up
+- workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
+- typos in plugin description
 
 ## 2.1.3 - 2022-12-09
 
@@ -53,6 +102,16 @@
 - outdated Coder CLI binaries are cleaned up
 - workspace status color style: running workspaces are green, failed ones should be red, everything else is gray
 - typos in plugin description
+
+## 2.1.2-eap.0 - 2022-11-29
+
+### Added
+- support for Gateway 2022.3 RC
+- upgraded support for the latest Coder REST API
+- support for latest Gateway 2022.2.x builds
+
+### Fixed
+- authentication flow is now done using HTTP headers
 
 ## 2.1.2 - 2022-11-23
 

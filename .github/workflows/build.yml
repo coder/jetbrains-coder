@@ -80,7 +80,7 @@ jobs:
 
       # Run plugin build
       - name: Run Build
-        run: ./gradlew clean buildPlugin
+        run: ./gradlew clean buildPlugin --info
 
 # until https://github.com/JetBrains/gradle-intellij-plugin/issues/1027 is solved
 
@@ -151,6 +151,7 @@ jobs:
         run: |
           gh release create v${{ needs.build.outputs.version }} \
             --draft \
+            --target main \
             --title "v${{ needs.build.outputs.version }}" \
             --notes "$(cat << 'EOM'
           ${{ needs.build.outputs.changelog }}
