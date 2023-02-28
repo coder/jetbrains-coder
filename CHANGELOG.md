@@ -6,7 +6,7 @@
 
 ### Fixed
 - terminal link is now correct when host ends in `/`
-- improved resiliency and error handling trying to open last successful connection
+- improved resiliency and error handling when trying to open the last successful connection
 
 ## 2.1.6-eap.0 - 2023-02-02
 
