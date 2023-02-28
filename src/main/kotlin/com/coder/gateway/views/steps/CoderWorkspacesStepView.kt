@@ -330,7 +330,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
                         else -> {
                             logger.warn("An exception was encountered while opening ${localWizardModel.coderURL}. Reason: ${e.message}")
-                            localWizardModel = CoderWorkspacesWizardModel()
+                            localWizardModel.coderURL = "https://coder.example.com"
+                            localWizardModel.token = ""
                             tfUrl?.text = localWizardModel.coderURL
                         }
                     }
