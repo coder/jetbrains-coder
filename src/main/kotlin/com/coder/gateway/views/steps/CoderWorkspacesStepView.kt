@@ -212,11 +212,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
+                        listTableModelOfWorkspaces.items = emptyList()
                         askTokenAndOpenSession(true)
                     }
                 }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     poller?.cancel()
+                    listTableModelOfWorkspaces.items = emptyList()
                     askTokenAndOpenSession(true)
                 }.applyToComponent {
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
@@ -311,7 +313,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         enableNextButtonCallback(false)
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
-            triggerWorkspacePolling()
+            triggerWorkspacePolling(true)
         } else {
             val url = appPropertiesService.getValue(CODER_URL_KEY)
             val token = appPropertiesService.getValue(SESSION_TOKEN)
@@ -434,7 +436,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
             this.indicator.fraction = 1.0
             updateWorkspaceActions()
-            triggerWorkspacePolling()
+            triggerWorkspacePolling(false)
         }
     }
 
@@ -465,10 +467,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         return tokenFromUser
     }
 
-    private fun triggerWorkspacePolling() {
+    private fun triggerWorkspacePolling(fetchNow: Boolean) {
         poller?.cancel()
 
         poller = cs.launch {
+            if (fetchNow) {
+                loadWorkspaces()
+            }
             while (isActive) {
                 delay(5000)
                 loadWorkspaces()
