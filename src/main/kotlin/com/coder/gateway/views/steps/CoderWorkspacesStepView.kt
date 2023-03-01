@@ -46,13 +46,7 @@ import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
-import com.intellij.ui.dsl.builder.AlignX
-import com.intellij.ui.dsl.builder.AlignY
-import com.intellij.ui.dsl.builder.BottomGap
-import com.intellij.ui.dsl.builder.RightGap
-import com.intellij.ui.dsl.builder.TopGap
-import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.*
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.JBFont
@@ -76,8 +70,12 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.net.SocketTimeoutException
 import javax.swing.Icon
+import javax.swing.JCheckBox
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
@@ -100,6 +98,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private val appPropertiesService: PropertiesComponent = service()
 
     private var tfUrl: JTextField? = null
+    private var cbExistingToken: JCheckBox? = null
     private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
         WorkspaceIconColumnInfo(""),
         WorkspaceNameColumnInfo("Name"),
@@ -201,13 +200,13 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     font = JBFont.h3().asBold()
                     icon = CoderIcons.LOGO_16
                 }
-            }.topGap(TopGap.SMALL).bottomGap(BottomGap.MEDIUM)
+            }.topGap(TopGap.SMALL)
             row {
                 cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"), false, -1, true))
             }
             row {
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
-            }.bottomGap(BottomGap.MEDIUM)
+            }
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
                 tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
@@ -222,6 +221,17 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
                 }
                 cell()
+            }
+            row {
+                cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
+                    .bindSelected(localWizardModel::useExistingToken)
+                    .component
+            }
+            row {
+                cell(ComponentPanelBuilder.createCommentComponent(
+                         CoderGatewayBundle.message("gateway.connector.view.login.existing-token.tooltip",
+                                                    CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label")),
+                         false, -1, true))
             }
             row {
                 scrollCell(toolbar.createPanel().apply {
@@ -313,16 +323,69 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
             triggerWorkspacePolling()
         } else {
-            val url = appPropertiesService.getValue(CODER_URL_KEY)
-            val token = appPropertiesService.getValue(SESSION_TOKEN)
-            if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
+            val (url, token) = readStorageOrConfig()
+            if (!url.isNullOrBlank()) {
                 localWizardModel.coderURL = url
-                localWizardModel.token = token
                 tfUrl?.text = url
+            }
+            if (!token.isNullOrBlank()) {
+                localWizardModel.token = token
+            }
+            if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
                 loginAndLoadWorkspace(token, true)
             }
         }
         updateWorkspaceActions()
+    }
+
+    /**
+     * Return the URL and token from storage or the CLI config.
+     */
+    private fun readStorageOrConfig(): Pair<String?, String?> {
+        val url = appPropertiesService.getValue(CODER_URL_KEY)
+        val token = appPropertiesService.getValue(SESSION_TOKEN)
+        if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
+            return url to token
+        }
+        return readConfig()
+    }
+
+    /**
+     * Return the URL and token from the CLI config.
+     */
+    private fun readConfig(): Pair<String?, String?> {
+        val configDir = getConfigDir()
+        logger.info("Reading config from $configDir")
+        try {
+            val url = Files.readString(configDir.resolve("url"))
+            val token = Files.readString(configDir.resolve("session"))
+            return url to token
+        } catch (e: Exception) {
+            return null to null // Probably has not configured the CLI yet.
+        }
+    }
+
+    /**
+     * Return the config directory used by the CLI.
+     */
+    private fun getConfigDir(): Path {
+        var dir = System.getenv("CODER_CONFIG_DIR")
+        if (!dir.isNullOrBlank()) {
+            return Path.of(dir)
+        }
+        // The Coder CLI uses https://github.com/kirsle/configdir so this should
+        // match how it behaves.
+        return when(getOS()) {
+            OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
+            OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
+            else -> {
+                dir = System.getenv("XDG_CACHE_HOME")
+                if (!dir.isNullOrBlank()) {
+                    return Paths.get(dir, "coderv2")
+                }
+                return Paths.get(System.getenv("HOME"), ".config/coderv2")
+            }
+        }
     }
 
     private fun updateWorkspaceActions() {
@@ -440,8 +503,14 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private fun askToken(openBrowser: Boolean): String? {
         val getTokenUrl = localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth")
-        if (openBrowser) {
+        if (openBrowser && !localWizardModel.useExistingToken) {
             BrowserUtil.browse(getTokenUrl)
+        } else if (localWizardModel.useExistingToken) {
+            val (url, token) = readConfig()
+            if (url == localWizardModel.coderURL && !token.isNullOrBlank()) {
+                logger.info("Injecting valid token from CLI config")
+                localWizardModel.token = token
+            }
         }
         var tokenFromUser: String? = null
         ApplicationManager.getApplication().invokeAndWait({
