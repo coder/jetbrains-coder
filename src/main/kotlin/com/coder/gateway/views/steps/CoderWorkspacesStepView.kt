@@ -76,6 +76,7 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
+import java.net.SocketTimeoutException
 import javax.swing.Icon
 import javax.swing.JTable
 import javax.swing.JTextField
@@ -211,12 +212,12 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
-                        askTokenAndOpenSession()
+                        askTokenAndOpenSession(true)
                     }
                 }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     poller?.cancel()
-                    askTokenAndOpenSession()
+                    askTokenAndOpenSession(true)
                 }.applyToComponent {
                     background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
                 }
@@ -318,25 +319,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 localWizardModel.coderURL = url
                 localWizardModel.token = token
                 tfUrl?.text = url
-
-                poller?.cancel()
-                try {
-                    coderClient.initClientSession(url.toURL(), token)
-                    loginAndLoadWorkspace(token)
-                } catch (e: Exception) {
-                    when (e) {
-                        is AuthenticationResponseException -> {
-                            // probably the token is expired
-                            askTokenAndOpenSession()
-                        }
-
-                        else -> {
-                            logger.warn("An exception was encountered while opening ${localWizardModel.coderURL}. Reason: ${e.message}")
-                            localWizardModel.token = ""
-                        }
-                    }
-
-                }
+                loginAndLoadWorkspace(token, true)
             }
         }
         updateWorkspaceActions()
@@ -374,49 +357,44 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         ActivityTracker.getInstance().inc()
     }
 
-    private fun askTokenAndOpenSession() {
+    private fun askTokenAndOpenSession(openBrowser: Boolean) {
         // force bindings to be filled
         component.apply()
 
-        val pastedToken = askToken()
+        val pastedToken = askToken(openBrowser)
         if (pastedToken.isNullOrBlank()) {
             return
         }
-        loginAndLoadWorkspace(pastedToken)
+        // False so that subsequent authentication failures do not keep opening
+        // the browser as it was already opened earlier.
+        loginAndLoadWorkspace(pastedToken, false)
     }
 
-    private fun loginAndLoadWorkspace(token: String) {
-        try {
-            coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
-            if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
-                notificationBanner.apply {
-                    component.isVisible = true
-                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
-                }
-            } else {
-                val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
-                if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
-                    notificationBanner.apply {
-                        component.isVisible = true
-                        showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
-                    }
-                }
-            }
-        } catch (e: AuthenticationResponseException) {
-            logger.error("Could not authenticate on ${localWizardModel.coderURL}. Reason $e")
-            return
-        }
-        appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
-        appPropertiesService.setValue(SESSION_TOKEN, token)
-        val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
-
-        localWizardModel.apply {
-            this.token = token
-            buildVersion = coderClient.buildVersion
-            localCliPath = cliManager.localCli.toAbsolutePath().toString()
-        }
-
+    private fun loginAndLoadWorkspace(token: String, openBrowser: Boolean) {
         LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), canBeCancelled = false, isIndeterminate = true) {
+            this.indicator.apply {
+                text = "Authenticating..."
+            }
+
+            try {
+                authenticate(token)
+            } catch (e: AuthenticationResponseException) {
+                logger.error("Unable to authenticate to ${localWizardModel.coderURL}; has your token expired?", e)
+                askTokenAndOpenSession(openBrowser)
+                return@launchUnderBackgroundProgress
+            } catch (e: SocketTimeoutException) {
+                logger.error("Unable to connect to ${localWizardModel.coderURL}; is it up?", e)
+                return@launchUnderBackgroundProgress
+            }
+
+            val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
+
+            localWizardModel.apply {
+                this.token = token
+                buildVersion = coderClient.buildVersion
+                localCliPath = cliManager.localCli.toAbsolutePath().toString()
+            }
+
             this.indicator.apply {
                 isIndeterminate = false
                 text = "Retrieving Workspaces..."
@@ -460,16 +438,19 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private fun askToken(): String? {
-        BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
+    private fun askToken(openBrowser: Boolean): String? {
+        val getTokenUrl = localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth")
+        if (openBrowser) {
+            BrowserUtil.browse(getTokenUrl)
+        }
         var tokenFromUser: String? = null
         ApplicationManager.getApplication().invokeAndWait({
             lateinit var sessionTokenTextField: JBTextField
 
             val panel = panel {
                 row {
-                    label(CoderGatewayBundle.message("gateway.connector.view.login.token.label"))
-                    sessionTokenTextField = textField().applyToComponent {
+                    browserLink(CoderGatewayBundle.message("gateway.connector.view.login.token.label"), getTokenUrl.toString())
+                    sessionTokenTextField = textField().bindText(localWizardModel::token).applyToComponent {
                         minimumSize = Dimension(320, -1)
                     }.component
                 }
@@ -493,6 +474,33 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 loadWorkspaces()
             }
         }
+    }
+
+    /**
+     * Check that the token is valid for the URL in the wizard and throw if not.
+     * On success store the URL and token and display warning banners if
+     * versions do not match.
+     */
+    private fun authenticate(token: String) {
+        coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
+
+        if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
+            notificationBanner.apply {
+                component.isVisible = true
+                showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
+            }
+        } else {
+            val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
+            if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
+                notificationBanner.apply {
+                    component.isVisible = true
+                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
+                }
+            }
+        }
+
+        appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
+        appPropertiesService.setValue(SESSION_TOKEN, token)
     }
 
     private suspend fun loadWorkspaces() {
