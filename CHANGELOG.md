@@ -7,6 +7,7 @@
 ### Added
 
 - support for Gateway 2023
+- ability to use existing tokens rather than request a new one
 
 ## 2.1.7 - 2023-02-28
 
