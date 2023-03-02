@@ -2,8 +2,8 @@ package com.coder.gateway.views.steps
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBUI
 import javax.swing.JEditorPane
 import javax.swing.JLabel
@@ -19,7 +19,7 @@ class NotificationBanner {
                 icon = icon(AllIcons.General.Warning).applyToComponent {
                     border = JBUI.Borders.empty(0, 5)
                 }.component
-                txt = text("").resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent { foreground = JBUI.CurrentTheme.NotificationWarning.foregroundColor() }.component
+                txt = text("").resizableColumn().align(AlignX.FILL).applyToComponent { foreground = JBUI.CurrentTheme.NotificationWarning.foregroundColor() }.component
             }
         }.apply {
             background = JBUI.CurrentTheme.NotificationWarning.backgroundColor()

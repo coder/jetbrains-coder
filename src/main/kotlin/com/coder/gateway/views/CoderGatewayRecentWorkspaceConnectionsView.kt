@@ -20,12 +20,12 @@ import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
-import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.jetbrains.gateway.api.GatewayRecentConnections
@@ -38,7 +38,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.awt.Component
 import java.awt.Dimension
-import java.util.Locale
+import java.util.*
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
@@ -65,14 +65,15 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     panel {
                         indent {
                             row {
-                                cell(JLabel()).resizableColumn().horizontalAlign(HorizontalAlign.FILL)
-                                searchBar = cell(SearchTextField(false)).resizableColumn().horizontalAlign(HorizontalAlign.FILL).applyToComponent {
+                                cell(JLabel()).resizableColumn().align(AlignX.FILL)
+                                searchBar = cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
                                     minimumSize = Dimension(350, -1)
                                     textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
                                     addDocumentListener(object : DocumentAdapter() {
                                         override fun textChanged(e: DocumentEvent) {
                                             val toSearchFor = this@applyToComponent.text
-                                            val filteredConnections = recentConnectionsService.getAllRecentConnections().filter { it.coderWorkspaceHostname?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false || it.projectPath?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false }
+                                            val filteredConnections = recentConnectionsService.getAllRecentConnections()
+                                                .filter { it.coderWorkspaceHostname?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false || it.projectPath?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false }
                                             updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
                                         }
                                     })
@@ -92,7 +93,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
                     resizableRow()
-                    cell(recentWorkspacesContentPanel).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL).component
+                    cell(recentWorkspacesContentPanel).resizableColumn().align(AlignX.FILL).align(AlignY.FILL).component
                 }
             }
         }.apply {
@@ -114,7 +115,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     if (hostname != null) {
                         label(hostname).applyToComponent {
                             font = JBFont.h3().asBold()
-                        }.horizontalAlign(HorizontalAlign.LEFT).gap(RightGap.SMALL)
+                        }.align(AlignX.LEFT).gap(RightGap.SMALL)
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
                             override fun actionPerformed(e: AnActionEvent) {
                                 BrowserUtil.browse(recentConnections[0].webTerminalLink ?: "")
@@ -132,7 +133,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 GatewayUI.getInstance().connect(connectionDetails.toWorkspaceParams())
                             }
                         })
-                        label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL)
+                        label("").resizableColumn().align(AlignX.FILL)
                         label("Last opened: ${connectionDetails.lastOpened}").applyToComponent {
                             foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                             font = ComponentPanelBuilder.getCommentFont(font)

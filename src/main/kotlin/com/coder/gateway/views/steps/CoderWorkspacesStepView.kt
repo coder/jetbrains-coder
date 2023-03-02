@@ -46,13 +46,13 @@ import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
-import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.JBFont
@@ -208,7 +208,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                tfUrl = textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
+                tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
                         askTokenAndOpenSession()
@@ -225,7 +225,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             row {
                 scrollCell(toolbar.createPanel().apply {
                     add(notificationBanner.component.apply { isVisible = false }, "South")
-                }).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
                 cell()
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
         }

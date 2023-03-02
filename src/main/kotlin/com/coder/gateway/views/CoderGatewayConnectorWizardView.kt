@@ -6,9 +6,9 @@ import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.coder.gateway.views.steps.CoderWorkspacesWizardStep
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
+import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayUI
 import java.awt.Component
@@ -109,9 +109,9 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
             indent {
                 row {
 
-                    label("").resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL)
-                    previousButton = button("") { previous() }.horizontalAlign(HorizontalAlign.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
-                    nextButton = button("") { next() }.horizontalAlign(HorizontalAlign.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                    label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
+                    previousButton = button("") { previous() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                    nextButton = button("") { next() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
                 }
             }.apply {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
