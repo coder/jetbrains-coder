@@ -4,9 +4,14 @@
 
 ## Unreleased
 
+### Added
+
+- support for Gateway 2023
+
 ## 2.1.7 - 2023-02-28
 
 ### Fixed
+
 - terminal link is now correct when host ends in `/`
 - improved resiliency and error handling when trying to open the last successful connection
 
