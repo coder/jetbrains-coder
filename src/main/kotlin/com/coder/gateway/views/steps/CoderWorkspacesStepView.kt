@@ -311,7 +311,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     }
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
-        enableNextButtonCallback(false)
+        listTableModelOfWorkspaces.items = emptyList()
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
             triggerWorkspacePolling(true)
         } else {
