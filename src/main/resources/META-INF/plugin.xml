@@ -18,6 +18,7 @@
         <applicationService serviceImplementation="com.coder.gateway.sdk.CoderRestClientService"></applicationService>
         <applicationService serviceImplementation="com.coder.gateway.sdk.TemplateIconDownloader"></applicationService>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"></applicationService>
+        <webHelpProvider implementation="com.coder.gateway.help.CoderWebHelp"></webHelpProvider>
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains">
         <gatewayConnector implementation="com.coder.gateway.CoderGatewayMainView"/>

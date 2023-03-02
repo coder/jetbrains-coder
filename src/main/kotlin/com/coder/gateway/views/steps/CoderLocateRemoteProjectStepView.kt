@@ -29,11 +29,11 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
@@ -47,6 +47,7 @@ import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
+import com.jetbrains.gateway.ssh.util.validateRemotePath
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +63,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
 import java.time.Duration
-import java.util.Locale
+import java.util.*
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JLabel
@@ -99,13 +100,13 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 label("IDE:")
                 cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                     renderer = IDECellRenderer()
-                }).resizableColumn().horizontalAlign(HorizontalAlign.FILL).comment("The IDE will be downloaded from jetbrains.com").component
+                }).resizableColumn().align(AlignX.FILL).comment("The IDE will be downloaded from jetbrains.com").component
                 cell()
             }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
 
             row {
                 label("Project directory:")
-                cell(tfProject).resizableColumn().horizontalAlign(HorizontalAlign.FILL).component
+                cell(tfProject).resizableColumn().align(AlignX.FILL).component
                 cell()
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
             row {
@@ -190,8 +191,8 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 pathValidationJobs.queue(Update.create("validate-remote-path") {
                     runBlocking {
                         try {
-                            val isPathPresent = executor.isPathPresentOnRemote(tfProject.text)
-                            if (!isPathPresent) {
+                            val isPathPresent = validateRemotePath(tfProject.text, executor)
+                            if (isPathPresent.pathOrNull == null) {
                                 ComponentValidator.getInstance(tfProject).ifPresent {
                                     it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
                                 }

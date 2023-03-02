@@ -3,10 +3,16 @@ package com.coder.gateway.sdk
 import com.coder.gateway.icons.CoderIcons
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import com.intellij.util.IconUtil
+import com.intellij.ui.JreHiDpiUtil
+import com.intellij.ui.paint.alignToInt
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ImageLoader
 import com.intellij.util.ui.ImageUtil
 import org.imgscalr.Scalr
+import java.awt.Component
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.image.BufferedImage
 import java.net.URL
 import javax.swing.Icon
 
@@ -30,13 +36,41 @@ class TemplateIconDownloader {
             }
             var img = ImageLoader.loadFromUrl(url)
             if (img != null) {
-                val icon = IconUtil.toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
+                val icon = toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
                 cache[Pair(workspaceName, path)] = icon
                 return icon
             }
         }
 
         return iconForChar(workspaceName.lowercase().first())
+    }
+
+    private fun toRetinaAwareIcon(image: BufferedImage): Icon {
+        val sysScale = JBUIScale.sysScale()
+        return object : Icon {
+            override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
+                if (isJreHiDPI) {
+                    val newG = g.create(x, y, image.width, image.height) as Graphics2D
+                    alignToInt(newG)
+                    newG.scale(1.0 / sysScale, 1.0 / sysScale)
+                    newG.drawImage(image, 0, 0, null)
+                    newG.dispose()
+                } else {
+                    g.drawImage(image, x, y, null)
+                }
+            }
+
+            override fun getIconWidth(): Int = if (isJreHiDPI) (image.width / sysScale).toInt() else image.width
+
+            override fun getIconHeight(): Int = if (isJreHiDPI) (image.height / sysScale).toInt() else image.height
+
+            private val isJreHiDPI: Boolean
+                get() = JreHiDpiUtil.isJreHiDPI(sysScale)
+
+            override fun toString(): String {
+                return "TemplateIconDownloader.toRetinaAwareIcon for $image"
+            }
+        }
     }
 
     private fun iconForChar(c: Char) = when (c) {

@@ -28,9 +28,10 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.invokeAndWaitIfNeeded
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
@@ -45,13 +46,13 @@ import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.dialog
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
-import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.ui.table.TableView
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.JBFont
@@ -187,11 +188,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         .disableAddAction()
         .disableRemoveAction()
         .disableUpDownActions()
-        .addExtraAction(goToDashboardAction)
-        .addExtraAction(startWorkspaceAction)
-        .addExtraAction(stopWorkspaceAction)
-        .addExtraAction(updateWorkspaceTemplateAction)
-        .addExtraAction(createWorkspaceAction)
+        .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction as AnAction)
 
 
     private var poller: Job? = null
@@ -211,7 +208,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
             }.bottomGap(BottomGap.MEDIUM)
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                tfUrl = textField().resizableColumn().horizontalAlign(HorizontalAlign.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
+                tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
                     addActionListener {
                         poller?.cancel()
                         askTokenAndOpenSession()
@@ -228,7 +225,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             row {
                 scrollCell(toolbar.createPanel().apply {
                     add(notificationBanner.component.apply { isVisible = false }, "South")
-                }).resizableColumn().horizontalAlign(HorizontalAlign.FILL).verticalAlign(VerticalAlign.FILL)
+                }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
                 cell()
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
         }
@@ -237,13 +234,15 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
-    private inner class GoToDashboardAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
+    private inner class GoToDashboardAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
         override fun actionPerformed(p0: AnActionEvent) {
             BrowserUtil.browse(coderClient.coderURL)
         }
     }
 
-    private inner class StartWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
+    private inner class StartWorkspaceAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
@@ -261,7 +260,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private inner class UpdateWorkspaceTemplateAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
+    private inner class UpdateWorkspaceTemplateAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
@@ -281,7 +281,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private inner class StopWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
+    private inner class StopWorkspaceAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
             if (tableOfWorkspaces.selectedObject != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
@@ -299,7 +300,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         }
     }
 
-    private inner class CreateWorkspaceAction : AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
+    private inner class CreateWorkspaceAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
         override fun actionPerformed(p0: AnActionEvent) {
             BrowserUtil.browse(coderClient.coderURL.toURI().resolve("/templates"))
         }
@@ -460,7 +462,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
     private fun askToken(): String? {
         BrowserUtil.browse(localWizardModel.coderURL.toURL().withPath("/login?redirect=%2Fcli-auth"))
-        return invokeAndWaitIfNeeded(ModalityState.any()) {
+        var tokenFromUser: String? = null
+        ApplicationManager.getApplication().invokeAndWait({
             lateinit var sessionTokenTextField: JBTextField
 
             val panel = panel {
@@ -474,10 +477,11 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
 
             AppIcon.getInstance().requestAttention(null, true)
             if (!dialog(CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"), panel = panel, focusedComponent = sessionTokenTextField).showAndGet()) {
-                return@invokeAndWaitIfNeeded null
+                return@invokeAndWait
             }
-            return@invokeAndWaitIfNeeded sessionTokenTextField.text
-        }
+            tokenFromUser = sessionTokenTextField.text
+        }, ModalityState.any())
+        return tokenFromUser
     }
 
     private fun triggerWorkspacePolling() {
