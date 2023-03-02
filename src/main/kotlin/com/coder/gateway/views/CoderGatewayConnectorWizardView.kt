@@ -112,6 +112,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
                     label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
                     previousButton = button("") { previous() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
                     nextButton = button("") { next() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                    cell()
                 }
             }.apply {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
