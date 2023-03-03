@@ -7,6 +7,7 @@
 ### Added
 
 - support for Gateway 2023
+- ability to use existing tokens rather than request a new one
 
 ### Fixed
 

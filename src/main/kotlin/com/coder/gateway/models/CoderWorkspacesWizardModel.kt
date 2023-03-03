@@ -5,5 +5,6 @@ data class CoderWorkspacesWizardModel(
     var token: String = "",
     var buildVersion: String = "",
     var localCliPath: String = "",
-    var selectedWorkspace: WorkspaceAgentModel? = null
+    var selectedWorkspace: WorkspaceAgentModel? = null,
+    var useExistingToken: Boolean = false
 )
