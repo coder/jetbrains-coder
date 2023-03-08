@@ -4,25 +4,22 @@
 
 ## Unreleased
 
-### Added
+## 2.2.0 - 2023-03-08
 
+### Added
 - support for Gateway 2023
-- ability to use existing tokens rather than request a new one
 
 ### Fixed
-
 - the "Select IDE and Project" button is no longer disabled for a time after
   going back a step
 
 ### Changed
-
 - initial authentication is now asynchronous which means no hang on the main
   screen while that happens and it shows in the progress bar
 
 ## 2.1.7 - 2023-02-28
 
 ### Fixed
-
 - terminal link is now correct when host ends in `/`
 - improved resiliency and error handling when trying to open the last successful connection
 
