@@ -217,6 +217,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             RemoteCredentialsHolder().apply {
                 setHost("coder.${wizard.selectedWorkspace?.name}")
                 userName = "coder"
+                port = 22
                 authType = AuthType.OPEN_SSH
             },
             true
