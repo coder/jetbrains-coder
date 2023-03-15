@@ -140,7 +140,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
 
         ideResolvingJob = cs.launch {
             try {
-                val executor = withTimeout(Duration.ofSeconds(60)) { createRemoteExecutor() }
+                val executor = withTimeout(Duration.ofSeconds(60)) { createRemoteExecutor(selectedWorkspace) }
                 retrieveIDES(executor, selectedWorkspace)
                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                     installRemotePathValidator(executor)
@@ -212,10 +212,10 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
         })
     }
 
-    private suspend fun createRemoteExecutor(): HighLevelHostAccessor {
+    private suspend fun createRemoteExecutor(selectedWorkspace: WorkspaceAgentModel): HighLevelHostAccessor {
         return HighLevelHostAccessor.create(
             RemoteCredentialsHolder().apply {
-                setHost("coder.${wizard.selectedWorkspace?.name}")
+                setHost("coder.${selectedWorkspace.name}")
                 userName = "coder"
                 port = 22
                 authType = AuthType.OPEN_SSH
