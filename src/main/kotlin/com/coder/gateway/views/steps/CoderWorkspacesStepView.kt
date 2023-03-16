@@ -381,7 +381,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
             OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
             else -> {
-                dir = System.getenv("XDG_CACHE_HOME")
+                dir = System.getenv("XDG_CONFIG_HOME")
                 if (!dir.isNullOrBlank()) {
                     return Paths.get(dir, "coderv2")
                 }
