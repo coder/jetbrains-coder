@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+- reading an existing config would sometimes use the wrong directory on Linux
+- two separate SSH sessions would spawn when connecting to a workspace through
+  the main flow
+
 ## 2.2.0 - 2023-03-08
 
 ### Added
