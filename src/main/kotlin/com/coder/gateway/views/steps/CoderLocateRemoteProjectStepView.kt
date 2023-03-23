@@ -20,6 +20,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
 import com.intellij.openapi.ui.ValidationInfo
+import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
@@ -82,6 +83,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     private lateinit var titleLabel: JLabel
     private lateinit var wizard: CoderWorkspacesWizardModel
     private lateinit var cbIDE: IDEComboBox
+    private lateinit var cbIDEComment: JLabel
     private var tfProject = JBTextField()
     private lateinit var terminalLink: LazyBrowserLink
     private lateinit var ideResolvingJob: Job
@@ -99,17 +101,37 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                 label("IDE:")
                 cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                     renderer = IDECellRenderer()
-                }).resizableColumn().align(AlignX.FILL).comment("The IDE will be downloaded from jetbrains.com").component
-                cell()
-            }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
-
+                    addActionListener {
+                        ApplicationManager.getApplication().invokeLater {
+                            logger.info("Selected IDE: ${this.selectedItem}")
+                            when (this.selectedItem?.status) {
+                                IdeStatus.ALREADY_INSTALLED ->
+                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
+                                IdeStatus.DOWNLOAD ->
+                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
+                                else ->
+                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
+                            }
+                        }
+                    }
+                }).resizableColumn().align(AlignX.FILL).component
+                cell() // To leave space on the right.
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // Empty cell for alignment.
+                cbIDEComment = cell(ComponentPanelBuilder.createCommentComponent(
+                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
+                    false, -1, true)
+                ).component
+                cell() // To leave space on the right.
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
             row {
                 label("Project directory:")
                 cell(tfProject).resizableColumn().align(AlignX.FILL).component
-                cell()
+                cell() // To leave space on the right.
             }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
             row {
-                cell()
+                cell() // Empty cell for alignment.
                 terminalLink = cell(
                     LazyBrowserLink(
                         CoderIcons.OPEN_TERMINAL,
