@@ -94,8 +94,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     font = JBFont.h3().asBold()
                     icon = CoderIcons.LOGO_16
                 }.component
-            }.bottomGap(BottomGap.MEDIUM)
-
+            }.topGap(TopGap.SMALL)
             row {
                 label("IDE:")
                 cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
