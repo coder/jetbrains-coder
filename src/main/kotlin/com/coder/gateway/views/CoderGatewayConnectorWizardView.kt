@@ -106,20 +106,18 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
         nextButton = JButton()
         return panel {
             separator(background = WelcomeScreenUIManager.getSeparatorColor())
-            indent {
-                row {
-
-                    label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
-                    previousButton = button("") { previous() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
-                    nextButton = button("") { next() }.align(AlignX.RIGHT).gap(RightGap.SMALL).applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
-                    cell()
-                }
-            }.apply {
-                background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            row {
+                label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
+                previousButton = button("") { previous() }
+                    .align(AlignX.RIGHT).gap(RightGap.SMALL)
+                    .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                nextButton = button("") { next() }
+                    .align(AlignX.RIGHT)
+                    .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
             }
-
         }.apply {
             background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            border = JBUI.Borders.empty(0, 16, 0, 16)
         }
     }
 
@@ -127,4 +125,3 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
         steps.clear()
     }
 }
-

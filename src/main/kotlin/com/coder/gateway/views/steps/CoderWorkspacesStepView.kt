@@ -194,55 +194,71 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
     private var poller: Job? = null
 
     override val component = panel {
-        indent {
-            row {
-                label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.header.text")).applyToComponent {
-                    font = JBFont.h3().asBold()
-                    icon = CoderIcons.LOGO_16
-                }
-            }.topGap(TopGap.SMALL)
-            row {
-                cell(ComponentPanelBuilder.createCommentComponent(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"), false, -1, true))
+        row {
+            label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.header.text")).applyToComponent {
+                font = JBFont.h3().asBold()
+                icon = CoderIcons.LOGO_16
             }
-            row {
-                browserLink(CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"), "https://coder.com/docs/coder-oss/latest/workspaces")
-            }
-            row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-                tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL).bindText(localWizardModel::coderURL).applyToComponent {
-                    addActionListener {
-                        poller?.cancel()
-                        listTableModelOfWorkspaces.items = emptyList()
-                        askTokenAndOpenSession(true)
-                    }
-                }.component
-                button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
+        }.topGap(TopGap.SMALL)
+        row {
+            cell(
+                ComponentPanelBuilder.createCommentComponent(
+                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"),
+                    false,
+                    -1,
+                    true
+                )
+            )
+        }
+        row {
+            browserLink(
+                CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"),
+                "https://coder.com/docs/coder-oss/latest/workspaces"
+            )
+        }
+        row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
+            tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
+                .bindText(localWizardModel::coderURL).applyToComponent {
+                addActionListener {
                     poller?.cancel()
                     listTableModelOfWorkspaces.items = emptyList()
                     askTokenAndOpenSession(true)
-                }.applyToComponent {
-                    background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
                 }
-                cell()
+            }.component
+            button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
+                poller?.cancel()
+                listTableModelOfWorkspaces.items = emptyList()
+                askTokenAndOpenSession(true)
+            }.applyToComponent {
+                background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             }
-            row {
-                cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
-                    .bindSelected(localWizardModel::useExistingToken)
-                    .component
-            }
-            row {
-                cell(ComponentPanelBuilder.createCommentComponent(
-                         CoderGatewayBundle.message("gateway.connector.view.login.existing-token.tooltip",
-                                                    CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label")),
-                         false, -1, true))
-            }
-            row {
-                scrollCell(toolbar.createPanel().apply {
-                    add(notificationBanner.component.apply { isVisible = false }, "South")
-                }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
-                cell()
-            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
         }
-    }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
+        row {
+            cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
+                .bindSelected(localWizardModel::useExistingToken)
+                .component
+        }
+        row {
+            cell(
+                ComponentPanelBuilder.createCommentComponent(
+                    CoderGatewayBundle.message(
+                        "gateway.connector.view.login.existing-token.tooltip",
+                        CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label")
+                    ),
+                    false, -1, true
+                )
+            )
+        }
+        row {
+            scrollCell(toolbar.createPanel().apply {
+                add(notificationBanner.component.apply { isVisible = false }, "South")
+            }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
+        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
+
+    }.apply {
+        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+        border = JBUI.Borders.empty(0, 16, 0, 16)
+    }
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")

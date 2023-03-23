@@ -30,12 +30,9 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.dsl.builder.AlignX
-import com.intellij.ui.dsl.builder.BottomGap
-import com.intellij.ui.dsl.builder.RowLayout
-import com.intellij.ui.dsl.builder.TopGap
-import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.*
 import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
@@ -90,57 +87,63 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
     private val pathValidationJobs = MergingUpdateQueue("remote-path-validation", 1000, true, tfProject)
 
     override val component = panel {
-        indent {
-            row {
-                titleLabel = label("").applyToComponent {
-                    font = JBFont.h3().asBold()
-                    icon = CoderIcons.LOGO_16
-                }.component
-            }.topGap(TopGap.SMALL)
-            row {
-                label("IDE:")
-                cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
-                    renderer = IDECellRenderer()
-                    addActionListener {
-                        ApplicationManager.getApplication().invokeLater {
-                            logger.info("Selected IDE: ${this.selectedItem}")
-                            when (this.selectedItem?.status) {
-                                IdeStatus.ALREADY_INSTALLED ->
-                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
-                                IdeStatus.DOWNLOAD ->
-                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
-                                else ->
-                                    cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
-                            }
+        row {
+            titleLabel = label("").applyToComponent {
+                font = JBFont.h3().asBold()
+                icon = CoderIcons.LOGO_16
+            }.component
+        }.topGap(TopGap.SMALL)
+        row {
+            label("IDE:")
+            cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
+                renderer = IDECellRenderer()
+                addActionListener {
+                    ApplicationManager.getApplication().invokeLater {
+                        logger.info("Selected IDE: ${this.selectedItem}")
+                        when (this.selectedItem?.status) {
+                            IdeStatus.ALREADY_INSTALLED ->
+                                cbIDEComment.text =
+                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
+
+                            IdeStatus.DOWNLOAD ->
+                                cbIDEComment.text =
+                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
+
+                            else ->
+                                cbIDEComment.text =
+                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
                         }
                     }
-                }).resizableColumn().align(AlignX.FILL).component
-                cell() // To leave space on the right.
-            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-            row {
-                cell() // Empty cell for alignment.
-                cbIDEComment = cell(ComponentPanelBuilder.createCommentComponent(
+                }
+            }).resizableColumn().align(AlignX.FILL).component
+        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+        row {
+            cell() // Empty cell for alignment.
+            cbIDEComment = cell(
+                ComponentPanelBuilder.createCommentComponent(
                     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
-                    false, -1, true)
-                ).component
-                cell() // To leave space on the right.
-            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-            row {
-                label("Project directory:")
-                cell(tfProject).resizableColumn().align(AlignX.FILL).component
-                cell() // To leave space on the right.
-            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-            row {
-                cell() // Empty cell for alignment.
-                terminalLink = cell(
-                    LazyBrowserLink(
-                        CoderIcons.OPEN_TERMINAL,
-                        "Open Terminal"
-                    )
-                ).component
-            }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
-        }
-    }.apply { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }
+                    false, -1, true
+                )
+            ).component
+        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+        row {
+            label("Project directory:")
+            cell(tfProject).resizableColumn().align(AlignX.FILL).component
+        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+        row {
+            cell() // Empty cell for alignment.
+            terminalLink = cell(
+                LazyBrowserLink(
+                    CoderIcons.OPEN_TERMINAL,
+                    "Open Terminal"
+                )
+            ).component
+        }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
+        gap(RightGap.SMALL)
+    }.apply {
+        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+        border = JBUI.Borders.empty(0, 16, 0, 16)
+    }
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
