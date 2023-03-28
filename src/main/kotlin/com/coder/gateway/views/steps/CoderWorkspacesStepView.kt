@@ -232,13 +232,15 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
             }.applyToComponent {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             }
-        }
+        }.layout(RowLayout.PARENT_GRID)
         row {
+            cell() // Empty cell for alignment.
             cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
                 .bindSelected(localWizardModel::useExistingToken)
                 .component
-        }
+        }.layout(RowLayout.PARENT_GRID)
         row {
+            cell() // Empty cell for alignment.
             cell(
                 ComponentPanelBuilder.createCommentComponent(
                     CoderGatewayBundle.message(
@@ -249,7 +251,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                     false, -1, true
                 )
             )
-        }
+        }.layout(RowLayout.PARENT_GRID)
         row {
             scrollCell(toolbar.createPanel().apply {
                 add(notificationBanner.component.apply { isVisible = false }, "South")
