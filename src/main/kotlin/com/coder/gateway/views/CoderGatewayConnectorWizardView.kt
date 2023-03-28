@@ -9,6 +9,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.jetbrains.gateway.api.GatewayUI
 import java.awt.Component
@@ -30,11 +31,9 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
 
         registerStep(CoderWorkspacesStepView { nextButton.isEnabled = it })
-        registerStep(CoderLocateRemoteProjectStepView {
-            nextButton.isVisible = false
-        })
+        registerStep(CoderLocateRemoteProjectStepView { nextButton.isEnabled = it })
 
-        addToBottom(createBackComponent())
+        addToBottom(createButtons())
 
         steps[0].apply {
             onInit(model)
@@ -42,6 +41,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
             updateUI()
             nextButton.text = nextActionText
             previousButton.text = previousActionText
+            nextButton.isEnabled = false
         }
 
     }
@@ -73,6 +73,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
     private fun showNavigationButtons() {
         nextButton.isVisible = true
         previousButton.isVisible = true
+        nextButton.isEnabled = false
     }
 
     private fun next() {
@@ -101,7 +102,7 @@ class CoderGatewayConnectorWizardView : BorderLayoutPanel(), Disposable {
         }
     }
 
-    private fun createBackComponent(): Component {
+    private fun createButtons(): Component {
         previousButton = JButton()
         nextButton = JButton()
         return panel {

@@ -71,7 +71,7 @@ import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
-class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit) : CoderWorkspacesWizardStep, Disposable {
+class CoderLocateRemoteProjectStepView(private val enableNextButton: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
@@ -98,6 +98,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
             cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                 renderer = IDECellRenderer()
                 addActionListener {
+                    enableNextButton(this.selectedItem != null)
                     ApplicationManager.getApplication().invokeLater {
                         logger.info("Selected IDE: ${this.selectedItem}")
                         when (this.selectedItem?.status) {
@@ -177,7 +178,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     is SshException -> {
                         logger.error("Can't connect to workspace ${selectedWorkspace.name}. Reason: $e")
                         withContext(Dispatchers.Main) {
-                            disableNextAction()
+                            enableNextButton(false)
                             cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
                                 override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
@@ -191,7 +192,7 @@ class CoderLocateRemoteProjectStepView(private val disableNextAction: () -> Unit
                     else -> {
                         logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
                         withContext(Dispatchers.Main) {
-                            disableNextAction()
+                            enableNextButton(false)
                             cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
                                 override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
