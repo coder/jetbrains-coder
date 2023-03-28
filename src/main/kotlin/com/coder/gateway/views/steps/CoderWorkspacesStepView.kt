@@ -243,7 +243,8 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
                 ComponentPanelBuilder.createCommentComponent(
                     CoderGatewayBundle.message(
                         "gateway.connector.view.login.existing-token.tooltip",
-                        CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label")
+                        CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"),
+                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
                     ),
                     false, -1, true
                 )
