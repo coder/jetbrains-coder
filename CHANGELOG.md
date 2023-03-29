@@ -9,6 +9,8 @@
   already installed
 - various minor alignment issues
 
+## 2.2.1 - 2023-03-23
+
 ### Fixed
 - reading an existing config would sometimes use the wrong directory on Linux
 - two separate SSH sessions would spawn when connecting to a workspace through
