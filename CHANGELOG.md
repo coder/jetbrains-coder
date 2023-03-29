@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+- the help text under the IDE dropdown now takes into account whether the IDE is
+  already installed
+- various minor alignment issues
+
 ## 2.2.1 - 2023-03-23
 
 ### Fixed
