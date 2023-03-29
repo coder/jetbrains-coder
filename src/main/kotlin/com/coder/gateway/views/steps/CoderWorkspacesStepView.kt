@@ -89,7 +89,7 @@ private const val SESSION_TOKEN = "session-token"
 
 private const val MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW = "MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW"
 
-class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
+class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = service()
@@ -122,7 +122,7 @@ class CoderWorkspacesStepView(val enableNextButtonCallback: (Boolean) -> Unit) :
         rowHeight = 48
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            enableNextButtonCallback(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
+            setNextButtonEnabled(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
             if (selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
