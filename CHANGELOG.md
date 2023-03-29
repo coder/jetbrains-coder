@@ -5,6 +5,11 @@
 ## Unreleased
 
 ### Fixed
+- the help text under the IDE dropdown now takes into account whether the IDE is
+  already installed
+- various minor alignment issues
+
+### Fixed
 - reading an existing config would sometimes use the wrong directory on Linux
 - two separate SSH sessions would spawn when connecting to a workspace through
   the main flow
