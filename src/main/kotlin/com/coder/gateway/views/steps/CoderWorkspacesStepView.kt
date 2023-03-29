@@ -353,7 +353,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 localWizardModel.token = token
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                loginAndLoadWorkspace(token, true)
+                loginAndLoadWorkspaces(token, true)
             }
         }
         updateWorkspaceActions()
@@ -451,10 +451,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
         // False so that subsequent authentication failures do not keep opening
         // the browser as it was already opened earlier.
-        loginAndLoadWorkspace(pastedToken, false)
+        loginAndLoadWorkspaces(pastedToken, false)
     }
 
-    private fun loginAndLoadWorkspace(token: String, openBrowser: Boolean) {
+    private fun loginAndLoadWorkspaces(token: String, openBrowser: Boolean) {
         LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), canBeCancelled = false, isIndeterminate = true) {
             this.indicator.apply {
                 text = "Authenticating..."
@@ -575,9 +575,12 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * versions do not match.
      */
     private fun authenticate(token: String) {
+        logger.info("Authenticating...")
         coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
 
+        logger.info("Checking Coder version...")
         if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
+            logger.warn("Got invalid version ${coderClient.buildVersion}")
             notificationBanner.apply {
                 component.isVisible = true
                 showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
@@ -585,6 +588,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         } else {
             val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
             if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
+                logger.warn("Running with incompatible version ${coderClient.buildVersion}")
                 notificationBanner.apply {
                     component.isVisible = true
                     showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
@@ -592,6 +596,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
         }
 
+        logger.info("Authenticated successfully")
         appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
         appPropertiesService.setValue(SESSION_TOKEN, token)
     }
