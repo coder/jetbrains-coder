@@ -160,8 +160,8 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
          * Return the URL and token from the CLI config.
          */
         @JvmStatic
-        fun readConfig(): Pair<String?, String?> {
-            val configDir = getConfigDir()
+        fun readConfig(env: Environment = Environment()): Pair<String?, String?> {
+            val configDir = getConfigDir(env)
             CoderWorkspacesStepView.logger.info("Reading config from $configDir")
             return try {
                 val url = Files.readString(configDir.resolve("url"))
@@ -176,24 +176,34 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
          * Return the config directory used by the CLI.
          */
         @JvmStatic
-        fun getConfigDir(): Path {
-            var dir = System.getenv("CODER_CONFIG_DIR")
+        fun getConfigDir(env: Environment = Environment()): Path {
+            var dir = env.get("CODER_CONFIG_DIR")
             if (!dir.isNullOrBlank()) {
                 return Path.of(dir)
             }
             // The Coder CLI uses https://github.com/kirsle/configdir so this should
             // match how it behaves.
             return when (getOS()) {
-                OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
-                OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
+                OS.WINDOWS -> Paths.get(env.get("APPDATA"), "coderv2")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coderv2")
                 else -> {
-                    dir = System.getenv("XDG_CONFIG_HOME")
+                    dir = env.get("XDG_CONFIG_HOME")
                     if (!dir.isNullOrBlank()) {
                         return Paths.get(dir, "coderv2")
                     }
-                    return Paths.get(System.getenv("HOME"), ".config/coderv2")
+                    return Paths.get(env.get("HOME"), ".config/coderv2")
                 }
             }
         }
+    }
+}
+
+class Environment(private val env: Map<String, String> = emptyMap()) {
+    fun get(name: String): String? {
+        val e = env[name]
+        if (e != null) {
+            return e
+        }
+        return System.getenv(name)
     }
 }
