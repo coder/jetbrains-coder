@@ -59,7 +59,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseEvent
@@ -491,18 +490,19 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 return@launchUnderBackgroundProgress
             }
             this.indicator.apply {
-                text = "Configuring Coder CLI..."
+                text = "Logging in..."
                 fraction = 0.5
             }
-
-            val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
-            logger.info("coder-cli login output: $loginOutput")
-            this.indicator.fraction = 0.8
-            val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-            logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+            cliManager.login(localWizardModel.coderURL, localWizardModel.token)
 
             this.indicator.apply {
-                text = "Remove old Coder CLI versions..."
+                text = "Configuring SSH..."
+                fraction = 0.7
+            }
+            cliManager.configSsh()
+
+            this.indicator.apply {
+                text = "Removing old Coder CLI versions..."
                 fraction = 0.9
             }
             cliManager.removeOldCli()

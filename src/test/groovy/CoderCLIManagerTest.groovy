@@ -1,6 +1,5 @@
 package com.coder.gateway.sdk
 
-import org.zeroturnaround.exec.ProcessExecutor
 import spock.lang.Unroll
 
 import java.nio.file.Files
@@ -55,7 +54,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         downloaded
         ccm.localBinaryPath.getParent() == dir
         ccm.localBinaryPath.toFile().exists()
-        new ProcessExecutor().command(ccm.localBinaryPath.toString(), "version").readOutput(true).execute().outputUTF8().contains("Coder")
+        ccm.version().contains("Coder")
     }
 
     def "skips cli download if it already exists"() {

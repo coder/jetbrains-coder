@@ -1,6 +1,7 @@
 package com.coder.gateway.sdk
 
 import com.intellij.openapi.diagnostic.Logger
+import org.zeroturnaround.exec.ProcessExecutor
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Files
@@ -109,6 +110,45 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
                     }
             }
         }
+    }
+
+    /**
+     * Use the provided credentials to authenticate the CLI.
+     */
+    fun login(url: String, token: String): String {
+        return exec("login", url, "--token", token)
+    }
+
+    /**
+     * Configure SSH to use this binary.
+     *
+     * TODO: Support multiple deployments; currently they will clobber each
+     *       other.
+     */
+    fun configSsh(): String {
+        return exec("config-ssh", "--yes", "--use-previous-options")
+    }
+
+    /**
+     * Return the binary version.
+     */
+    fun version(): String {
+        return exec("version")
+    }
+
+    /**
+     * Execute the binary with the provided arguments.
+     *
+     * @return The command's output.
+     */
+    private fun exec(vararg args: String): String {
+        val stdout = ProcessExecutor()
+            .command(localBinaryPath.toString(), *args)
+            .readOutput(true)
+            .execute()
+            .outputUTF8()
+        logger.info("`${localBinaryPath} ${listOf(*args).joinToString(" ")}`: $stdout")
+        return stdout
     }
 
     companion object {
