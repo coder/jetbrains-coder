@@ -3,30 +3,43 @@ package com.coder.gateway.sdk
 import com.intellij.openapi.diagnostic.Logger
 import java.io.InputStream
 import java.net.URL
-import java.nio.file.FileVisitOption
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermissions
 
-class CoderCLIManager(url: URL, buildVersion: String) {
-    var remoteCli: URL
-    var localCli: Path
-    private var cliNamePrefix: String
-    private var tmpDir: String
-    private var cliFileName: String
+/**
+ * Manage the CLI for a single deployment.
+ */
+class CoderCLIManager(deployment: URL, buildVersion: String) {
+    private var remoteBinaryUrl: URL
+    var localBinaryPath: Path
+    private var binaryNamePrefix: String
+    private var destinationDir: Path
+    private var localBinaryName: String
 
     init {
+        // TODO: Should use a persistent path to avoid needing to download on
+        //       each restart.
+        destinationDir = Path.of(System.getProperty("java.io.tmpdir"))
+            .resolve("coder-gateway").resolve(deployment.host)
         val os = getOS()
-        cliNamePrefix = getCoderCLIForOS(os, getArch())
-        val cliNameWithExt = if (os == OS.WINDOWS) "$cliNamePrefix.exe" else cliNamePrefix
-        cliFileName = if (os == OS.WINDOWS) "${cliNamePrefix}-${buildVersion}.exe" else "${cliNamePrefix}-${buildVersion}"
-
-        remoteCli = URL(url.protocol, url.host, url.port, "/bin/$cliNameWithExt")
-        tmpDir = System.getProperty("java.io.tmpdir")
-        localCli = Paths.get(tmpDir, cliFileName)
+        binaryNamePrefix = getCoderCLIForOS(os, getArch())
+        val binaryName = if (os == OS.WINDOWS) "$binaryNamePrefix.exe" else binaryNamePrefix
+        localBinaryName =
+            if (os == OS.WINDOWS) "${binaryNamePrefix}-${buildVersion}.exe" else "${binaryNamePrefix}-${buildVersion}"
+        remoteBinaryUrl = URL(
+            deployment.protocol,
+            deployment.host,
+            deployment.port,
+            "/bin/$binaryName"
+        )
+        localBinaryPath = destinationDir.resolve(localBinaryName)
     }
 
+    /**
+     * Return the name of the binary (sans extension) for the provided OS and
+     * architecture.
+     */
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
         logger.info("Resolving coder cli for $os $arch")
         if (os == null) {
@@ -55,26 +68,45 @@ class CoderCLIManager(url: URL, buildVersion: String) {
         }
     }
 
+    /**
+     * Download the CLI from the deployment if necessary.
+     */
     fun downloadCLI(): Boolean {
-        if (Files.exists(localCli)) {
-            logger.info("${localCli.toAbsolutePath()} already exists, skipping download")
+        Files.createDirectories(destinationDir)
+        try {
+            logger.info("Downloading Coder CLI to ${localBinaryPath.toAbsolutePath()}")
+            remoteBinaryUrl.openStream().use {
+                Files.copy(it as InputStream, localBinaryPath)
+            }
+        } catch (e: java.nio.file.FileAlreadyExistsException) {
+            // This relies on the provided build version being the latest.  It
+            // must be freshly fetched immediately before downloading.
+            // TODO: Use etags instead?
+            logger.info("${localBinaryPath.toAbsolutePath()} already exists, skipping download")
             return false
         }
-        logger.info("Starting Coder CLI download to ${localCli.toAbsolutePath()}")
-        remoteCli.openStream().use {
-            Files.copy(it as InputStream, localCli, StandardCopyOption.REPLACE_EXISTING)
+        if (getOS() != OS.WINDOWS) {
+            Files.setPosixFilePermissions(
+                localBinaryPath,
+                PosixFilePermissions.fromString("rwxr-x---")
+            )
         }
         return true
     }
 
+    /**
+     * Remove all versions of the CLI for this deployment that do not match the
+     * current build version.
+     */
     fun removeOldCli() {
-        val tmpPath = Path.of(tmpDir)
-        if (Files.isReadable(tmpPath)) {
-            Files.walk(tmpPath, 1).use {
-                it.sorted().map { pt -> pt.toFile() }.filter { fl -> fl.name.contains(cliNamePrefix) && !fl.name.contains(cliFileName) }.forEach { fl ->
-                    logger.info("Removing $fl because it is an old coder cli")
-                    fl.delete()
-                }
+        if (Files.isReadable(destinationDir)) {
+            Files.walk(destinationDir, 1).use {
+                it.sorted().map { pt -> pt.toFile() }
+                    .filter { fl -> fl.name.contains(binaryNamePrefix) && fl.name != localBinaryName }
+                    .forEach { fl ->
+                        logger.info("Removing $fl because it is an old version")
+                        fl.delete()
+                    }
             }
         }
     }

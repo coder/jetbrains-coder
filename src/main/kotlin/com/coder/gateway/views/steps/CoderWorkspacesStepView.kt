@@ -34,9 +34,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
@@ -472,12 +469,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
 
             val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
-
-            localWizardModel.apply {
-                this.token = token
-                buildVersion = coderClient.buildVersion
-                localCliPath = cliManager.localCli.toAbsolutePath().toString()
-            }
+            localWizardModel.token = token
 
             this.indicator.apply {
                 isIndeterminate = false
@@ -492,12 +484,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 text = "Downloading Coder CLI..."
                 fraction = 0.3
             }
-
-            cliManager.downloadCLI()
-            if (getOS() != OS.WINDOWS) {
-                this.indicator.fraction = 0.4
-                val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
-                logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
+            try {
+                cliManager.downloadCLI()
+            } catch (e: Exception) {
+                logger.error("Failed to download Coder CLI", e)
+                return@launchUnderBackgroundProgress
             }
             this.indicator.apply {
                 text = "Configuring Coder CLI..."
@@ -575,7 +566,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * versions do not match.
      */
     private fun authenticate(token: String) {
-        logger.info("Authenticating...")
+        logger.info("Authenticating to ${localWizardModel.coderURL}...")
         coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
 
         logger.info("Checking Coder version...")
@@ -593,10 +584,14 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     component.isVisible = true
                     showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
                 }
+            } else {
+                logger.info("Got version ${coderClient.buildVersion}...")
             }
         }
 
         logger.info("Authenticated successfully")
+
+        // Remember these in order to default to them for future attempts.
         appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
         appPropertiesService.setValue(SESSION_TOKEN, token)
     }
@@ -714,28 +709,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
-        if (localWizardModel.localCliPath.isNotBlank()) {
-            val configSSHTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.configssh.dialog.title"), false) {
-                override fun run(pi: ProgressIndicator) {
-                    pi.apply {
-                        isIndeterminate = false
-                        text = "Configuring coder cli..."
-                        fraction = 0.1
-                    }
-                    val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                    pi.fraction = 0.8
-                    logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
-                    pi.fraction = 1.0
-                }
-            }
-            ProgressManager.getInstance().run(configSSHTask)
-        }
-
         wizardModel.apply {
             coderURL = localWizardModel.coderURL
             token = localWizardModel.token
-            buildVersion = localWizardModel.buildVersion
-            localCliPath = localWizardModel.localCliPath
         }
 
         val workspace = tableOfWorkspaces.selectedObject
