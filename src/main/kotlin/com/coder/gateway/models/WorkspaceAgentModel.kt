@@ -3,7 +3,7 @@ package com.coder.gateway.models
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
-import java.util.UUID
+import java.util.*
 import javax.swing.Icon
 
 data class WorkspaceAgentModel(
@@ -32,6 +32,7 @@ data class WorkspaceAgentModel(
         if (name != other.name) return false
         if (templateID != other.templateID) return false
         if (templateName != other.templateName) return false
+        if (agentStatus != other.agentStatus) return false
 
         return true
     }
@@ -42,6 +43,7 @@ data class WorkspaceAgentModel(
         result = 31 * result + name.hashCode()
         result = 31 * result + templateID.hashCode()
         result = 31 * result + templateName.hashCode()
+        result = 31 * result + agentStatus.hashCode()
         return result
     }
 }
