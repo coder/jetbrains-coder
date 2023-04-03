@@ -19,7 +19,6 @@ import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
-import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
@@ -66,9 +65,6 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.net.SocketTimeoutException
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -364,45 +360,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
             return url to token
         }
-        return readConfig()
-    }
-
-    /**
-     * Return the URL and token from the CLI config.
-     */
-    private fun readConfig(): Pair<String?, String?> {
-        val configDir = getConfigDir()
-        logger.info("Reading config from $configDir")
-        try {
-            val url = Files.readString(configDir.resolve("url"))
-            val token = Files.readString(configDir.resolve("session"))
-            return url to token
-        } catch (e: Exception) {
-            return null to null // Probably has not configured the CLI yet.
-        }
-    }
-
-    /**
-     * Return the config directory used by the CLI.
-     */
-    private fun getConfigDir(): Path {
-        var dir = System.getenv("CODER_CONFIG_DIR")
-        if (!dir.isNullOrBlank()) {
-            return Path.of(dir)
-        }
-        // The Coder CLI uses https://github.com/kirsle/configdir so this should
-        // match how it behaves.
-        return when(getOS()) {
-            OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
-            OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
-            else -> {
-                dir = System.getenv("XDG_CONFIG_HOME")
-                if (!dir.isNullOrBlank()) {
-                    return Paths.get(dir, "coderv2")
-                }
-                return Paths.get(System.getenv("HOME"), ".config/coderv2")
-            }
-        }
+        return CoderCLIManager.readConfig()
     }
 
     private fun updateWorkspaceActions() {
@@ -518,7 +476,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (openBrowser && !localWizardModel.useExistingToken) {
             BrowserUtil.browse(getTokenUrl)
         } else if (localWizardModel.useExistingToken) {
-            val (url, token) = readConfig()
+            val (url, token) = CoderCLIManager.readConfig()
             if (url == localWizardModel.coderURL && !token.isNullOrBlank()) {
                 logger.info("Injecting valid token from CLI config")
                 localWizardModel.token = token

@@ -1,11 +1,13 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.intellij.openapi.diagnostic.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
 
 /**
@@ -153,5 +155,45 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
 
     companion object {
         val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
+
+        /**
+         * Return the URL and token from the CLI config.
+         */
+        @JvmStatic
+        fun readConfig(): Pair<String?, String?> {
+            val configDir = getConfigDir()
+            CoderWorkspacesStepView.logger.info("Reading config from $configDir")
+            return try {
+                val url = Files.readString(configDir.resolve("url"))
+                val token = Files.readString(configDir.resolve("session"))
+                url to token
+            } catch (e: Exception) {
+                null to null // Probably has not configured the CLI yet.
+            }
+        }
+
+        /**
+         * Return the config directory used by the CLI.
+         */
+        @JvmStatic
+        fun getConfigDir(): Path {
+            var dir = System.getenv("CODER_CONFIG_DIR")
+            if (!dir.isNullOrBlank()) {
+                return Path.of(dir)
+            }
+            // The Coder CLI uses https://github.com/kirsle/configdir so this should
+            // match how it behaves.
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
+                OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
+                else -> {
+                    dir = System.getenv("XDG_CONFIG_HOME")
+                    if (!dir.isNullOrBlank()) {
+                        return Paths.get(dir, "coderv2")
+                    }
+                    return Paths.get(System.getenv("HOME"), ".config/coderv2")
+                }
+            }
+        }
     }
 }
