@@ -32,6 +32,7 @@ data class WorkspaceAgentModel(
         if (name != other.name) return false
         if (templateID != other.templateID) return false
         if (templateName != other.templateName) return false
+        if (agentStatus != other.agentStatus) return false
 
         return true
     }
@@ -42,6 +43,7 @@ data class WorkspaceAgentModel(
         result = 31 * result + name.hashCode()
         result = 31 * result + templateID.hashCode()
         result = 31 * result + templateName.hashCode()
+        result = 31 * result + agentStatus.hashCode()
         return result
     }
 }
