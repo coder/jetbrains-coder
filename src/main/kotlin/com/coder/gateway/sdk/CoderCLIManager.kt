@@ -149,12 +149,15 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
             .readOutput(true)
             .execute()
             .outputUTF8()
-        logger.info("`${localBinaryPath} ${listOf(*args).joinToString(" ")}`: $stdout")
+        val redactedArgs = listOf(*args).joinToString(" ").replace(tokenRegex, "--token <redacted>")
+        logger.info("`$localBinaryPath $redactedArgs`: $stdout")
         return stdout
     }
 
     companion object {
         val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
+
+        private val tokenRegex = "--token [^ ]+".toRegex()
 
         /**
          * Return the URL and token from the CLI config.
