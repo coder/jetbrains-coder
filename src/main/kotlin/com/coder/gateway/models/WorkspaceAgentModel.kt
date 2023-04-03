@@ -3,7 +3,7 @@ package com.coder.gateway.models
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
-import java.util.*
+import java.util.UUID
 import javax.swing.Icon
 
 data class WorkspaceAgentModel(
