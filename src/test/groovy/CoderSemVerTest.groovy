@@ -278,4 +278,49 @@ class CoderSemVerTest extends spock.lang.Specification {
 
         ]
     }
+
+    def "should be invalid"() {
+        when:
+        CoderSemVer.checkVersionCompatibility(version)
+
+        then:
+        thrown(InvalidVersionException)
+
+        where:
+        version << [
+                "",
+                "foo",
+                "1.foo.2",
+        ]
+    }
+
+    def "should be incompatible"() {
+        when:
+        CoderSemVer.checkVersionCompatibility(version)
+
+        then:
+        thrown(IncompatibleVersionException)
+
+        where:
+        version << [
+                "0.0.0",
+                "0.12.8",
+                "9999999999.99999.99",
+        ]
+    }
+
+    def "should be compatible"() {
+        when:
+        CoderSemVer.checkVersionCompatibility(version)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        version << [
+                "0.12.9",
+                "0.99.99",
+                "1.0.0",
+        ]
+    }
 }

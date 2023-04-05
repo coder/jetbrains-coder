@@ -1,7 +1,6 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
-import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
@@ -14,6 +13,8 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.CoderSemVer
+import com.coder.gateway.sdk.IncompatibleVersionException
+import com.coder.gateway.sdk.InvalidVersionException
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
@@ -521,23 +522,21 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         logger.info("Authenticating to ${localWizardModel.coderURL}...")
         coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
 
-        logger.info("Checking Coder version...")
-        if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
-            logger.warn("Got invalid version ${coderClient.buildVersion}")
+        try {
+            logger.info("Checking compatibility with Coder version ${coderClient.buildVersion}...")
+            CoderSemVer.checkVersionCompatibility(coderClient.buildVersion)
+            logger.info("${coderClient.buildVersion} is compatible")
+        } catch (e: InvalidVersionException) {
+            logger.warn(e)
             notificationBanner.apply {
                 component.isVisible = true
                 showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
             }
-        } else {
-            val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
-            if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
-                logger.warn("Running with incompatible version ${coderClient.buildVersion}")
-                notificationBanner.apply {
-                    component.isVisible = true
-                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
-                }
-            } else {
-                logger.info("Got version ${coderClient.buildVersion}...")
+        } catch (e: IncompatibleVersionException) {
+            logger.warn(e)
+            notificationBanner.apply {
+                component.isVisible = true
+                showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
             }
         }
 
