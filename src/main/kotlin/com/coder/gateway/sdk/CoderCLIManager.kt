@@ -3,22 +3,29 @@ package com.coder.gateway.sdk
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.intellij.openapi.diagnostic.Logger
 import org.zeroturnaround.exec.ProcessExecutor
-import java.io.InputStream
+import java.io.BufferedInputStream
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
+import java.security.DigestInputStream
+import java.security.MessageDigest
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter
+
 
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager(deployment: URL, buildVersion: String) {
+class CoderCLIManager(deployment: URL) {
     private var remoteBinaryUrl: URL
     var localBinaryPath: Path
     private var binaryNamePrefix: String
     private var destinationDir: Path
-    private var localBinaryName: String
 
     init {
         // TODO: Should use a persistent path to avoid needing to download on
@@ -28,15 +35,13 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
         val os = getOS()
         binaryNamePrefix = getCoderCLIForOS(os, getArch())
         val binaryName = if (os == OS.WINDOWS) "$binaryNamePrefix.exe" else binaryNamePrefix
-        localBinaryName =
-            if (os == OS.WINDOWS) "${binaryNamePrefix}-${buildVersion}.exe" else "${binaryNamePrefix}-${buildVersion}"
         remoteBinaryUrl = URL(
             deployment.protocol,
             deployment.host,
             deployment.port,
             "/bin/$binaryName"
         )
-        localBinaryPath = destinationDir.resolve(localBinaryName)
+        localBinaryPath = destinationDir.resolve(binaryName)
     }
 
     /**
@@ -44,7 +49,7 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
      * architecture.
      */
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
-        logger.info("Resolving coder cli for $os $arch")
+        logger.info("Resolving binary for $os $arch")
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
             return "coder-windows-amd64"
@@ -75,42 +80,59 @@ class CoderCLIManager(deployment: URL, buildVersion: String) {
      * Download the CLI from the deployment if necessary.
      */
     fun downloadCLI(): Boolean {
-        Files.createDirectories(destinationDir)
-        try {
-            logger.info("Downloading Coder CLI to ${localBinaryPath.toAbsolutePath()}")
-            remoteBinaryUrl.openStream().use {
-                Files.copy(it as InputStream, localBinaryPath)
+        val etag = getBinaryETag()
+        val conn = remoteBinaryUrl.openConnection() as HttpURLConnection
+        if (etag != null) {
+            logger.info("Found existing binary at ${localBinaryPath.toAbsolutePath()}; calculated hash as $etag")
+            conn.setRequestProperty("If-None-Match", "\"$etag\"")
+        }
+        conn.connect()
+        logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
+        when (conn.responseCode) {
+            200 -> {
+                logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
+                Files.createDirectories(destinationDir)
+                conn.inputStream.use {
+                    Files.copy(it, localBinaryPath, StandardCopyOption.REPLACE_EXISTING)
+                }
+                if (getOS() != OS.WINDOWS) {
+                    Files.setPosixFilePermissions(
+                        localBinaryPath,
+                        PosixFilePermissions.fromString("rwxr-x---")
+                    )
+                }
+                conn.disconnect()
+                return true
             }
-        } catch (e: java.nio.file.FileAlreadyExistsException) {
-            // This relies on the provided build version being the latest.  It
-            // must be freshly fetched immediately before downloading.
-            // TODO: Use etags instead?
-            logger.info("${localBinaryPath.toAbsolutePath()} already exists, skipping download")
-            return false
+
+            304 -> {
+                logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
+                conn.disconnect()
+                return false
+            }
         }
-        if (getOS() != OS.WINDOWS) {
-            Files.setPosixFilePermissions(
-                localBinaryPath,
-                PosixFilePermissions.fromString("rwxr-x---")
-            )
-        }
-        return true
+        conn.disconnect()
+        throw Exception("Unable to download $remoteBinaryUrl (got response code `${conn.responseCode}`)")
     }
 
     /**
-     * Remove all versions of the CLI for this deployment that do not match the
-     * current build version.
+     * Return the entity tag for the binary on disk, if any.
      */
-    fun removeOldCli() {
-        if (Files.isReadable(destinationDir)) {
-            Files.walk(destinationDir, 1).use {
-                it.sorted().map { pt -> pt.toFile() }
-                    .filter { fl -> fl.name.contains(binaryNamePrefix) && fl.name != localBinaryName }
-                    .forEach { fl ->
-                        logger.info("Removing $fl because it is an old version")
-                        fl.delete()
-                    }
+    private fun getBinaryETag(): String? {
+        try {
+            val md = MessageDigest.getInstance("SHA-1")
+            val fis = FileInputStream(localBinaryPath.toFile())
+            val dis = DigestInputStream(BufferedInputStream(fis), md)
+            fis.use {
+                while (dis.read() != -1) {
+                }
             }
+            return HexBinaryAdapter().marshal(md.digest()).lowercase()
+        } catch (e: FileNotFoundException) {
+            return null
+        } catch (e: Exception) {
+            logger.warn("Unable to calculate hash for ${localBinaryPath.toAbsolutePath()}", e)
+            return null
         }
     }
 

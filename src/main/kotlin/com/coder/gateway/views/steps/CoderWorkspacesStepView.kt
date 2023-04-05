@@ -425,7 +425,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 return@launchUnderBackgroundProgress
             }
 
-            val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
+            val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL())
             localWizardModel.token = token
 
             this.indicator.apply {
@@ -458,12 +458,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 fraction = 0.7
             }
             cliManager.configSsh()
-
-            this.indicator.apply {
-                text = "Removing old Coder CLI versions..."
-                fraction = 0.9
-            }
-            cliManager.removeOldCli()
 
             this.indicator.fraction = 1.0
             updateWorkspaceActions()
