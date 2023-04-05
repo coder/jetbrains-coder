@@ -15,6 +15,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.DigestInputStream
 import java.security.MessageDigest
+import java.util.zip.GZIPInputStream
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 
@@ -86,6 +87,7 @@ class CoderCLIManager(deployment: URL) {
             logger.info("Found existing binary at ${localBinaryPath.toAbsolutePath()}; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
+        conn.setRequestProperty("Accept-Encoding", "gzip")
         conn.connect()
         logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
         when (conn.responseCode) {
@@ -93,7 +95,11 @@ class CoderCLIManager(deployment: URL) {
                 logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
                 Files.createDirectories(destinationDir)
                 conn.inputStream.use {
-                    Files.copy(it, localBinaryPath, StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(
+                        if (conn.contentEncoding == "gzip") GZIPInputStream(it) else it,
+                        localBinaryPath,
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
                 }
                 if (getOS() != OS.WINDOWS) {
                     Files.setPosixFilePermissions(
