@@ -22,44 +22,35 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager(deployment: URL) {
+class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir: Path = getDataDir()) {
     private var remoteBinaryUrl: URL
     var localBinaryPath: Path
-    private var binaryNamePrefix: String
-    private var destinationDir: Path
 
     init {
-        // TODO: Should use a persistent path to avoid needing to download on
-        //       each restart.
-        destinationDir = Path.of(System.getProperty("java.io.tmpdir"))
-            .resolve("coder-gateway").resolve(deployment.host)
-        val os = getOS()
-        binaryNamePrefix = getCoderCLIForOS(os, getArch())
-        val binaryName = if (os == OS.WINDOWS) "$binaryNamePrefix.exe" else binaryNamePrefix
+        val binaryName = getCoderCLIForOS(getOS(), getArch())
         remoteBinaryUrl = URL(
             deployment.protocol,
             deployment.host,
             deployment.port,
             "/bin/$binaryName"
         )
-        localBinaryPath = destinationDir.resolve(binaryName)
+        localBinaryPath = destinationDir.resolve(deployment.host).resolve(binaryName)
     }
-
     /**
-     * Return the name of the binary (sans extension) for the provided OS and
+     * Return the name of the binary (with extension) for the provided OS and
      * architecture.
      */
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
         logger.info("Resolving binary for $os $arch")
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return "coder-windows-amd64"
+            return "coder-windows-amd64.exe"
         }
         return when (os) {
             OS.WINDOWS -> when (arch) {
-                Arch.AMD64 -> "coder-windows-amd64"
-                Arch.ARM64 -> "coder-windows-arm64"
-                else -> "coder-windows-amd64"
+                Arch.AMD64 -> "coder-windows-amd64.exe"
+                Arch.ARM64 -> "coder-windows-arm64.exe"
+                else -> "coder-windows-amd64.exe"
             }
 
             OS.LINUX -> when (arch) {
@@ -93,7 +84,7 @@ class CoderCLIManager(deployment: URL) {
         when (conn.responseCode) {
             200 -> {
                 logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
-                Files.createDirectories(destinationDir)
+                Files.createDirectories(localBinaryPath.parent)
                 conn.inputStream.use {
                     Files.copy(
                         if (conn.contentEncoding == "gzip") GZIPInputStream(it) else it,
@@ -207,6 +198,7 @@ class CoderCLIManager(deployment: URL) {
          * Return the config directory used by the CLI.
          */
         @JvmStatic
+        @JvmOverloads
         fun getConfigDir(env: Environment = Environment()): Path {
             var dir = env.get("CODER_CONFIG_DIR")
             if (!dir.isNullOrBlank()) {
@@ -223,6 +215,25 @@ class CoderCLIManager(deployment: URL) {
                         return Paths.get(dir, "coderv2")
                     }
                     return Paths.get(env.get("HOME"), ".config/coderv2")
+                }
+            }
+        }
+
+        /**
+         * Return the data directory.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun getDataDir(env: Environment = Environment()): Path {
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(env.get("LOCALAPPDATA"), "coder-gateway")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coder-gateway")
+                else -> {
+                    val dir = env.get("XDG_DATA_HOME")
+                    if (!dir.isNullOrBlank()) {
+                        return Paths.get(dir, "coder-gateway")
+                    }
+                    return Paths.get(env.get("HOME"), ".local/share/coder-gateway")
                 }
             }
         }
