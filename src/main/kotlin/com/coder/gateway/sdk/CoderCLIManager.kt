@@ -83,7 +83,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
         conn.connect()
         logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
         when (conn.responseCode) {
-            200 -> {
+            HttpURLConnection.HTTP_OK -> {
                 logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
                 Files.createDirectories(localBinaryPath.parent)
                 conn.inputStream.use {
@@ -103,7 +103,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
                 return true
             }
 
-            304 -> {
+            HttpURLConnection.HTTP_NOT_MODIFIED -> {
                 logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
                 conn.disconnect()
                 return false
@@ -149,13 +149,6 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
      */
     fun configSsh(): String {
         return exec("config-ssh", "--yes", "--use-previous-options")
-    }
-
-    /**
-     * Return the binary version.
-     */
-    fun version(): String {
-        return exec("version")
     }
 
     /**

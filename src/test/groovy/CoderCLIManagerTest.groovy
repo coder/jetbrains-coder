@@ -1,6 +1,10 @@
 package com.coder.gateway.sdk
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import spock.lang.Requires
+import spock.lang.Shared
 import spock.lang.Unroll
 
 import java.nio.file.Files
@@ -8,25 +12,70 @@ import java.nio.file.Path
 
 @Unroll
 class CoderCLIManagerTest extends spock.lang.Specification {
-    /**
-     * Create a CLI manager pointing to the URL in the environment or to the
-       default URLs.
-     *
-     * @TODO: Implement a mock.
-     */
-    def createCLIManager(Boolean alternate = false) {
-        var url = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT")
-        if (url == null) {
-            url = "https://dev.coder.com"
-        }
-        if (alternate) {
-            url = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT_ALT")
-            if (url == null) {
-                url = "https://oss.demo.coder.com"
+    @Shared
+    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test")
+    @Shared
+    private String deploymentURL = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT")
+    @Shared
+    private String altDeploymentURL = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT_ALT")
+    @Shared
+    private def servers = []
+
+    String startMockServer() {
+        HttpServer srv = HttpServer.create(new InetSocketAddress(0), 0)
+        srv.createContext("/", new HttpHandler() {
+            void handle(HttpExchange exchange) {
+                int code = HttpURLConnection.HTTP_OK
+                String response = "not a real binary"
+
+                String[] etags = exchange.requestHeaders.get("If-None-Match")
+                if (etags != null && etags.contains("\"cb25cf6f41bb3127d7e05b0c3c6403be9ab052bc\"")) {
+                    code = HttpURLConnection.HTTP_NOT_MODIFIED
+                    response = "not modified"
+                }
+
+                if (!exchange.requestURI.path.startsWith("/bin/coder-")) {
+                    code = HttpURLConnection.HTTP_NOT_FOUND
+                    response = "not found"
+                }
+
+                byte[] body = response.getBytes()
+                exchange.sendResponseHeaders(code, code == HttpURLConnection.HTTP_OK ? body.length : -1)
+                exchange.responseBody.write(body)
+                exchange.close()
             }
+        })
+        servers << srv
+        srv.start()
+        return "http://localhost:" + srv.address.port
+    }
+
+    void setupSpec() {
+        // Clean up from previous runs otherwise they get cluttered since the
+        // port is random.
+        tmpdir.toFile().deleteDir()
+
+        // Spin up mock server(s).
+        if (deploymentURL == null) {
+            deploymentURL = startMockServer()
         }
-        var tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test")
-        return new CoderCLIManager(new URL(url), tmpdir)
+        if (altDeploymentURL == null) {
+            altDeploymentURL = startMockServer()
+        }
+    }
+
+    void cleanupSpec() {
+        servers.each {
+            it.stop(0)
+        }
+    }
+
+    /**
+     * Create a CLI manager pointing to the URLs in the environment or to mocked
+     * servers.
+     */
+    CoderCLIManager createCLIManager(Boolean alternate = false) {
+        return new CoderCLIManager(new URL(alternate ? altDeploymentURL : deploymentURL), tmpdir)
     }
 
     def "defaults to a sub-directory in the data directory"() {
@@ -55,7 +104,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         downloaded
-        ccm.version().contains("Coder")
+        ccm.localBinaryPath.toFile().canExecute()
     }
 
     def "overwrites cli if incorrect version"() {
@@ -69,7 +118,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         downloaded
-        ccm.version().contains("Coder")
+        ccm.localBinaryPath.toFile().canExecute()
     }
 
     def "skips cli download if it already exists"() {
@@ -82,7 +131,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         !downloaded
-        ccm.version().contains("Coder")
+        ccm.localBinaryPath.toFile().canExecute()
     }
 
     def "does not clobber other deployments"() {
@@ -98,7 +147,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         ccm1.localBinaryPath != ccm2.localBinaryPath
     }
 
-    def testEnv = [
+    Map<String, String> testEnv = [
             "APPDATA"         : "/tmp/coder-gateway-test/appdata",
             "LOCALAPPDATA"    : "/tmp/coder-gateway-test/localappdata",
             "HOME"            : "/tmp/coder-gateway-test/home",
@@ -110,7 +159,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     /**
      * Get a config dir using default environment variable values.
      */
-    def configDir(Map<String, String> env = [:]) {
+    Path configDir(Map<String, String> env = [:]) {
         return CoderCLIManager.getConfigDir(new Environment(testEnv + env))
     }
 
@@ -159,7 +208,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     /**
      * Get a data dir using default environment variable values.
      */
-    def dataDir(Map<String, String> env = [:]) {
+    Path dataDir(Map<String, String> env = [:]) {
         return CoderCLIManager.getDataDir(new Environment(testEnv + env))
     }
     // Mostly just a sanity check to make sure the default System.getenv runs
