@@ -37,6 +37,14 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid")
     }
 
+    def "includes port in sub-directory if included"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"))
+
+        expect:
+        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid-3000")
+    }
+
     def "downloads a working cli"() {
         given:
         def ccm = createCLIManager()

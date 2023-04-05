@@ -34,7 +34,8 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
             deployment.port,
             "/bin/$binaryName"
         )
-        localBinaryPath = destinationDir.resolve(deployment.host).resolve(binaryName)
+        val subdir = if (deployment.port > 0) "${deployment.host}-${deployment.port}" else deployment.host
+        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
     }
     /**
      * Return the name of the binary (with extension) for the provided OS and
