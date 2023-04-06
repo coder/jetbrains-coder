@@ -37,6 +37,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
         val subdir = if (deployment.port > 0) "${deployment.host}-${deployment.port}" else deployment.host
         localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
     }
+
     /**
      * Return the name of the binary (with extension) for the provided OS and
      * architecture.
@@ -80,36 +81,38 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
-        conn.connect()
-        logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
-        when (conn.responseCode) {
-            HttpURLConnection.HTTP_OK -> {
-                logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
-                Files.createDirectories(localBinaryPath.parent)
-                conn.inputStream.use {
-                    Files.copy(
-                        if (conn.contentEncoding == "gzip") GZIPInputStream(it) else it,
-                        localBinaryPath,
-                        StandardCopyOption.REPLACE_EXISTING,
-                    )
-                }
-                if (getOS() != OS.WINDOWS) {
-                    Files.setPosixFilePermissions(
-                        localBinaryPath,
-                        PosixFilePermissions.fromString("rwxr-x---")
-                    )
-                }
-                conn.disconnect()
-                return true
-            }
 
-            HttpURLConnection.HTTP_NOT_MODIFIED -> {
-                logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
-                conn.disconnect()
-                return false
+        try {
+            conn.connect()
+            logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
+            when (conn.responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
+                    Files.createDirectories(localBinaryPath.parent)
+                    conn.inputStream.use {
+                        Files.copy(
+                            if (conn.contentEncoding == "gzip") GZIPInputStream(it) else it,
+                            localBinaryPath,
+                            StandardCopyOption.REPLACE_EXISTING,
+                        )
+                    }
+                    if (getOS() != OS.WINDOWS) {
+                        Files.setPosixFilePermissions(
+                            localBinaryPath,
+                            PosixFilePermissions.fromString("rwxr-x---")
+                        )
+                    }
+                    return true
+                }
+
+                HttpURLConnection.HTTP_NOT_MODIFIED -> {
+                    logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
+                    return false
+                }
             }
+        } finally {
+            conn.disconnect()
         }
-        conn.disconnect()
         throw Exception("Unable to download $remoteBinaryUrl (got response code `${conn.responseCode}`)")
     }
 
