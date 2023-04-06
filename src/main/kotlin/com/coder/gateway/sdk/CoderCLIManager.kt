@@ -124,7 +124,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
      * Return the entity tag for the binary on disk, if any.
      */
     private fun getBinaryETag(): String? {
-        try {
+        return try {
             val md = MessageDigest.getInstance("SHA-1")
             val fis = FileInputStream(localBinaryPath.toFile())
             val dis = DigestInputStream(BufferedInputStream(fis), md)
@@ -132,12 +132,12 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
                 while (dis.read() != -1) {
                 }
             }
-            return HexBinaryAdapter().marshal(md.digest()).lowercase()
+            HexBinaryAdapter().marshal(md.digest()).lowercase()
         } catch (e: FileNotFoundException) {
-            return null
+            null
         } catch (e: Exception) {
             logger.warn("Unable to calculate hash for ${localBinaryPath.toAbsolutePath()}", e)
-            return null
+            null
         }
     }
 
