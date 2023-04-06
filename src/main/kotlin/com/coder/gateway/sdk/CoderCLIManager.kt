@@ -7,6 +7,7 @@ import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.net.HttpURLConnection
+import java.net.IDN
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -34,7 +35,10 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
             deployment.port,
             "/bin/$binaryName"
         )
-        val subdir = if (deployment.port > 0) "${deployment.host}-${deployment.port}" else deployment.host
+        // Convert IDN to ASCII in case the file system cannot support the
+        // necessary character set.
+        val host = IDN.toASCII(deployment.host, IDN.ALLOW_UNASSIGNED)
+        val subdir = if (deployment.port > 0) "${host}-${deployment.port}" else host
         localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
     }
 

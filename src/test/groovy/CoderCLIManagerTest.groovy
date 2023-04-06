@@ -94,6 +94,14 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid-3000")
     }
 
+    def "encodes IDN with punycode"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"))
+
+        expect:
+        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.xn--n28h.invalid")
+    }
+
     def "downloads a working cli"() {
         given:
         def ccm = createCLIManager()
