@@ -14,25 +14,23 @@ import java.nio.file.Path
 class CoderCLIManagerTest extends spock.lang.Specification {
     @Shared
     private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test")
-    @Shared
-    private String deploymentURL = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT")
-    @Shared
-    private String altDeploymentURL = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT_ALT")
-    @Shared
-    private def servers = []
+    private String mockBinaryContent = "#!/bin/sh\necho Coder"
 
     /**
      * Create, start, and return a server that mocks Coder.
      */
-    HttpServer startMockServer(errorCode = 0) {
+    def mockServer(errorCode = 0) {
         HttpServer srv = HttpServer.create(new InetSocketAddress(0), 0)
         srv.createContext("/", new HttpHandler() {
             void handle(HttpExchange exchange) {
                 int code = HttpURLConnection.HTTP_OK
-                String response = "not a real binary"
+                // TODO: Is there some simple way to create an executable file
+                // on Windows without having to execute something to generate
+                // said executable or having to commit one to the repo?
+                String response = mockBinaryContent
 
                 String[] etags = exchange.requestHeaders.get("If-None-Match")
-                if (etags != null && etags.contains("\"cb25cf6f41bb3127d7e05b0c3c6403be9ab052bc\"")) {
+                if (etags != null && etags.contains("\"2f1960264fc0f332a2a7fef2fe678f258dcdff9c\"")) {
                     code = HttpURLConnection.HTTP_NOT_MODIFIED
                     response = "not modified"
                 }
@@ -53,37 +51,14 @@ class CoderCLIManagerTest extends spock.lang.Specification {
                 exchange.close()
             }
         })
-        servers << srv
         srv.start()
-        return "http://localhost:" + srv.address.port
+        return [srv, "http://localhost:" + srv.address.port]
     }
 
     void setupSpec() {
         // Clean up from previous runs otherwise they get cluttered since the
-        // port is random.
+        // mock server port is random.
         tmpdir.toFile().deleteDir()
-
-        // Spin up mock server(s).
-        if (deploymentURL == null) {
-            deploymentURL = startMockServer()
-        }
-        if (altDeploymentURL == null) {
-            altDeploymentURL = startMockServer()
-        }
-    }
-
-    void cleanupSpec() {
-        servers.each {
-            it.stop(0)
-        }
-    }
-
-    /**
-     * Create a CLI manager pointing to the URLs in the environment or to mocked
-     * servers.
-     */
-    CoderCLIManager createCLIManager(Boolean alternate = false) {
-        return new CoderCLIManager(new URL(alternate ? altDeploymentURL : deploymentURL), tmpdir)
     }
 
     def "defaults to a sub-directory in the data directory"() {
@@ -112,8 +87,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
     def "fails to download"() {
         given:
-        HttpServer server = startMockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
-        String url = "http://localhost:" + server.address.port
+        def (srv, url) = mockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
         def ccm = new CoderCLIManager(new URL(url), tmpdir)
 
         when:
@@ -122,11 +96,21 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         then:
         def e = thrown(ResponseException)
         e.code == HttpURLConnection.HTTP_INTERNAL_ERROR
+
+        cleanup:
+        srv.stop(0)
     }
 
-    def "downloads a working cli"() {
+    // This test uses a real deployment if possible to make sure we really
+    // download a working CLI and that it runs on each platform.
+    @Requires({ env["CODER_GATEWAY_TEST_DEPLOYMENT"] != "mock" })
+    def "downloads a real working cli"() {
         given:
-        def ccm = createCLIManager()
+        def url = System.getenv("CODER_GATEWAY_TEST_DEPLOYMENT")
+        if (url == null) {
+            url = "https://dev.coder.com"
+        }
+        def ccm = new CoderCLIManager(new URL(url), tmpdir)
         ccm.localBinaryPath.getParent().toFile().deleteDir()
 
         when:
@@ -134,40 +118,73 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         downloaded
-        ccm.localBinaryPath.toFile().canExecute()
+        ccm.version().contains("Coder")
     }
 
-    def "overwrites cli if incorrect version"() {
+    def "downloads a mocked cli"() {
         given:
-        def ccm = createCLIManager()
-        Files.createDirectories(ccm.localBinaryPath.getParent())
-        ccm.localBinaryPath.toFile().write("cli")
+        def (srv, url) = mockServer()
+        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        ccm.localBinaryPath.getParent().toFile().deleteDir()
 
         when:
         def downloaded = ccm.downloadCLI()
 
         then:
         downloaded
-        ccm.localBinaryPath.toFile().canExecute()
+        // The mock does not serve a binary that works on Windows so do not
+        // actually execute.  Checking the contents works just as well as proof
+        // that the binary was correctly downloaded anyway.
+        ccm.localBinaryPath.toFile().readBytes() == mockBinaryContent.getBytes()
+
+        cleanup:
+        srv.stop(0)
+    }
+
+    def "overwrites cli if incorrect version"() {
+        given:
+        def (srv, url) = mockServer()
+        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.getParent())
+        ccm.localBinaryPath.toFile().write("cli")
+        ccm.localBinaryPath.toFile().setLastModified(0)
+
+        when:
+        def downloaded = ccm.downloadCLI()
+
+        then:
+        downloaded
+        ccm.localBinaryPath.toFile().readBytes() != "cli".getBytes()
+        ccm.localBinaryPath.toFile().lastModified() > 0
+
+        cleanup:
+        srv.stop(0)
     }
 
     def "skips cli download if it already exists"() {
         given:
-        def ccm = createCLIManager()
+        def (srv, url) = mockServer()
+        def ccm = new CoderCLIManager(new URL(url), tmpdir)
 
         when:
         ccm.downloadCLI()
+        ccm.localBinaryPath.toFile().setLastModified(0)
         def downloaded = ccm.downloadCLI()
 
         then:
         !downloaded
-        ccm.localBinaryPath.toFile().canExecute()
+        ccm.localBinaryPath.toFile().lastModified() == 0
+
+        cleanup:
+        srv.stop(0)
     }
 
     def "does not clobber other deployments"() {
-        given:
-        def ccm1 = createCLIManager(true)
-        def ccm2 = createCLIManager()
+        setup:
+        def (srv1, url1) = mockServer()
+        def (srv2, url2) = mockServer()
+        def ccm1 = new CoderCLIManager(new URL(url1), tmpdir)
+        def ccm2 = new CoderCLIManager(new URL(url2), tmpdir)
 
         when:
         ccm1.downloadCLI()
@@ -175,6 +192,12 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         ccm1.localBinaryPath != ccm2.localBinaryPath
+        ccm1.localBinaryPath.toFile().exists()
+        ccm2.localBinaryPath.toFile().exists()
+
+        cleanup:
+        srv1.stop(0)
+        srv2.stop(0)
     }
 
     Map<String, String> testEnv = [

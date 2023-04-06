@@ -160,10 +160,12 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
     }
 
     /**
-     * Execute the binary with the provided arguments.
-     *
-     * @return The command's output.
+     * Return the binary version.
      */
+    fun version(): String {
+        return exec("version")
+    }
+
     private fun exec(vararg args: String): String {
         val stdout = ProcessExecutor()
             .command(localBinaryPath.toString(), *args)
