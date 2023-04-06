@@ -123,6 +123,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
     /**
      * Return the entity tag for the binary on disk, if any.
      */
+    @Suppress("ControlFlowWithEmptyBody")
     private fun getBinaryETag(): String? {
         return try {
             val md = MessageDigest.getInstance("SHA-1")
