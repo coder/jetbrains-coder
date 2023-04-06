@@ -117,7 +117,7 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
         } finally {
             conn.disconnect()
         }
-        throw Exception("Unable to download $remoteBinaryUrl (got response code `${conn.responseCode}`)")
+        throw ResponseException("Unexpected response from $remoteBinaryUrl", conn.responseCode)
     }
 
     /**
@@ -251,3 +251,5 @@ class Environment(private val env: Map<String, String> = emptyMap()) {
         return System.getenv(name)
     }
 }
+
+class ResponseException(message: String, val code: Int) : Exception(message)

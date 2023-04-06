@@ -16,6 +16,7 @@ import com.coder.gateway.sdk.CoderSemVer
 import com.coder.gateway.sdk.IncompatibleVersionException
 import com.coder.gateway.sdk.InvalidVersionException
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -444,6 +445,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
             try {
                 cliManager.downloadCLI()
+            } catch (e: ResponseException) {
+                logger.error("Download failed with response code ${e.code}", e)
+                return@launchUnderBackgroundProgress
             } catch (e: Exception) {
                 logger.error("Failed to download Coder CLI", e)
                 return@launchUnderBackgroundProgress

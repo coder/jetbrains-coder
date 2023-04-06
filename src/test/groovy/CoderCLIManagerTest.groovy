@@ -21,7 +21,10 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     @Shared
     private def servers = []
 
-    String startMockServer() {
+    /**
+     * Create, start, and return a server that mocks Coder.
+     */
+    HttpServer startMockServer(errorCode = 0) {
         HttpServer srv = HttpServer.create(new InetSocketAddress(0), 0)
         srv.createContext("/", new HttpHandler() {
             void handle(HttpExchange exchange) {
@@ -37,6 +40,11 @@ class CoderCLIManagerTest extends spock.lang.Specification {
                 if (!exchange.requestURI.path.startsWith("/bin/coder-")) {
                     code = HttpURLConnection.HTTP_NOT_FOUND
                     response = "not found"
+                }
+
+                if (errorCode != 0) {
+                    code = errorCode
+                    response = "error code ${code}"
                 }
 
                 byte[] body = response.getBytes()
@@ -100,6 +108,20 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         expect:
         ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.xn--n28h.invalid")
+    }
+
+    def "fails to download"() {
+        given:
+        HttpServer server = startMockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
+        String url = "http://localhost:" + server.address.port
+        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+
+        when:
+        ccm.downloadCLI()
+
+        then:
+        def e = thrown(ResponseException)
+        e.code == HttpURLConnection.HTTP_INTERNAL_ERROR
     }
 
     def "downloads a working cli"() {
