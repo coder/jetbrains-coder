@@ -1,5 +1,6 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.CoderSupportedVersions
 
 class CoderSemVer(private val major: Long = 0, private val minor: Long = 0, private val patch: Long = 0) : Comparable<CoderSemVer> {
 
@@ -62,5 +63,27 @@ class CoderSemVer(private val major: Long = 0, private val minor: Long = 0, priv
                 if (matchResult.groupValues[3].isNotEmpty()) matchResult.groupValues[3].toLong() else 0,
             )
         }
+
+        /**
+         * Check to see if the plugin is compatible with the provided version.
+         * Throws if not valid.
+         */
+        @JvmStatic
+        fun checkVersionCompatibility(buildVersion: String) {
+            if (!isValidVersion(buildVersion)) {
+                throw InvalidVersionException("Invalid version $buildVersion")
+            }
+
+            if (!parse(buildVersion).isInClosedRange(
+                    CoderSupportedVersions.minCompatibleCoderVersion,
+                    CoderSupportedVersions.maxCompatibleCoderVersion
+                )
+            ) {
+                throw IncompatibleVersionException("Incompatible version $buildVersion")
+            }
+        }
     }
 }
+
+class InvalidVersionException(message: String) : Exception(message)
+class IncompatibleVersionException(message: String) : Exception(message)

@@ -1,45 +1,60 @@
-# GitHub Actions Workflow created for testing and preparing the plugin release in following steps:
-# - validate Gradle Wrapper,
-# - run 'test' and 'verifyPlugin' tasks,
-# - run Qodana inspections,
-# - run 'buildPlugin' task and prepare artifact for the further tests,
-# - run 'runPluginVerifier' task,
-# - create a draft release.
-#
-# Workflow is triggered on push and pull_request events.
-#
+# GitHub Actions workflow for testing and preparing the plugin release.
 # GitHub Actions reference: https://help.github.com/en/actions
-#
-
 
 name: Coder Gateway Plugin Build
+
 on:
-  # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g. for dependabot pull requests)
   push:
-    branches: [ main ]
-  # Trigger the workflow on any pull request
+    branches:
+      - main
   pull_request:
 
 jobs:
 
-  # Run Gradle Wrapper Validation Action to verify the wrapper's checksum
-  # Run verifyPlugin, IntelliJ Plugin Verifier, and test Gradle tasks
-  # Build plugin and provide the artifact for the next workflow jobs
+  # Run plugin tests on every supported platform.
+  test:
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3.5.0
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+
+      - uses: gradle/wrapper-validation-action@v1.0.6
+
+      # Run tests
+      - run: ./gradlew test
+
+      # Collect Tests Result of failed tests
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tests-result
+          path: ${{ github.workspace }}/build/reports/tests
+
+  # Run Gradle Wrapper Validation Action to verify the wrapper's checksum.  Run
+  # verifyPlugin and IntelliJ Plugin Verifier.  Build plugin and provide the
+  # artifact for the next workflow jobs.
   build:
     name: Build
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.properties.outputs.version }}
       changelog: ${{ steps.properties.outputs.changelog }}
     steps:
-
       # Check out current repository
       - name: Fetch Sources
         uses: actions/checkout@v3.5.0
-
-      # Validate wrapper
-      - name: Gradle Wrapper Validation
-        uses: gradle/wrapper-validation-action@v1.0.6
 
       # Setup Java 11 environment for the next steps
       - name: Setup Java
@@ -66,17 +81,6 @@ jobs:
           echo "::set-output name=changelog::$CHANGELOG"
           echo "::set-output name=pluginVerifierHomeDir::~/.pluginVerifier"
           ./gradlew listProductsReleases # prepare list of IDEs for Plugin Verifier
-      # Run tests
-      - name: Run Tests
-        run: ./gradlew test
-
-      # Collect Tests Result of failed tests
-      - name: Collect Tests Result
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: tests-result
-          path: ${{ github.workspace }}/build/reports/tests
 
       # Run plugin build
       - name: Run Build

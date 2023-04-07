@@ -1,43 +1,62 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.intellij.openapi.diagnostic.Logger
-import java.io.InputStream
+import org.zeroturnaround.exec.ProcessExecutor
+import java.io.BufferedInputStream
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.net.HttpURLConnection
+import java.net.IDN
 import java.net.URL
-import java.nio.file.FileVisitOption
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermissions
+import java.security.DigestInputStream
+import java.security.MessageDigest
+import java.util.zip.GZIPInputStream
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
-class CoderCLIManager(url: URL, buildVersion: String) {
-    var remoteCli: URL
-    var localCli: Path
-    private var cliNamePrefix: String
-    private var tmpDir: String
-    private var cliFileName: String
+
+/**
+ * Manage the CLI for a single deployment.
+ */
+class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir: Path = getDataDir()) {
+    private var remoteBinaryUrl: URL
+    var localBinaryPath: Path
 
     init {
-        val os = getOS()
-        cliNamePrefix = getCoderCLIForOS(os, getArch())
-        val cliNameWithExt = if (os == OS.WINDOWS) "$cliNamePrefix.exe" else cliNamePrefix
-        cliFileName = if (os == OS.WINDOWS) "${cliNamePrefix}-${buildVersion}.exe" else "${cliNamePrefix}-${buildVersion}"
-
-        remoteCli = URL(url.protocol, url.host, url.port, "/bin/$cliNameWithExt")
-        tmpDir = System.getProperty("java.io.tmpdir")
-        localCli = Paths.get(tmpDir, cliFileName)
+        val binaryName = getCoderCLIForOS(getOS(), getArch())
+        remoteBinaryUrl = URL(
+            deployment.protocol,
+            deployment.host,
+            deployment.port,
+            "/bin/$binaryName"
+        )
+        // Convert IDN to ASCII in case the file system cannot support the
+        // necessary character set.
+        val host = IDN.toASCII(deployment.host, IDN.ALLOW_UNASSIGNED)
+        val subdir = if (deployment.port > 0) "${host}-${deployment.port}" else host
+        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
     }
 
+    /**
+     * Return the name of the binary (with extension) for the provided OS and
+     * architecture.
+     */
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
-        logger.info("Resolving coder cli for $os $arch")
+        logger.info("Resolving binary for $os $arch")
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return "coder-windows-amd64"
+            return "coder-windows-amd64.exe"
         }
         return when (os) {
             OS.WINDOWS -> when (arch) {
-                Arch.AMD64 -> "coder-windows-amd64"
-                Arch.ARM64 -> "coder-windows-arm64"
-                else -> "coder-windows-amd64"
+                Arch.AMD64 -> "coder-windows-amd64.exe"
+                Arch.ARM64 -> "coder-windows-arm64.exe"
+                else -> "coder-windows-amd64.exe"
             }
 
             OS.LINUX -> when (arch) {
@@ -55,31 +74,184 @@ class CoderCLIManager(url: URL, buildVersion: String) {
         }
     }
 
+    /**
+     * Download the CLI from the deployment if necessary.
+     */
     fun downloadCLI(): Boolean {
-        if (Files.exists(localCli)) {
-            logger.info("${localCli.toAbsolutePath()} already exists, skipping download")
-            return false
+        val etag = getBinaryETag()
+        val conn = remoteBinaryUrl.openConnection() as HttpURLConnection
+        if (etag != null) {
+            logger.info("Found existing binary at ${localBinaryPath.toAbsolutePath()}; calculated hash as $etag")
+            conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
-        logger.info("Starting Coder CLI download to ${localCli.toAbsolutePath()}")
-        remoteCli.openStream().use {
-            Files.copy(it as InputStream, localCli, StandardCopyOption.REPLACE_EXISTING)
-        }
-        return true
-    }
+        conn.setRequestProperty("Accept-Encoding", "gzip")
 
-    fun removeOldCli() {
-        val tmpPath = Path.of(tmpDir)
-        if (Files.isReadable(tmpPath)) {
-            Files.walk(tmpPath, 1).use {
-                it.sorted().map { pt -> pt.toFile() }.filter { fl -> fl.name.contains(cliNamePrefix) && !fl.name.contains(cliFileName) }.forEach { fl ->
-                    logger.info("Removing $fl because it is an old coder cli")
-                    fl.delete()
+        try {
+            conn.connect()
+            logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
+            when (conn.responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
+                    Files.createDirectories(localBinaryPath.parent)
+                    conn.inputStream.use {
+                        Files.copy(
+                            if (conn.contentEncoding == "gzip") GZIPInputStream(it) else it,
+                            localBinaryPath,
+                            StandardCopyOption.REPLACE_EXISTING,
+                        )
+                    }
+                    if (getOS() != OS.WINDOWS) {
+                        Files.setPosixFilePermissions(
+                            localBinaryPath,
+                            PosixFilePermissions.fromString("rwxr-x---")
+                        )
+                    }
+                    return true
+                }
+
+                HttpURLConnection.HTTP_NOT_MODIFIED -> {
+                    logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
+                    return false
                 }
             }
+        } finally {
+            conn.disconnect()
         }
+        throw ResponseException("Unexpected response from $remoteBinaryUrl", conn.responseCode)
+    }
+
+    /**
+     * Return the entity tag for the binary on disk, if any.
+     */
+    @Suppress("ControlFlowWithEmptyBody")
+    private fun getBinaryETag(): String? {
+        return try {
+            val md = MessageDigest.getInstance("SHA-1")
+            val fis = FileInputStream(localBinaryPath.toFile())
+            val dis = DigestInputStream(BufferedInputStream(fis), md)
+            fis.use {
+                while (dis.read() != -1) {
+                }
+            }
+            HexBinaryAdapter().marshal(md.digest()).lowercase()
+        } catch (e: FileNotFoundException) {
+            null
+        } catch (e: Exception) {
+            logger.warn("Unable to calculate hash for ${localBinaryPath.toAbsolutePath()}", e)
+            null
+        }
+    }
+
+    /**
+     * Use the provided credentials to authenticate the CLI.
+     */
+    fun login(url: String, token: String): String {
+        return exec("login", url, "--token", token)
+    }
+
+    /**
+     * Configure SSH to use this binary.
+     *
+     * TODO: Support multiple deployments; currently they will clobber each
+     *       other.
+     */
+    fun configSsh(): String {
+        return exec("config-ssh", "--yes", "--use-previous-options")
+    }
+
+    /**
+     * Return the binary version.
+     */
+    fun version(): String {
+        return exec("version")
+    }
+
+    private fun exec(vararg args: String): String {
+        val stdout = ProcessExecutor()
+            .command(localBinaryPath.toString(), *args)
+            .readOutput(true)
+            .execute()
+            .outputUTF8()
+        val redactedArgs = listOf(*args).joinToString(" ").replace(tokenRegex, "--token <redacted>")
+        logger.info("`$localBinaryPath $redactedArgs`: $stdout")
+        return stdout
     }
 
     companion object {
         val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
+
+        private val tokenRegex = "--token [^ ]+".toRegex()
+
+        /**
+         * Return the URL and token from the CLI config.
+         */
+        @JvmStatic
+        fun readConfig(env: Environment = Environment()): Pair<String?, String?> {
+            val configDir = getConfigDir(env)
+            CoderWorkspacesStepView.logger.info("Reading config from $configDir")
+            return try {
+                val url = Files.readString(configDir.resolve("url"))
+                val token = Files.readString(configDir.resolve("session"))
+                url to token
+            } catch (e: Exception) {
+                null to null // Probably has not configured the CLI yet.
+            }
+        }
+
+        /**
+         * Return the config directory used by the CLI.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun getConfigDir(env: Environment = Environment()): Path {
+            var dir = env.get("CODER_CONFIG_DIR")
+            if (!dir.isNullOrBlank()) {
+                return Path.of(dir)
+            }
+            // The Coder CLI uses https://github.com/kirsle/configdir so this should
+            // match how it behaves.
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(env.get("APPDATA"), "coderv2")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coderv2")
+                else -> {
+                    dir = env.get("XDG_CONFIG_HOME")
+                    if (!dir.isNullOrBlank()) {
+                        return Paths.get(dir, "coderv2")
+                    }
+                    return Paths.get(env.get("HOME"), ".config/coderv2")
+                }
+            }
+        }
+
+        /**
+         * Return the data directory.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun getDataDir(env: Environment = Environment()): Path {
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(env.get("LOCALAPPDATA"), "coder-gateway")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coder-gateway")
+                else -> {
+                    val dir = env.get("XDG_DATA_HOME")
+                    if (!dir.isNullOrBlank()) {
+                        return Paths.get(dir, "coder-gateway")
+                    }
+                    return Paths.get(env.get("HOME"), ".local/share/coder-gateway")
+                }
+            }
+        }
     }
 }
+
+class Environment(private val env: Map<String, String> = emptyMap()) {
+    fun get(name: String): String? {
+        val e = env[name]
+        if (e != null) {
+            return e
+        }
+        return System.getenv(name)
+    }
+}
+
+class ResponseException(message: String, val code: Int) : Exception(message)

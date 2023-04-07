@@ -1,7 +1,6 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
-import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
@@ -14,12 +13,14 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.CoderSemVer
+import com.coder.gateway.sdk.IncompatibleVersionException
+import com.coder.gateway.sdk.InvalidVersionException
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
-import com.coder.gateway.sdk.getOS
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
@@ -34,9 +35,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
@@ -62,7 +60,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.zeroturnaround.exec.ProcessExecutor
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseEvent
@@ -70,9 +67,6 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.net.SocketTimeoutException
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -353,7 +347,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 localWizardModel.token = token
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                loginAndLoadWorkspace(token, true)
+                loginAndLoadWorkspaces(token, true)
             }
         }
         updateWorkspaceActions()
@@ -368,45 +362,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
             return url to token
         }
-        return readConfig()
-    }
-
-    /**
-     * Return the URL and token from the CLI config.
-     */
-    private fun readConfig(): Pair<String?, String?> {
-        val configDir = getConfigDir()
-        logger.info("Reading config from $configDir")
-        try {
-            val url = Files.readString(configDir.resolve("url"))
-            val token = Files.readString(configDir.resolve("session"))
-            return url to token
-        } catch (e: Exception) {
-            return null to null // Probably has not configured the CLI yet.
-        }
-    }
-
-    /**
-     * Return the config directory used by the CLI.
-     */
-    private fun getConfigDir(): Path {
-        var dir = System.getenv("CODER_CONFIG_DIR")
-        if (!dir.isNullOrBlank()) {
-            return Path.of(dir)
-        }
-        // The Coder CLI uses https://github.com/kirsle/configdir so this should
-        // match how it behaves.
-        return when(getOS()) {
-            OS.WINDOWS -> Paths.get(System.getenv("APPDATA"), "coderv2")
-            OS.MAC -> Paths.get(System.getenv("HOME"), "Library/Application Support/coderv2")
-            else -> {
-                dir = System.getenv("XDG_CONFIG_HOME")
-                if (!dir.isNullOrBlank()) {
-                    return Paths.get(dir, "coderv2")
-                }
-                return Paths.get(System.getenv("HOME"), ".config/coderv2")
-            }
-        }
+        return CoderCLIManager.readConfig()
     }
 
     private fun updateWorkspaceActions() {
@@ -451,10 +407,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
         // False so that subsequent authentication failures do not keep opening
         // the browser as it was already opened earlier.
-        loginAndLoadWorkspace(pastedToken, false)
+        loginAndLoadWorkspaces(pastedToken, false)
     }
 
-    private fun loginAndLoadWorkspace(token: String, openBrowser: Boolean) {
+    private fun loginAndLoadWorkspaces(token: String, openBrowser: Boolean) {
         LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"), canBeCancelled = false, isIndeterminate = true) {
             this.indicator.apply {
                 text = "Authenticating..."
@@ -471,13 +427,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 return@launchUnderBackgroundProgress
             }
 
-            val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL(), coderClient.buildVersion)
-
-            localWizardModel.apply {
-                this.token = token
-                buildVersion = coderClient.buildVersion
-                localCliPath = cliManager.localCli.toAbsolutePath().toString()
-            }
+            val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL())
+            localWizardModel.token = token
 
             this.indicator.apply {
                 isIndeterminate = false
@@ -492,29 +443,26 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 text = "Downloading Coder CLI..."
                 fraction = 0.3
             }
-
-            cliManager.downloadCLI()
-            if (getOS() != OS.WINDOWS) {
-                this.indicator.fraction = 0.4
-                val chmodOutput = ProcessExecutor().command("chmod", "+x", localWizardModel.localCliPath).readOutput(true).execute().outputUTF8()
-                logger.info("chmod +x ${cliManager.localCli.toAbsolutePath()} $chmodOutput")
+            try {
+                cliManager.downloadCLI()
+            } catch (e: ResponseException) {
+                logger.error("Download failed with response code ${e.code}", e)
+                return@launchUnderBackgroundProgress
+            } catch (e: Exception) {
+                logger.error("Failed to download Coder CLI", e)
+                return@launchUnderBackgroundProgress
             }
             this.indicator.apply {
-                text = "Configuring Coder CLI..."
+                text = "Logging in..."
                 fraction = 0.5
             }
-
-            val loginOutput = ProcessExecutor().command(localWizardModel.localCliPath, "login", localWizardModel.coderURL, "--token", localWizardModel.token).readOutput(true).execute().outputUTF8()
-            logger.info("coder-cli login output: $loginOutput")
-            this.indicator.fraction = 0.8
-            val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-            logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
+            cliManager.login(localWizardModel.coderURL, localWizardModel.token)
 
             this.indicator.apply {
-                text = "Remove old Coder CLI versions..."
-                fraction = 0.9
+                text = "Configuring SSH..."
+                fraction = 0.7
             }
-            cliManager.removeOldCli()
+            cliManager.configSsh()
 
             this.indicator.fraction = 1.0
             updateWorkspaceActions()
@@ -527,7 +475,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (openBrowser && !localWizardModel.useExistingToken) {
             BrowserUtil.browse(getTokenUrl)
         } else if (localWizardModel.useExistingToken) {
-            val (url, token) = readConfig()
+            val (url, token) = CoderCLIManager.readConfig()
             if (url == localWizardModel.coderURL && !token.isNullOrBlank()) {
                 logger.info("Injecting valid token from CLI config")
                 localWizardModel.token = token
@@ -575,23 +523,30 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * versions do not match.
      */
     private fun authenticate(token: String) {
+        logger.info("Authenticating to ${localWizardModel.coderURL}...")
         coderClient.initClientSession(localWizardModel.coderURL.toURL(), token)
 
-        if (!CoderSemVer.isValidVersion(coderClient.buildVersion)) {
+        try {
+            logger.info("Checking compatibility with Coder version ${coderClient.buildVersion}...")
+            CoderSemVer.checkVersionCompatibility(coderClient.buildVersion)
+            logger.info("${coderClient.buildVersion} is compatible")
+        } catch (e: InvalidVersionException) {
+            logger.warn(e)
             notificationBanner.apply {
                 component.isVisible = true
                 showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.invalid.coder.version", coderClient.buildVersion))
             }
-        } else {
-            val coderVersion = CoderSemVer.parse(coderClient.buildVersion)
-            if (!coderVersion.isInClosedRange(CoderSupportedVersions.minCompatibleCoderVersion, CoderSupportedVersions.maxCompatibleCoderVersion)) {
-                notificationBanner.apply {
-                    component.isVisible = true
-                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
-                }
+        } catch (e: IncompatibleVersionException) {
+            logger.warn(e)
+            notificationBanner.apply {
+                component.isVisible = true
+                showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", coderClient.buildVersion))
             }
         }
 
+        logger.info("Authenticated successfully")
+
+        // Remember these in order to default to them for future attempts.
         appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
         appPropertiesService.setValue(SESSION_TOKEN, token)
     }
@@ -709,28 +664,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
-        if (localWizardModel.localCliPath.isNotBlank()) {
-            val configSSHTask = object : Task.Modal(null, CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.configssh.dialog.title"), false) {
-                override fun run(pi: ProgressIndicator) {
-                    pi.apply {
-                        isIndeterminate = false
-                        text = "Configuring coder cli..."
-                        fraction = 0.1
-                    }
-                    val sshConfigOutput = ProcessExecutor().command(localWizardModel.localCliPath, "config-ssh", "--yes", "--use-previous-options").readOutput(true).execute().outputUTF8()
-                    pi.fraction = 0.8
-                    logger.info("Result of `${localWizardModel.localCliPath} config-ssh --yes --use-previous-options`: $sshConfigOutput")
-                    pi.fraction = 1.0
-                }
-            }
-            ProgressManager.getInstance().run(configSSHTask)
-        }
-
         wizardModel.apply {
             coderURL = localWizardModel.coderURL
             token = localWizardModel.token
-            buildVersion = localWizardModel.buildVersion
-            localCliPath = localWizardModel.localCliPath
         }
 
         val workspace = tableOfWorkspaces.selectedObject

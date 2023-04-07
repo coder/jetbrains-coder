@@ -78,7 +78,6 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
 
     private lateinit var titleLabel: JLabel
-    private lateinit var wizard: CoderWorkspacesWizardModel
     private lateinit var cbIDE: IDEComboBox
     private lateinit var cbIDEComment: JLabel
     private var tfProject = JBTextField()
@@ -152,7 +151,6 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         cbIDE.renderer = IDECellRenderer()
         ideComboBoxModel.removeAllElements()
-        wizard = wizardModel
         val selectedWorkspace = wizardModel.selectedWorkspace
         if (selectedWorkspace == null) {
             logger.warn("No workspace was selected. Please go back to the previous step and select a Coder Workspace")

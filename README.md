@@ -1,4 +1,4 @@
-# Coder Gateway Plugin 
+# Coder Gateway Plugin
 
 [!["Join us on
 Discord"](https://img.shields.io/badge/join-us%20on%20Discord-gray.svg?longCache=true&logo=discord&colorB=purple)](https://discord.gg/coder)
@@ -87,7 +87,9 @@ The properties listed define the plugin itself or configure the [gradle-intellij
 
 ### Testing
 
-No functional or UI tests are available yet.
+Run tests with `./gradlew test`. By default this will test against
+`https://dev.coder.com` but you can set `CODER_GATEWAY_TEST_DEPLOYMENT` to a URL
+of your choice or to `mock` to use mocks only.
 
 ### Code Monitoring
 
@@ -127,7 +129,8 @@ In the `.github/workflows` directory, you can find definitions for the following
   - Triggered on `Publish release` event.
   - Updates `CHANGELOG.md` file with the content provided with the release note.
   - Publishes the plugin to JetBrains Marketplace using the provided `PUBLISH_TOKEN`.
-  - Sets publish channel depending on the plugin version, i.e. `1.0.0-beta` -> `beta` channel. For now, both `main` and `eap` branches are published on default release channel. 
+  - Sets publish channel depending on the plugin version, i.e. `1.0.0-beta` -> `beta` channel. For now, both `main`
+    and `eap` branches are published on default release channel.
   - Patches the Changelog and commits.
 
 ### Release flow
