@@ -23,7 +23,7 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir: Path = getDataDir()) {
+class CoderCLIManager @JvmOverloads constructor(private val deployment: URL, destinationDir: Path = getDataDir()) {
     private var remoteBinaryUrl: URL
     var localBinaryPath: Path
 
@@ -143,10 +143,10 @@ class CoderCLIManager @JvmOverloads constructor(deployment: URL, destinationDir:
     }
 
     /**
-     * Use the provided credentials to authenticate the CLI.
+     * Use the provided token to authenticate the CLI.
      */
-    fun login(url: String, token: String): String {
-        return exec("login", url, "--token", token)
+    fun login(token: String): String {
+        return exec("login", deployment.toString(), "--token", token)
     }
 
     /**
