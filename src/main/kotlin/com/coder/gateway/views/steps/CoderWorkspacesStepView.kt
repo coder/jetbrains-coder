@@ -440,6 +440,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         poller?.cancel()
         listTableModelOfWorkspaces.items = emptyList()
 
+        val deploymentURL = localWizardModel.coderURL.toURL()
+        val token = localWizardModel.token
+
         // Authenticate and load in a background process with progress.
         // TODO: Make this cancelable.
         LifetimeDefinition().launchUnderBackgroundProgress(
@@ -449,35 +452,32 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         ) {
             try {
                 this.indicator.text = "Authenticating client..."
-                authenticate(localWizardModel.coderURL.toURL(), localWizardModel.token)
+                authenticate(deploymentURL, token)
                 // Remember these in order to default to them for future attempts.
-                appPropertiesService.setValue(CODER_URL_KEY, localWizardModel.coderURL)
-                appPropertiesService.setValue(SESSION_TOKEN, localWizardModel.token)
+                appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
+                appPropertiesService.setValue(SESSION_TOKEN, token)
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
 
                 this.indicator.text = "Downloading Coder CLI..."
-                val cliManager = CoderCLIManager(localWizardModel.coderURL.toURL())
+                val cliManager = CoderCLIManager(deploymentURL)
                 cliManager.downloadCLI()
 
                 this.indicator.text = "Authenticating Coder CLI..."
-                cliManager.login(localWizardModel.token)
-
-                this.indicator.text = "Configuring SSH..."
-                cliManager.configSsh()
+                cliManager.login(token)
 
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
             } catch (e: AuthenticationResponseException) {
-                logger.error("Token was rejected by ${localWizardModel.coderURL}; has your token expired?", e)
-                askTokenAndConnect(openBrowser) // Try again but no more opening browser windows.
+                logger.error("Token was rejected by $deploymentURL; has your token expired?", e)
+                askTokenAndConnect(openBrowser)
             } catch (e: SocketTimeoutException) {
-                logger.error("Unable to connect to ${localWizardModel.coderURL}; is it up?", e)
+                logger.error("Unable to connect to $deploymentURL; is it up?", e)
             } catch (e: ResponseException) {
                 logger.error("Failed to download Coder CLI", e)
             } catch (e: Exception) {
-                logger.error("Failed to configure connection to ${localWizardModel.coderURL}", e)
+                logger.error("Failed to configure connection to $deploymentURL", e)
             }
         }
     }
@@ -705,6 +705,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (workspace != null) {
             wizardModel.selectedWorkspace = workspace
             poller?.cancel()
+
+            logger.info("Configuring Coder CLI...")
+            val cliManager = CoderCLIManager(wizardModel.coderURL.toURL())
+            cliManager.configSsh(listTableModelOfWorkspaces.items)
+
             logger.info("Opening IDE and Project Location window for ${workspace.name}")
             return true
         }

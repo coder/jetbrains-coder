@@ -1,5 +1,6 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.intellij.openapi.diagnostic.Logger
 import org.zeroturnaround.exec.ProcessExecutor
@@ -23,23 +24,25 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager @JvmOverloads constructor(private val deployment: URL, destinationDir: Path = getDataDir()) {
+class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, destinationDir: Path = getDataDir()) {
     private var remoteBinaryUrl: URL
     var localBinaryPath: Path
+    private var coderConfigPath: Path
 
     init {
         val binaryName = getCoderCLIForOS(getOS(), getArch())
         remoteBinaryUrl = URL(
-            deployment.protocol,
-            deployment.host,
-            deployment.port,
+            deploymentURL.protocol,
+            deploymentURL.host,
+            deploymentURL.port,
             "/bin/$binaryName"
         )
         // Convert IDN to ASCII in case the file system cannot support the
         // necessary character set.
-        val host = IDN.toASCII(deployment.host, IDN.ALLOW_UNASSIGNED)
-        val subdir = if (deployment.port > 0) "${host}-${deployment.port}" else host
+        val host = getSafeHost(deploymentURL)
+        val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
         localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
+        coderConfigPath = destinationDir.resolve(subdir).resolve("config")
     }
 
     /**
@@ -146,17 +149,93 @@ class CoderCLIManager @JvmOverloads constructor(private val deployment: URL, des
      * Use the provided token to authenticate the CLI.
      */
     fun login(token: String): String {
-        return exec("login", deployment.toString(), "--token", token)
+        logger.info("Storing CLI credentials in $coderConfigPath")
+        return exec(
+            "login",
+            deploymentURL.toString(),
+            "--token",
+            token,
+            "--global-config",
+            coderConfigPath.toAbsolutePath().toString(),
+        )
     }
 
     /**
      * Configure SSH to use this binary.
-     *
-     * TODO: Support multiple deployments; currently they will clobber each
-     *       other.
      */
-    fun configSsh(): String {
-        return exec("config-ssh", "--yes", "--use-previous-options")
+    fun configSsh(
+        workspaces: List<WorkspaceAgentModel>,
+        sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
+    ) {
+        val host = getSafeHost(deploymentURL)
+        val startBlock = "# --- START CODER JETBRAINS $host"
+        val endBlock = "# --- END CODER JETBRAINS $host"
+        val isRemoving = workspaces.isEmpty()
+        val blockContent = workspaces.joinToString(
+            System.lineSeparator(),
+            startBlock + System.lineSeparator(),
+            System.lineSeparator() + endBlock,
+            transform = {
+                """
+                Host ${getHostName(deploymentURL, it)}
+                  HostName coder.${it.name}
+                  ProxyCommand "${localBinaryPath.toAbsolutePath()}" --global-config "${coderConfigPath.toAbsolutePath()}" ssh --stdio ${it.name}
+                  ConnectTimeout 0
+                  StrictHostKeyChecking no
+                  UserKnownHostsFile /dev/null
+                  LogLevel ERROR
+                  SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+                """.trimIndent().replace("\n", System.lineSeparator())
+            })
+        Files.createDirectories(sshConfigPath.parent)
+        try {
+            val contents = sshConfigPath.toFile().readText()
+            val start = "(\\s*)$startBlock".toRegex().find(contents)
+            val end = "$endBlock(\\s*)".toRegex().find(contents)
+            if (start == null && end == null && isRemoving) {
+                logger.info("Leaving $sshConfigPath alone since there are no workspaces and no config to remove")
+            } else if (start == null && end == null) {
+                logger.info("Appending config to $sshConfigPath")
+                sshConfigPath.toFile().writeText(
+                    if (contents.isEmpty()) blockContent else listOf(
+                        contents,
+                        blockContent
+                    ).joinToString(System.lineSeparator())
+                )
+            } else if (start == null) {
+                throw SSHConfigFormatException("End block exists but no start block")
+            } else if (end == null) {
+                throw SSHConfigFormatException("Start block exists but no end block")
+            } else if (start.range.first > end.range.first) {
+                throw SSHConfigFormatException("Start block found after end block")
+            } else if (isRemoving) {
+                logger.info("Removing config from $sshConfigPath")
+                sshConfigPath.toFile().writeText(
+                    listOf(
+                        contents.substring(0, start.range.first),
+                        // Need to keep the trailing newline(s) if we are not at
+                        // the front of the file otherwise the before and after
+                        // lines would get joined.
+                        if (start.range.first > 0) end.groupValues[1] else "",
+                        contents.substring(end.range.last + 1)
+                    ).joinToString("")
+                )
+            } else {
+                logger.info("Replacing config in $sshConfigPath")
+                sshConfigPath.toFile().writeText(
+                    listOf(
+                        contents.substring(0, start.range.first),
+                        start.groupValues[1], // Leading newline(s).
+                        blockContent,
+                        end.groupValues[1], // Trailing newline(s).
+                        contents.substring(end.range.last + 1)
+                    ).joinToString("")
+                )
+            }
+        } catch (e: FileNotFoundException) {
+            logger.info("Writing config to $sshConfigPath")
+            sshConfigPath.toFile().writeText(blockContent)
+        }
     }
 
     /**
@@ -241,6 +320,15 @@ class CoderCLIManager @JvmOverloads constructor(private val deployment: URL, des
                 }
             }
         }
+
+        private fun getSafeHost(url: URL): String {
+            return IDN.toASCII(url.host, IDN.ALLOW_UNASSIGNED)
+        }
+
+        @JvmStatic
+        fun getHostName(url: URL, ws: WorkspaceAgentModel): String {
+            return "coder-jetbrains--${ws.name}--${getSafeHost(url)}"
+        }
     }
 }
 
@@ -255,3 +343,5 @@ class Environment(private val env: Map<String, String> = emptyMap()) {
 }
 
 class ResponseException(message: String, val code: Int) : Exception(message)
+
+class SSHConfigFormatException(message: String) : Exception(message)

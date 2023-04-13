@@ -1,5 +1,9 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.models.WorkspaceAgentStatus
+import com.coder.gateway.models.WorkspaceVersionStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -295,5 +299,412 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     def "gets data dir from LOCALAPPDATA"() {
         expect:
         Path.of("/tmp/coder-gateway-test/localappdata/coder-gateway") == dataDir()
+    }
+
+    private WorkspaceAgentModel randWorkspace(String name) {
+        return new WorkspaceAgentModel(
+                UUID.randomUUID(),
+                name,
+                name,
+                UUID.randomUUID(),
+                "template-name",
+                "template-icon-path",
+                null,
+                WorkspaceVersionStatus.UPDATED,
+                WorkspaceAgentStatus.RUNNING,
+                WorkspaceTransition.START,
+                null,
+                null,
+                null
+        )
+    }
+
+    def "configures empty SSH file with multiple hosts"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def sshConfigPath = tmpdir.resolve("config-nonexistent")
+        def coderConfigPath = ccm.localBinaryPath.getParent().resolve("config")
+
+        when:
+        ccm.configSsh(List.of(randWorkspace("foo"), randWorkspace("bar")), sshConfigPath)
+
+        then:
+        sshConfigPath.toFile().text == """\
+          # --- START CODER JETBRAINS test.coder.invalid
+          Host coder-jetbrains--foo--test.coder.invalid
+            HostName coder.foo
+            ProxyCommand "${ccm.localBinaryPath}" --global-config "$coderConfigPath" ssh --stdio foo
+            ConnectTimeout 0
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+            SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+          Host coder-jetbrains--bar--test.coder.invalid
+            HostName coder.bar
+            ProxyCommand "${ccm.localBinaryPath}" --global-config "$coderConfigPath" ssh --stdio bar
+            ConnectTimeout 0
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+            SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+          # --- END CODER JETBRAINS test.coder.invalid""".stripIndent().replace("\n", System.lineSeparator())
+    }
+
+    def "configures existing SSH file with one host"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def sshConfigPath = tmpdir.resolve("config-existing")
+        Files.createDirectories(sshConfigPath.getParent())
+        sshConfigPath.toFile().write(contents.stripIndent().replace("\n", System.lineSeparator()))
+
+        when:
+        ccm.configSsh(List.of(randWorkspace("foo-bar")), sshConfigPath)
+
+        then:
+        sshConfigPath.toFile().text == expected.stripIndent().replace("\n", System.lineSeparator())
+
+        where:
+        contents << {
+            // Blank file.
+            ["",
+
+             // Preserve existing newlines.
+             """\
+
+
+             """,
+
+             // Append to config; ignore unrelated blocks.
+             """\
+             Host test
+               Port 80
+             # ------------START-CODER-----------
+             some coder config
+             # ------------END-CODER------------""",
+
+             // Replace config at end without newlines.
+             """\
+             Host test
+               Port 80 # --- START CODER JETBRAINS test.coder.invalid
+               some jetbrains config # --- END CODER JETBRAINS test.coder.invalid""",
+
+             // Replace config at the middle; ignore unrelated blocks.
+             """\
+             Host test
+               Port 80
+             # ------------START-CODER-----------
+             some coder config
+             # ------------END-CODER------------
+             # --- START CODER JETBRAINS test.coder.invalid
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.invalid
+             Host *
+               HostName localhost
+             # --- START CODER JETBRAINS test.coder.unrelated
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.unrelated""",
+
+             // Replace config at the start without leading newline.
+             """\
+             # --- START CODER JETBRAINS test.coder.invalid
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.invalid
+             Host test
+               Port 80""",
+
+             // Replace config at the end without trailing newline.
+             """\
+             Host test
+               Port 80
+             # --- START CODER JETBRAINS test.coder.invalid
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             // Replace config at the end with newlines.
+             """\
+             Host test
+               Port 80
+             # --- START CODER JETBRAINS test.coder.invalid
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.invalid
+             """,
+            ]
+        }()
+
+        expected << {
+            // Unfortunately you cannot access local vars in the where block so
+            // they have to be recreated.
+            def lbp = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir).localBinaryPath
+            def cp = lbp.getParent().resolve("config")
+            ["""\
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             """\
+
+
+
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             """\
+             Host test
+               Port 80
+             # ------------START-CODER-----------
+             some coder config
+             # ------------END-CODER------------
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             """\
+             Host test
+               Port 80 # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             """\
+             Host test
+               Port 80
+             # ------------START-CODER-----------
+             some coder config
+             # ------------END-CODER------------
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid
+             Host *
+               HostName localhost
+             # --- START CODER JETBRAINS test.coder.unrelated
+             some jetbrains config
+             # --- END CODER JETBRAINS test.coder.unrelated""",
+
+             """\
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid
+             Host test
+               Port 80""",
+
+             """\
+             Host test
+               Port 80
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid""",
+
+             """\
+             Host test
+               Port 80
+             # --- START CODER JETBRAINS test.coder.invalid
+             Host coder-jetbrains--foo-bar--test.coder.invalid
+               HostName coder.foo-bar
+               ProxyCommand "$lbp" --global-config "$cp" ssh --stdio foo-bar
+               ConnectTimeout 0
+               StrictHostKeyChecking no
+               UserKnownHostsFile /dev/null
+               LogLevel ERROR
+               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+             # --- END CODER JETBRAINS test.coder.invalid
+             """,
+            ]
+        }()
+    }
+
+    def "removes empty block including newlines"() {
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def configPath = tmpdir.resolve("config-remove")
+        Files.createDirectories(configPath.getParent())
+        configPath.toFile().write(contents.stripIndent().replace("\n", System.lineSeparator()))
+
+        when:
+        ccm.configSsh(List.of(), configPath)
+
+        then:
+        configPath.toFile().text == expected.stripIndent().replace("\n", System.lineSeparator())
+
+        where:
+        contents << [
+                // Nothing to remove.
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                // Remove at the end without a trailing newline.
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443
+                # --- START CODER JETBRAINS test.coder.invalid
+                some jetbrains config
+                # --- END CODER JETBRAINS test.coder.invalid""",
+
+                // Remove in the middle without a leading newline.
+                """\
+                Host test
+                  Port 80 # --- START CODER JETBRAINS test.coder.invalid
+                  some jetbrains config
+                  # --- END CODER JETBRAINS test.coder.invalid
+                Host test2
+                  Port 443""",
+
+                // Remove at the middle without any newlines.
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443 # --- START CODER JETBRAINS test.coder.invalid
+                  some jetbrains config # --- END CODER JETBRAINS test.coder.invalid""",
+
+                // Remove at the start.
+                """\
+                # --- START CODER JETBRAINS test.coder.invalid
+                some jetbrains config
+                # --- END CODER JETBRAINS test.coder.invalid
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                // Remove at the end with a trailing newline.
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443
+                  # --- START CODER JETBRAINS test.coder.invalid
+                  some jetbrains config
+                  # --- END CODER JETBRAINS test.coder.invalid
+                """,
+
+                // Remove everything.
+                """\
+                # --- START CODER JETBRAINS test.coder.invalid
+                some jetbrains config
+                # --- END CODER JETBRAINS test.coder.invalid
+                """
+        ]
+
+        expected << [
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443""",
+
+                """\
+                Host test
+                  Port 80
+                Host test2
+                  Port 443
+                """,
+
+                """""",
+        ]
+    }
+
+    def "fails if config is malformed"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def configPath = tmpdir.resolve("config-malformed")
+        Files.createDirectories(configPath.getParent())
+        configPath.toFile().write(content.stripIndent().replace("\n", System.lineSeparator()))
+
+        when:
+        ccm.configSsh(List.of(), configPath)
+
+        then:
+        thrown(SSHConfigFormatException)
+
+        where:
+        content << [
+                """# --- START CODER JETBRAINS test.coder.invalid
+                some jetbrains config""",
+                """some jetbrains config
+                # --- END CODER JETBRAINS test.coder.invalid""",
+                """# --- END CODER JETBRAINS test.coder.invalid
+                some jetbrains config
+                # --- START CODER JETBRAINS test.coder.invalid""",
+                """# --- START CODER JETBRAINS test.coder.something-else
+                some jetbrains config
+                # --- END CODER JETBRAINS test.coder.invalid""",
+        ]
     }
 }
