@@ -354,7 +354,12 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 localWizardModel.token = token
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                connect()
+                // It could be jarring to suddenly ask for a token when you are
+                // just trying to launch the Coder plugin so in this case where
+                // we are trying to automatically connect to the last deployment
+                // (or the deployment in the CLI config) do not ask for the
+                // token again until they explicitly press connect.
+                connect(false)
             }
         }
         updateWorkspaceActions()
@@ -431,9 +436,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * Existing workspaces will be immediately cleared before attempting to
      * connect to the new deployment.
      *
-     * If the token is invalid abort and start over from askTokenAndConnect().
+     * If the token is invalid abort and start over from askTokenAndConnect()
+     * unless retry is false.
      */
-    private fun connect() {
+    private fun connect(retry: Boolean = true) {
         // Clear out old deployment details.
         poller?.cancel()
         listTableModelOfWorkspaces.items = emptyList()
@@ -469,7 +475,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 triggerWorkspacePolling(false)
             } catch (e: AuthenticationResponseException) {
                 logger.error("Token was rejected by $deploymentURL; has your token expired?", e)
-                askTokenAndConnect(false) // Try again but no more opening browser windows.
+                if (retry) {
+                    askTokenAndConnect(false) // Try again but no more opening browser windows.
+                }
             } catch (e: SocketTimeoutException) {
                 logger.error("Unable to connect to $deploymentURL; is it up?", e)
             } catch (e: ResponseException) {
