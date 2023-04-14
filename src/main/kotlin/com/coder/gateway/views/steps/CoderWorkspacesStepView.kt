@@ -420,9 +420,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             return // User aborted.
         }
         localWizardModel.token = pastedToken
-        // If the token ends up being invalid we will ask for it again; pass
-        // false so we do not keep endlessly opening the browser.
-        connect(false)
+        connect()
     }
 
     /**
@@ -435,7 +433,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      *
      * If the token is invalid abort and start over from askTokenAndConnect().
      */
-    private fun connect(openBrowser: Boolean = true) {
+    private fun connect() {
         // Clear out old deployment details.
         poller?.cancel()
         listTableModelOfWorkspaces.items = emptyList()
@@ -471,7 +469,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 triggerWorkspacePolling(false)
             } catch (e: AuthenticationResponseException) {
                 logger.error("Token was rejected by $deploymentURL; has your token expired?", e)
-                askTokenAndConnect(openBrowser)
+                askTokenAndConnect(false) // Try again but no more opening browser windows.
             } catch (e: SocketTimeoutException) {
                 logger.error("Unable to connect to $deploymentURL; is it up?", e)
             } catch (e: ResponseException) {
