@@ -519,7 +519,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     )
                     sessionTokenTextField = textField().applyToComponent {
                         text = existingToken
-                        minimumSize = Dimension(320, -1)
+                        minimumSize = Dimension(520, -1)
                     }.component
                 }
             }
