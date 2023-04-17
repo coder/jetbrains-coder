@@ -322,8 +322,8 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
     def "configures an SSH file"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
         if (input != null) {
             Files.createDirectories(sshConfigPath.getParent())
             def originalConf = Path.of("src/test/fixtures/inputs").resolve(input + ".conf").toFile().text
@@ -338,13 +338,13 @@ class CoderCLIManagerTest extends spock.lang.Specification {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
 
         when:
-        ccm.configSsh(workspaces.collect { randWorkspace(it) }, sshConfigPath)
+        ccm.configSsh(workspaces.collect { randWorkspace(it) })
 
         then:
         sshConfigPath.toFile().text == expectedConf
 
         when:
-        ccm.configSsh(List.of(), sshConfigPath)
+        ccm.configSsh(List.of())
 
         then:
         sshConfigPath.toFile().text == Path.of("src/test/fixtures/inputs").resolve(remove + ".conf").toFile().text
@@ -367,8 +367,8 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
     def "fails if config is malformed"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
         def sshConfigPath = tmpdir.resolve("configured" + input + ".conf")
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
         Files.createDirectories(sshConfigPath.getParent())
         Files.copy(
                 Path.of("src/test/fixtures/inputs").resolve(input + ".conf"),
@@ -377,7 +377,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         )
 
         when:
-        ccm.configSsh(List.of(), sshConfigPath)
+        ccm.configSsh(List.of())
 
         then:
         thrown(SSHConfigFormatException)

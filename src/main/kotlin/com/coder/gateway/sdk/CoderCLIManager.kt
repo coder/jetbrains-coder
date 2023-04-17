@@ -24,7 +24,11 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, destinationDir: Path = getDataDir()) {
+class CoderCLIManager @JvmOverloads constructor(
+    private val deploymentURL: URL,
+    destinationDir: Path = getDataDir(),
+    private val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
+) {
     private var remoteBinaryUrl: URL
     var localBinaryPath: Path
     private var coderConfigPath: Path
@@ -163,10 +167,27 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
     /**
      * Configure SSH to use this binary.
      */
-    fun configSsh(
-        workspaces: List<WorkspaceAgentModel>,
-        sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
-    ) {
+    fun configSsh(workspaces: List<WorkspaceAgentModel>) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces))
+    }
+
+    /**
+     * Return the contents of the SSH config or null if it does not exist.
+     */
+    private fun readSSHConfig(): String? {
+        return try {
+            sshConfigPath.toFile().readText()
+        } catch (e: FileNotFoundException) {
+            null
+        }
+    }
+
+    /**
+     * Given an existing SSH config modify it to add or remove the config for
+     * this deployment and return the modified config or null if it does not
+     * need to be modified.
+     */
+    private fun modifySSHConfig(contents: String?, workspaces: List<WorkspaceAgentModel>): String? {
         val host = getSafeHost(deploymentURL)
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
@@ -187,53 +208,68 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
                   SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                 """.trimIndent().replace("\n", System.lineSeparator())
             })
-        Files.createDirectories(sshConfigPath.parent)
-        try {
-            val contents = sshConfigPath.toFile().readText()
-            val start = "(\\s*)$startBlock".toRegex().find(contents)
-            val end = "$endBlock(\\s*)".toRegex().find(contents)
-            if (start == null && end == null && isRemoving) {
-                logger.info("Leaving $sshConfigPath alone since there are no workspaces and no config to remove")
-            } else if (start == null && end == null) {
-                logger.info("Appending config to $sshConfigPath")
-                val toAppend = if (contents.isEmpty()) blockContent else listOf(
-                    contents,
-                    blockContent
-                ).joinToString(System.lineSeparator())
-                sshConfigPath.toFile().writeText(toAppend + System.lineSeparator())
-            } else if (start == null) {
-                throw SSHConfigFormatException("End block exists but no start block")
-            } else if (end == null) {
-                throw SSHConfigFormatException("Start block exists but no end block")
-            } else if (start.range.first > end.range.first) {
-                throw SSHConfigFormatException("Start block found after end block")
-            } else if (isRemoving) {
-                logger.info("Removing config from $sshConfigPath")
-                sshConfigPath.toFile().writeText(
-                    listOf(
-                        contents.substring(0, start.range.first),
-                        // Need to keep the trailing newline(s) if we are not at
-                        // the front of the file otherwise the before and after
-                        // lines would get joined.
-                        if (start.range.first > 0) end.groupValues[1] else "",
-                        contents.substring(end.range.last + 1)
-                    ).joinToString("")
-                )
-            } else {
-                logger.info("Replacing config in $sshConfigPath")
-                sshConfigPath.toFile().writeText(
-                    listOf(
-                        contents.substring(0, start.range.first),
-                        start.groupValues[1], // Leading newline(s).
-                        blockContent,
-                        end.groupValues[1], // Trailing newline(s).
-                        contents.substring(end.range.last + 1)
-                    ).joinToString("")
-                )
-            }
-        } catch (e: FileNotFoundException) {
-            logger.info("Writing config to $sshConfigPath")
-            sshConfigPath.toFile().writeText(blockContent + System.lineSeparator())
+
+        if (contents == null) {
+            logger.info("No existing SSH config to modify")
+            return blockContent + System.lineSeparator()
+        }
+
+        val start = "(\\s*)$startBlock".toRegex().find(contents)
+        val end = "$endBlock(\\s*)".toRegex().find(contents)
+
+        if (start == null && end == null && isRemoving) {
+            logger.info("No workspaces and no existing config blocks to remove")
+            return null
+        }
+
+        if (start == null && end == null) {
+            logger.info("Appending config block")
+            val toAppend = if (contents.isEmpty()) blockContent else listOf(
+                contents,
+                blockContent
+            ).joinToString(System.lineSeparator())
+            return toAppend + System.lineSeparator()
+        }
+
+        if (start == null) {
+            throw SSHConfigFormatException("End block exists but no start block")
+        }
+        if (end == null) {
+            throw SSHConfigFormatException("Start block exists but no end block")
+        }
+        if (start.range.first > end.range.first) {
+            throw SSHConfigFormatException("Start block found after end block")
+        }
+
+        if (isRemoving) {
+            logger.info("No workspaces; removing config block")
+            return listOf(
+                contents.substring(0, start.range.first),
+                // Need to keep the trailing newline(s) if we are not at the
+                // front of the file otherwise the before and after lines would
+                // get joined.
+                if (start.range.first > 0) end.groupValues[1] else "",
+                contents.substring(end.range.last + 1)
+            ).joinToString("")
+        }
+
+        logger.info("Replacing existing config block")
+        return listOf(
+            contents.substring(0, start.range.first),
+            start.groupValues[1], // Leading newline(s).
+            blockContent,
+            end.groupValues[1], // Trailing newline(s).
+            contents.substring(end.range.last + 1)
+        ).joinToString("")
+    }
+
+    /**
+     * Write the provided SSH config or do nothing if null.
+     */
+    private fun writeSSHConfig(contents: String?) {
+        if (contents != null) {
+            Files.createDirectories(sshConfigPath.parent)
+            sshConfigPath.toFile().writeText(contents)
         }
     }
 
