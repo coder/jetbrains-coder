@@ -41,8 +41,8 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
         // necessary character set.
         val host = getSafeHost(deploymentURL)
         val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
-        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName)
-        coderConfigPath = destinationDir.resolve(subdir).resolve("config")
+        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName).toAbsolutePath()
+        coderConfigPath = destinationDir.resolve(subdir).resolve("config").toAbsolutePath()
     }
 
     /**
@@ -84,7 +84,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
         val etag = getBinaryETag()
         val conn = remoteBinaryUrl.openConnection() as HttpURLConnection
         if (etag != null) {
-            logger.info("Found existing binary at ${localBinaryPath.toAbsolutePath()}; calculated hash as $etag")
+            logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
@@ -94,7 +94,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
             logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
             when (conn.responseCode) {
                 HttpURLConnection.HTTP_OK -> {
-                    logger.info("Downloading binary to ${localBinaryPath.toAbsolutePath()}")
+                    logger.info("Downloading binary to $localBinaryPath")
                     Files.createDirectories(localBinaryPath.parent)
                     conn.inputStream.use {
                         Files.copy(
@@ -113,7 +113,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
                 }
 
                 HttpURLConnection.HTTP_NOT_MODIFIED -> {
-                    logger.info("Using cached binary at ${localBinaryPath.toAbsolutePath()}")
+                    logger.info("Using cached binary at $localBinaryPath")
                     return false
                 }
             }
@@ -140,7 +140,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
         } catch (e: FileNotFoundException) {
             null
         } catch (e: Exception) {
-            logger.warn("Unable to calculate hash for ${localBinaryPath.toAbsolutePath()}", e)
+            logger.warn("Unable to calculate hash for $localBinaryPath", e)
             null
         }
     }
@@ -156,7 +156,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
             "--token",
             token,
             "--global-config",
-            coderConfigPath.toAbsolutePath().toString(),
+            coderConfigPath.toString(),
         )
     }
 
@@ -179,7 +179,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
                 """
                 Host ${getHostName(deploymentURL, it)}
                   HostName coder.${it.name}
-                  ProxyCommand "${localBinaryPath.toAbsolutePath()}" --global-config "${coderConfigPath.toAbsolutePath()}" ssh --stdio ${it.name}
+                  ProxyCommand "$localBinaryPath" --global-config "$coderConfigPath" ssh --stdio ${it.name}
                   ConnectTimeout 0
                   StrictHostKeyChecking no
                   UserKnownHostsFile /dev/null
