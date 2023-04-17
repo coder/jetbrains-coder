@@ -196,12 +196,11 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
                 logger.info("Leaving $sshConfigPath alone since there are no workspaces and no config to remove")
             } else if (start == null && end == null) {
                 logger.info("Appending config to $sshConfigPath")
-                sshConfigPath.toFile().writeText(
-                    if (contents.isEmpty()) blockContent else listOf(
-                        contents,
-                        blockContent
-                    ).joinToString(System.lineSeparator())
-                )
+                val toAppend = if (contents.isEmpty()) blockContent else listOf(
+                    contents,
+                    blockContent
+                ).joinToString(System.lineSeparator())
+                sshConfigPath.toFile().writeText(toAppend + System.lineSeparator())
             } else if (start == null) {
                 throw SSHConfigFormatException("End block exists but no start block")
             } else if (end == null) {
@@ -234,7 +233,7 @@ class CoderCLIManager @JvmOverloads constructor(private val deploymentURL: URL, 
             }
         } catch (e: FileNotFoundException) {
             logger.info("Writing config to $sshConfigPath")
-            sshConfigPath.toFile().writeText(blockContent)
+            sshConfigPath.toFile().writeText(blockContent + System.lineSeparator())
         }
     }
 
