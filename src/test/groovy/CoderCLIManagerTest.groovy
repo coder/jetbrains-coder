@@ -1,5 +1,9 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.models.WorkspaceAgentStatus
+import com.coder.gateway.models.WorkspaceVersionStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -9,6 +13,7 @@ import spock.lang.Unroll
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 @Unroll
 class CoderCLIManagerTest extends spock.lang.Specification {
@@ -295,5 +300,94 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     def "gets data dir from LOCALAPPDATA"() {
         expect:
         Path.of("/tmp/coder-gateway-test/localappdata/coder-gateway") == dataDir()
+    }
+
+    private WorkspaceAgentModel randWorkspace(String name) {
+        return new WorkspaceAgentModel(
+                UUID.randomUUID(),
+                name,
+                name,
+                UUID.randomUUID(),
+                "template-name",
+                "template-icon-path",
+                null,
+                WorkspaceVersionStatus.UPDATED,
+                WorkspaceAgentStatus.RUNNING,
+                WorkspaceTransition.START,
+                null,
+                null,
+                null
+        )
+    }
+
+    def "configures an SSH file"() {
+        given:
+        def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
+        if (input != null) {
+            Files.createDirectories(sshConfigPath.getParent())
+            def originalConf = Path.of("src/test/fixtures/inputs").resolve(input + ".conf").toFile().text
+                    .replaceAll("\\r?\\n", System.lineSeparator())
+            sshConfigPath.toFile().write(originalConf)
+        }
+        def coderConfigPath = ccm.localBinaryPath.getParent().resolve("config")
+
+        def expectedConf = Path.of("src/test/fixtures/outputs/").resolve(output + ".conf").toFile().text
+                .replaceAll("\\r?\\n", System.lineSeparator())
+                .replace("/tmp/coder-gateway/test.coder.invalid/config", coderConfigPath.toString())
+                .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
+
+        when:
+        ccm.configSsh(workspaces.collect { randWorkspace(it) })
+
+        then:
+        sshConfigPath.toFile().text == expectedConf
+
+        when:
+        ccm.configSsh(List.of())
+
+        then:
+        sshConfigPath.toFile().text == Path.of("src/test/fixtures/inputs").resolve(remove + ".conf").toFile().text
+
+        where:
+        workspaces     | input                           | output                            | remove
+        ["foo", "bar"] | null                            | "multiple-workspaces"             | "blank"
+        ["foo-bar"]    | "blank"                         | "append-blank"                    | "blank"
+        ["foo-bar"]    | "blank-newlines"                | "append-blank-newlines"           | "blank"
+        ["foo-bar"]    | "existing-end"                  | "replace-end"                     | "no-blocks"
+        ["foo-bar"]    | "existing-end-no-newline"       | "replace-end-no-newline"          | "no-blocks"
+        ["foo-bar"]    | "existing-middle"               | "replace-middle"                  | "no-blocks"
+        ["foo-bar"]    | "existing-middle-and-unrelated" | "replace-middle-ignore-unrelated" | "no-related-blocks"
+        ["foo-bar"]    | "existing-only"                 | "replace-only"                    | "blank"
+        ["foo-bar"]    | "existing-start"                | "replace-start"                   | "no-blocks"
+        ["foo-bar"]    | "no-blocks"                     | "append-no-blocks"                | "no-blocks"
+        ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks"
+        ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"
+    }
+
+    def "fails if config is malformed"() {
+        given:
+        def sshConfigPath = tmpdir.resolve("configured" + input + ".conf")
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
+        Files.createDirectories(sshConfigPath.getParent())
+        Files.copy(
+                Path.of("src/test/fixtures/inputs").resolve(input + ".conf"),
+                sshConfigPath,
+                StandardCopyOption.REPLACE_EXISTING,
+        )
+
+        when:
+        ccm.configSsh(List.of())
+
+        then:
+        thrown(SSHConfigFormatException)
+
+        where:
+        input << [
+                "malformed-mismatched-start",
+                "malformed-no-end",
+                "malformed-no-start",
+                "malformed-start-after-end",
+        ]
     }
 }

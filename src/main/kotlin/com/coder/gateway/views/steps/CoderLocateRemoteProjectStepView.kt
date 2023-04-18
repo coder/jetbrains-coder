@@ -5,8 +5,10 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.Arch
+import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.views.LazyBrowserLink
@@ -30,7 +32,12 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.dsl.builder.*
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.BottomGap
+import com.intellij.ui.dsl.builder.RightGap
+import com.intellij.ui.dsl.builder.RowLayout
+import com.intellij.ui.dsl.builder.TopGap
+import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -61,7 +68,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.FlowLayout
 import java.time.Duration
-import java.util.*
+import java.util.Locale
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JLabel
@@ -151,9 +158,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         cbIDE.renderer = IDECellRenderer()
         ideComboBoxModel.removeAllElements()
+        val deploymentURL = wizardModel.coderURL.toURL()
         val selectedWorkspace = wizardModel.selectedWorkspace
         if (selectedWorkspace == null) {
-            logger.warn("No workspace was selected. Please go back to the previous step and select a Coder Workspace")
+            // TODO: Should be impossible, tweak the types/flow to enforce this.
+            logger.warn("No workspace was selected. Please go back to the previous step and select a workspace")
             return
         }
 
@@ -163,7 +172,9 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         ideResolvingJob = cs.launch {
             try {
-                val executor = withTimeout(Duration.ofSeconds(60)) { createRemoteExecutor(selectedWorkspace) }
+                val executor = withTimeout(Duration.ofSeconds(60)) {
+                    createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                }
                 retrieveIDES(executor, selectedWorkspace)
                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                     installRemotePathValidator(executor)
@@ -235,10 +246,10 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         })
     }
 
-    private suspend fun createRemoteExecutor(selectedWorkspace: WorkspaceAgentModel): HighLevelHostAccessor {
+    private suspend fun createRemoteExecutor(host: String): HighLevelHostAccessor {
         return HighLevelHostAccessor.create(
             RemoteCredentialsHolder().apply {
-                setHost("coder.${selectedWorkspace.name}")
+                setHost(host)
                 userName = "coder"
                 port = 22
                 authType = AuthType.OPEN_SSH
@@ -310,11 +321,18 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
         val selectedIDE = cbIDE.selectedItem ?: return false
         logger.info("Going to launch the IDE")
+        val deploymentURL = wizardModel.coderURL.toURL()
+        val selectedWorkspace = wizardModel.selectedWorkspace
+        if (selectedWorkspace == null) {
+            // TODO: Should be impossible, tweak the types/flow to enforce this.
+            logger.warn("No workspace was selected. Please go back to the previous step and select a workspace")
+            return false
+        }
         cs.launch {
             GatewayUI.getInstance().connect(
                 selectedIDE
                     .toWorkspaceParams()
-                    .withWorkspaceHostname("coder.${wizardModel.selectedWorkspace?.name}")
+                    .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
                     .withProjectPath(tfProject.text)
                     .withWebTerminalLink("${terminalLink.url}")
             )

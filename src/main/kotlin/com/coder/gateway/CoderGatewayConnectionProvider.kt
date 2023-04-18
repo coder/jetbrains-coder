@@ -21,6 +21,8 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
     override suspend fun connect(parameters: Map<String, String>, requestor: ConnectionRequestor): GatewayConnectionHandle? {
         val clientLifetime = LifetimeDefinition()
+        // TODO: If this fails determine if it is an auth error and if so prompt
+        // for a new token, configure the CLI, then try again.
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title"), canBeCancelled = true, isIndeterminate = true, project = null) {
             val context = SshMultistagePanelContext(parameters.toHostDeployInputs())
             logger.info("Deploying and starting IDE with $context")
