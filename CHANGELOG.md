@@ -4,10 +4,30 @@
 
 ## Unreleased
 
+### Added
+- support connecting to multiple deployments (existing connections will still be
+  using the old method; please re-add them if you connect to multiple
+  deployments)
+- settings page for configuring both the source and destination of the CLI
+- listing editors and connecting will retry automatically on failure
+- surface various errors in the UI to make them more immediately visible
+
+### Changed
+- a token dialog and browser will not be launched when automatically connecting
+  to the last known deployment; these actions will only take place when you
+  explicitly interact by pressing "connect"
+- token dialog has been widened so the entire token can be seen at once
+
 ### Fixed
 - the help text under the IDE dropdown now takes into account whether the IDE is
   already installed
 - various minor alignment issues
+- workspaces table now updates when the agent status changes
+- connecting when the directory contains a tilde
+- selection getting lost when a workspace starts or stops
+- wait for the agent to become fully ready before connecting
+- avoid populating the token dialog with the last known token if it was for a
+  different deployment
 
 ## 2.2.1 - 2023-03-23
 
