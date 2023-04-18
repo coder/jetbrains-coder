@@ -26,27 +26,35 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
  */
 class CoderCLIManager @JvmOverloads constructor(
     private val deploymentURL: URL,
-    destinationDir: Path = getDataDir(),
+    destinationDir: Path? = null,
+    remoteBinaryURLOverride: String? = null,
     private val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
 ) {
-    private var remoteBinaryUrl: URL
+    var remoteBinaryURL: URL
     var localBinaryPath: Path
     private var coderConfigPath: Path
 
     init {
         val binaryName = getCoderCLIForOS(getOS(), getArch())
-        remoteBinaryUrl = URL(
+        remoteBinaryURL = URL(
             deploymentURL.protocol,
             deploymentURL.host,
             deploymentURL.port,
             "/bin/$binaryName"
         )
-        // Convert IDN to ASCII in case the file system cannot support the
-        // necessary character set.
+        if (!remoteBinaryURLOverride.isNullOrBlank()) {
+            logger.info("Using remote binary override $remoteBinaryURLOverride")
+            remoteBinaryURL = try {
+                remoteBinaryURLOverride.toURL()
+            } catch (e: Exception) {
+                remoteBinaryURL.withPath(remoteBinaryURLOverride)
+            }
+        }
+        val dir = destinationDir ?: getDataDir()
         val host = getSafeHost(deploymentURL)
         val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
-        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName).toAbsolutePath()
-        coderConfigPath = destinationDir.resolve(subdir).resolve("config").toAbsolutePath()
+        localBinaryPath = dir.resolve(subdir).resolve(binaryName).toAbsolutePath()
+        coderConfigPath = dir.resolve(subdir).resolve("config").toAbsolutePath()
     }
 
     /**
@@ -86,7 +94,7 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     fun downloadCLI(): Boolean {
         val etag = getBinaryETag()
-        val conn = remoteBinaryUrl.openConnection() as HttpURLConnection
+        val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (etag != null) {
             logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
@@ -95,7 +103,7 @@ class CoderCLIManager @JvmOverloads constructor(
 
         try {
             conn.connect()
-            logger.info("GET ${conn.responseCode} $remoteBinaryUrl")
+            logger.info("GET ${conn.responseCode} $remoteBinaryURL")
             when (conn.responseCode) {
                 HttpURLConnection.HTTP_OK -> {
                     logger.info("Downloading binary to $localBinaryPath")
@@ -124,7 +132,7 @@ class CoderCLIManager @JvmOverloads constructor(
         } finally {
             conn.disconnect()
         }
-        throw ResponseException("Unexpected response from $remoteBinaryUrl", conn.responseCode)
+        throw ResponseException("Unexpected response from $remoteBinaryURL", conn.responseCode)
     }
 
     /**
@@ -356,6 +364,10 @@ class CoderCLIManager @JvmOverloads constructor(
             }
         }
 
+        /**
+         * Convert IDN to ASCII in case the file system cannot support the
+         * necessary character set.
+         */
         private fun getSafeHost(url: URL): String {
             return IDN.toASCII(url.host, IDN.ALLOW_UNASSIGNED)
         }
