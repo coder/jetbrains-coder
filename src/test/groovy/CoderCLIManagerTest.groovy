@@ -20,7 +20,7 @@ import java.security.MessageDigest
 @Unroll
 class CoderCLIManagerTest extends Specification {
     @Shared
-    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test")
+    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test/cli-manager")
 
     /**
      * Create, start, and return a server that mocks Coder.
