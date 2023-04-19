@@ -291,6 +291,7 @@ class CoderCLIManager @JvmOverloads constructor(
     private fun exec(vararg args: String): String {
         val stdout = ProcessExecutor()
             .command(localBinaryPath.toString(), *args)
+            .exitValues(0)
             .readOutput(true)
             .execute()
             .outputUTF8()

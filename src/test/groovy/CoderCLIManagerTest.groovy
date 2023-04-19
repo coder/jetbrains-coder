@@ -7,6 +7,8 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import org.zeroturnaround.exec.InvalidExitValueException
+import org.zeroturnaround.exec.ProcessInitException
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
@@ -140,6 +142,13 @@ class CoderCLIManagerTest extends Specification {
         then:
         downloaded
         ccm.version().contains("Coder")
+
+        // Make sure login failures propagate correctly.
+        when:
+        ccm.login("jetbrains-ci-test")
+
+        then:
+        thrown(InvalidExitValueException)
     }
 
     def "downloads a mocked cli"() {
@@ -160,6 +169,17 @@ class CoderCLIManagerTest extends Specification {
 
         cleanup:
         srv.stop(0)
+    }
+
+    def "fails to run non-existent binary"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://foo"), tmpdir.resolve("does-not-exist"))
+
+        when:
+        ccm.version()
+
+        then:
+        thrown(ProcessInitException)
     }
 
     def "overwrites cli if incorrect version"() {
