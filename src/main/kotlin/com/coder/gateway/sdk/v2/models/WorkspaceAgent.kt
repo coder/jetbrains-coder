@@ -20,11 +20,12 @@ data class WorkspaceAgent(
     @SerializedName("operating_system") val operatingSystem: String,
     @SerializedName("startup_script") val startupScript: String?,
     @SerializedName("directory") val directory: String?,
+    @SerializedName("expanded_directory") val expandedDirectory: String?,
     @SerializedName("version") val version: String,
     @SerializedName("apps") val apps: List<WorkspaceApp>,
     @SerializedName("latency") val derpLatency: Map<String, DERPRegion>?,
     @SerializedName("connection_timeout_seconds") val connectionTimeoutSeconds: Int,
-    @SerializedName("troubleshooting_url") val troubleshootingURL: String
+    @SerializedName("troubleshooting_url") val troubleshootingURL: String,
 )
 
 enum class WorkspaceAgentStatus {
