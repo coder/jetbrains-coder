@@ -209,12 +209,13 @@ class CoderCLIManagerTest extends Specification {
         def ccm = new CoderCLIManager(new URL(url), tmpdir)
 
         when:
-        ccm.downloadCLI()
+        def downloaded1 = ccm.downloadCLI()
         ccm.localBinaryPath.toFile().setLastModified(0)
-        def downloaded = ccm.downloadCLI()
+        def downloaded2 = ccm.downloadCLI()
 
         then:
-        !downloaded
+        downloaded1
+        !downloaded2
         ccm.localBinaryPath.toFile().lastModified() == 0
 
         cleanup:

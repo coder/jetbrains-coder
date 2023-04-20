@@ -24,6 +24,7 @@ import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.withPath
+import com.coder.gateway.services.CoderSettingsState
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -77,6 +78,7 @@ import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
 import java.net.SocketTimeoutException
 import java.net.URL
+import java.nio.file.Path
 import javax.swing.Icon
 import javax.swing.JCheckBox
 import javax.swing.JTable
@@ -97,6 +99,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val coderClient: CoderRestClientService = service()
     private val iconDownloader: TemplateIconDownloader = service()
+    private val settings: CoderSettingsState = service()
 
     private val appPropertiesService: PropertiesComponent = service()
 
@@ -462,7 +465,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(SESSION_TOKEN, token)
 
                 this.indicator.text = "Downloading Coder CLI..."
-                val cliManager = CoderCLIManager(deploymentURL)
+                val cliManager = CoderCLIManager(
+                    deploymentURL,
+                    if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination) else null,
+                    settings.binarySource,
+                )
                 cliManager.downloadCLI()
 
                 this.indicator.text = "Authenticating Coder CLI..."
@@ -713,7 +720,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             poller?.cancel()
 
             logger.info("Configuring Coder CLI...")
-            val cliManager = CoderCLIManager(wizardModel.coderURL.toURL())
+            val cliManager = CoderCLIManager(
+                wizardModel.coderURL.toURL(),
+                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination) else null,
+                settings.binarySource,
+            )
             cliManager.configSsh(listTableModelOfWorkspaces.items)
 
             logger.info("Opening IDE and Project Location window for ${workspace.name}")
