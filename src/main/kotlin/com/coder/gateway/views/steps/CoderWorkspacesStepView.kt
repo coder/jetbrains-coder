@@ -461,15 +461,15 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN, token)
 
-                this.indicator.text = "Retrieving workspaces..."
-                loadWorkspaces()
-
                 this.indicator.text = "Downloading Coder CLI..."
                 val cliManager = CoderCLIManager(deploymentURL)
                 cliManager.downloadCLI()
 
                 this.indicator.text = "Authenticating Coder CLI..."
                 cliManager.login(token)
+
+                this.indicator.text = "Retrieving workspaces..."
+                loadWorkspaces()
 
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
