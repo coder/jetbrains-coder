@@ -655,7 +655,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                         this.latestBuild.transition,
                         OS.from(agent.operatingSystem),
                         Arch.from(agent.architecture),
-                        agent.directory
+                        agent.expandedDirectory ?: agent.directory,
                     )
                     cs.launch(Dispatchers.IO) {
                         wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
