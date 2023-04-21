@@ -14,7 +14,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.PosixFilePermissions
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
@@ -116,10 +115,7 @@ class CoderCLIManager @JvmOverloads constructor(
                         )
                     }
                     if (getOS() != OS.WINDOWS) {
-                        Files.setPosixFilePermissions(
-                            localBinaryPath,
-                            PosixFilePermissions.fromString("rwxr-x---")
-                        )
+                        localBinaryPath.toFile().setExecutable(true)
                     }
                     return true
                 }
