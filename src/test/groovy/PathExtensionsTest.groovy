@@ -12,35 +12,47 @@ class PathExtensionsTest extends Specification {
     @Shared
     private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir"))
     @Shared
-    private Path unwritable = tmpdir.resolve("coder-gateway-test/path-extensions/unwritable")
+    private Path unwritableFile = tmpdir.resolve("coder-gateway-test/path-extensions/unwritable/file")
+    @Shared
+    private Path writableFile = tmpdir.resolve("coder-gateway-test/path-extensions/writable-file")
 
     void setupSpec() {
-        if (unwritable.parent.toFile().exists()) {
-            unwritable.parent.toFile().setWritable(true)
-            unwritable.parent.toFile().deleteDir()
+        // TODO: On Windows setWritable() only sets read-only; how do we set
+        // actual permissions?  Initially I tried an existing dir like WINDIR
+        // which worked locally but in CI that is writable for some reason.
+        if (unwritableFile.parent.toFile().exists()) {
+            unwritableFile.parent.toFile().setWritable(true)
+            unwritableFile.parent.toFile().deleteDir()
         }
-        Files.createDirectories(unwritable.parent)
-        unwritable.toFile().write("text")
-        unwritable.toFile().setWritable(false)
-        unwritable.parent.toFile().setWritable(false)
+        Files.createDirectories(unwritableFile.parent)
+        unwritableFile.toFile().write("text")
+        writableFile.toFile().write("text")
+        unwritableFile.toFile().setWritable(false)
+        unwritableFile.parent.toFile().setWritable(false)
     }
 
-    def "canWrite"() {
+    def "canCreateDirectory"() {
         expect:
         use(PathExtensionsKt) {
-            path.canWrite() == expected
+            path.canCreateDirectory() == expected
         }
 
         where:
-        path                                            | expected
-        unwritable                                      | false
-        unwritable.resolve("probably/nonexistent")      | false
-        Path.of("relative to project")                  | true
-        tmpdir.resolve("./foo/bar/../..")               | true
-        tmpdir                                          | true
-        tmpdir.resolve("some/nested/non-existent/path") | true
-        tmpdir.resolve("with space")                    | true
-        CoderCLIManager.getConfigDir()                  | true
-        CoderCLIManager.getDataDir()                    | true
+        path                                                                 | expected
+        unwritableFile                                                       | false
+        unwritableFile.resolve("probably/nonexistent")                       | false
+        // TODO: Java reports read-only directories on Windows as writable.
+        unwritableFile.parent.resolve("probably/nonexistent")                | System.getProperty("os.name").toLowerCase().contains("windows")
+        writableFile                                                         | false
+        writableFile.parent                                                  | true
+        writableFile.resolve("nested/under/file")                            | false
+        writableFile.parent.resolve("nested/under/dir")                      | true
+        Path.of("relative to project")                                       | true
+        tmpdir.resolve("./foo/bar/../../coder-gateway-test/path-extensions") | true
+        tmpdir                                                               | true
+        tmpdir.resolve("some/nested/non-existent/path")                      | true
+        tmpdir.resolve("with space")                                         | true
+        CoderCLIManager.getConfigDir()                                       | true
+        CoderCLIManager.getDataDir()                                         | true
     }
 }

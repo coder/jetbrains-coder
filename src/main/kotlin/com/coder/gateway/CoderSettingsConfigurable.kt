@@ -1,7 +1,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.sdk.CoderCLIManager
-import com.coder.gateway.sdk.canWrite
+import com.coder.gateway.sdk.canCreateDirectory
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable
@@ -45,8 +45,8 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
     }
 
     private fun validateBinaryDestination(): ValidationInfoBuilder.(JBTextField) -> ValidationInfo? = {
-        if (it.text.isNotBlank() && !Path.of(it.text).canWrite()) {
-            error("Cannot write to this path")
+        if (it.text.isNotBlank() && !Path.of(it.text).canCreateDirectory()) {
+            error("Cannot create this directory")
         } else {
             null
         }
