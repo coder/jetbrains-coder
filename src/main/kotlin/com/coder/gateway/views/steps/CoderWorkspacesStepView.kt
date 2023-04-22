@@ -357,12 +357,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 localWizardModel.token = token
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                // It could be jarring to suddenly ask for a token when you are
-                // just trying to launch the Coder plugin so in this case where
-                // we are trying to automatically connect to the last deployment
-                // (or the deployment in the CLI config) do not ask for the
-                // token again until they explicitly press connect.
-                connect(false)
+                connect(url.toURL(), token)
             }
         }
         updateWorkspaceActions()
@@ -415,6 +410,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     /**
      * Ask for a new token (regardless of whether we already have a token),
      * place it in the local model, then connect.
+     *
+     * If the token is invalid abort and start over from askTokenAndConnect()
+     * unless retry is false.
      */
     private fun askTokenAndConnect(openBrowser: Boolean = true) {
         component.apply() // Force bindings to be filled.
@@ -428,7 +426,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             return // User aborted.
         }
         localWizardModel.token = pastedToken
-        connect()
+        connect(localWizardModel.coderURL.toURL(), localWizardModel.token) {
+            askTokenAndConnect(false)
+        }
     }
 
     /**
@@ -439,20 +439,16 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * Existing workspaces will be immediately cleared before attempting to
      * connect to the new deployment.
      *
-     * If the token is invalid abort and start over from askTokenAndConnect()
-     * unless retry is false.
+     * If the token is invalid invoke onAuthFailure.
      */
-    private fun connect(retry: Boolean = true) {
+    private fun connect(deploymentURL: URL, token: String, onAuthFailure: (() -> Unit)? = null): Job {
         // Clear out old deployment details.
         poller?.cancel()
         listTableModelOfWorkspaces.items = emptyList()
 
-        val deploymentURL = localWizardModel.coderURL.toURL()
-        val token = localWizardModel.token
-
         // Authenticate and load in a background process with progress.
         // TODO: Make this cancelable.
-        LifetimeDefinition().launchUnderBackgroundProgress(
+        return LifetimeDefinition().launchUnderBackgroundProgress(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"),
             canBeCancelled = false,
             isIndeterminate = true
