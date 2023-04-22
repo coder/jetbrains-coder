@@ -38,6 +38,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
+import com.intellij.openapi.ui.setEmptyState
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
@@ -76,6 +77,7 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
+import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.file.Path
@@ -126,6 +128,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             minWidth = JBUI.scale(52)
         }
         rowHeight = 48
+        setEmptyState("Disconnected")
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             setNextButtonEnabled(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
@@ -444,6 +447,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private fun connect(deploymentURL: URL, token: String, onAuthFailure: (() -> Unit)? = null): Job {
         // Clear out old deployment details.
         poller?.cancel()
+        tableOfWorkspaces.setEmptyState("Connecting to $deploymentURL...")
         listTableModelOfWorkspaces.items = emptyList()
 
         // Authenticate and load in a background process with progress.
@@ -453,6 +457,12 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             canBeCancelled = false,
             isIndeterminate = true
         ) {
+            val cliManager = CoderCLIManager(
+                deploymentURL,
+                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
+                else CoderCLIManager.getDataDir(),
+                settings.binarySource,
+            )
             try {
                 this.indicator.text = "Authenticating client..."
                 authenticate(deploymentURL, token)
@@ -461,12 +471,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(SESSION_TOKEN, token)
 
                 this.indicator.text = "Downloading Coder CLI..."
-                val cliManager = CoderCLIManager(
-                    deploymentURL,
-                    if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
-                    else CoderCLIManager.getDataDir(),
-                    settings.binarySource,
-                )
                 cliManager.downloadCLI()
 
                 this.indicator.text = "Authenticating Coder CLI..."
@@ -477,17 +481,41 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
-            } catch (e: AuthenticationResponseException) {
-                logger.error("Token was rejected by $deploymentURL; has your token expired?", e)
-                if (retry) {
-                    askTokenAndConnect(false) // Try again but no more opening browser windows.
-                }
-            } catch (e: SocketTimeoutException) {
-                logger.error("Unable to connect to $deploymentURL; is it up?", e)
-            } catch (e: ResponseException) {
-                logger.error("Failed to download Coder CLI", e)
+
+                tableOfWorkspaces.setEmptyState("Connected to $deploymentURL")
             } catch (e: Exception) {
-                logger.error("Failed to configure connection to $deploymentURL", e)
+                val errorSummary = e.message ?: "No reason was provided"
+                var msg = CoderGatewayBundle.message(
+                    "gateway.connector.view.workspaces.connect.failed",
+                    deploymentURL,
+                    errorSummary,
+                )
+                when (e) {
+                    is AuthenticationResponseException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.unauthorized",
+                            deploymentURL,
+                        )
+                        cs.launch { onAuthFailure?.invoke() }
+                    }
+
+                    is SocketTimeoutException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.timeout",
+                            deploymentURL,
+                        )
+                    }
+
+                    is ResponseException, is ConnectException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.download-failed",
+                            cliManager.remoteBinaryURL,
+                            errorSummary,
+                        )
+                    }
+                }
+                tableOfWorkspaces.setEmptyState(msg)
+                logger.error(msg, e)
             }
         }
     }
