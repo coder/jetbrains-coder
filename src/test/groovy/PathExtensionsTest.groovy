@@ -6,29 +6,56 @@ import spock.lang.Unroll
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.AclEntry
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
 
 @Unroll
 class PathExtensionsTest extends Specification {
     @Shared
-    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir"))
-    @Shared
-    private Path unwritableFile = tmpdir.resolve("coder-gateway-test/path-extensions/unwritable/file")
-    @Shared
-    private Path writableFile = tmpdir.resolve("coder-gateway-test/path-extensions/writable-file")
+    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test/path-extensions/")
+
+    private void setWindowsPermissions(Path path) {
+        AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class)
+        AclEntry entry = AclEntry.newBuilder()
+                .setType(AclEntryType.DENY)
+                .setPrincipal(view.getOwner())
+                .setPermissions(AclEntryPermission.WRITE_DATA)
+                .build()
+        List<AclEntry> acl = view.getAcl()
+        acl.set(0, entry)
+        view.setAcl(acl)
+    }
 
     void setupSpec() {
-        // TODO: On Windows setWritable() only sets read-only; how do we set
-        // actual permissions?  Initially I tried an existing dir like WINDIR
-        // which worked locally but in CI that is writable for some reason.
-        if (unwritableFile.parent.toFile().exists()) {
-            unwritableFile.parent.toFile().setWritable(true)
-            unwritableFile.parent.toFile().deleteDir()
+        // Clean up from the last run, if any.
+        tmpdir.toFile().deleteDir()
+
+        // Push out the test files.
+        for (String dir in ["read-only-dir", "no-permissions-dir"]) {
+            Files.createDirectories(tmpdir.resolve(dir))
+            tmpdir.resolve(dir).resolve("file").toFile().write("")
         }
-        Files.createDirectories(unwritableFile.parent)
-        unwritableFile.toFile().write("text")
-        writableFile.toFile().write("text")
-        unwritableFile.toFile().setWritable(false)
-        unwritableFile.parent.toFile().setWritable(false)
+        for (String file in ["read-only-file", "writable-file", "no-permissions-file"]) {
+            tmpdir.resolve(file).toFile().write("")
+        }
+
+        // On Windows `File.setWritable()` only sets read-only, not permissions
+        // so on other platforms "read-only" is the same as "no permissions".
+        tmpdir.resolve("read-only-file").toFile().setWritable(false)
+        tmpdir.resolve("read-only-dir").toFile().setWritable(false)
+
+        // Create files without actual write permissions on Windows (not just
+        // read-only).  On other platforms this is the same as above.
+        tmpdir.resolve("no-permissions-dir/file").toFile().write("")
+        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+            setWindowsPermissions(tmpdir.resolve("no-permissions-file"))
+            setWindowsPermissions(tmpdir.resolve("no-permissions-dir"))
+        } else {
+            tmpdir.resolve("no-permissions-file").toFile().setWritable(false)
+            tmpdir.resolve("no-permissions-dir").toFile().setWritable(false)
+        }
     }
 
     def "canCreateDirectory"() {
@@ -39,20 +66,33 @@ class PathExtensionsTest extends Specification {
 
         where:
         path                                                                 | expected
-        unwritableFile                                                       | false
-        unwritableFile.resolve("probably/nonexistent")                       | false
-        // TODO: Java reports read-only directories on Windows as writable.
-        unwritableFile.parent.resolve("probably/nonexistent")                | System.getProperty("os.name").toLowerCase().contains("windows")
-        writableFile                                                         | false
-        writableFile.parent                                                  | true
-        writableFile.resolve("nested/under/file")                            | false
-        writableFile.parent.resolve("nested/under/dir")                      | true
-        Path.of("relative to project")                                       | true
-        tmpdir.resolve("./foo/bar/../../coder-gateway-test/path-extensions") | true
+        // A file is not valid for directory creation regardless of writability.
+        tmpdir.resolve("read-only-file")                                     | false
+        tmpdir.resolve("read-only-file/nested/under/file")                   | false
+        tmpdir.resolve("writable-file")                                      | false
+        tmpdir.resolve("writable-file/nested/under/file")                    | false
+        tmpdir.resolve("read-only-dir/file")                                 | false
+        tmpdir.resolve("no-permissions-dir/file")                            | false
+
+        // Windows: can create under read-only directories.
+        tmpdir.resolve("read-only-dir")                                      | System.getProperty("os.name").toLowerCase().contains("windows")
+        tmpdir.resolve("read-only-dir/nested/under/dir")                     | System.getProperty("os.name").toLowerCase().contains("windows")
+
+        // Cannot create under a directory without permissions.
+        tmpdir.resolve("no-permissions-dir")                                 | false
+        tmpdir.resolve("no-permissions-dir/nested/under/dir")                | false
+
+        // Can create under a writable directory.
         tmpdir                                                               | true
-        tmpdir.resolve("some/nested/non-existent/path")                      | true
+        tmpdir.resolve("./foo/bar/../../coder-gateway-test/path-extensions") | true
+        tmpdir.resolve("nested/under/dir")                                   | true
         tmpdir.resolve("with space")                                         | true
+
+        // Config/data directories should be fine.
         CoderCLIManager.getConfigDir()                                       | true
         CoderCLIManager.getDataDir()                                         | true
+
+        // Relative paths can work as well.
+        Path.of("relative/to/project")                                       | true
     }
 }
