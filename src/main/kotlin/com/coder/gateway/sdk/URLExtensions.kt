@@ -8,5 +8,8 @@ fun String.toURL(): URL {
 }
 
 fun URL.withPath(path: String): URL {
-    return URL(this.protocol, this.host, this.port, path)
+    return URL(
+        this.protocol, this.host, this.port,
+        if (path.startsWith("/")) path else "/$path"
+    )
 }

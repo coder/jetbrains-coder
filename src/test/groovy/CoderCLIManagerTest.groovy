@@ -7,19 +7,22 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import org.zeroturnaround.exec.InvalidExitValueException
+import org.zeroturnaround.exec.ProcessInitException
 import spock.lang.Requires
 import spock.lang.Shared
+import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 
 @Unroll
-class CoderCLIManagerTest extends spock.lang.Specification {
+class CoderCLIManagerTest extends Specification {
     @Shared
-    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test")
-    private String mockBinaryContent = "#!/bin/sh\necho Coder"
+    private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test/cli-manager")
 
     /**
      * Create, start, and return a server that mocks Coder.
@@ -32,22 +35,20 @@ class CoderCLIManagerTest extends spock.lang.Specification {
                 // TODO: Is there some simple way to create an executable file
                 // on Windows without having to execute something to generate
                 // said executable or having to commit one to the repo?
-                String response = mockBinaryContent
-
+                String response = "#!/bin/sh\necho 'http://localhost:${srv.address.port}'"
                 String[] etags = exchange.requestHeaders.get("If-None-Match")
-                if (etags != null && etags.contains("\"2f1960264fc0f332a2a7fef2fe678f258dcdff9c\"")) {
-                    code = HttpURLConnection.HTTP_NOT_MODIFIED
-                    response = "not modified"
-                }
-
-                if (!exchange.requestURI.path.startsWith("/bin/coder-")) {
+                if (exchange.requestURI.path == "/bin/override") {
+                    code = HttpURLConnection.HTTP_OK
+                    response = "#!/bin/sh\necho 'override binary'"
+                } else if (!exchange.requestURI.path.startsWith("/bin/coder-")) {
                     code = HttpURLConnection.HTTP_NOT_FOUND
                     response = "not found"
-                }
-
-                if (errorCode != 0) {
+                } else if (errorCode != 0) {
                     code = errorCode
-                    response = "error code ${code}"
+                    response = "error code $code"
+                } else if (etags != null && etags.contains("\"${sha1(response)}\"")) {
+                    code = HttpURLConnection.HTTP_NOT_MODIFIED
+                    response = "not modified"
                 }
 
                 byte[] body = response.getBytes()
@@ -60,34 +61,51 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         return [srv, "http://localhost:" + srv.address.port]
     }
 
+    String sha1(String input) {
+        MessageDigest md = MessageDigest.getInstance("SHA-1")
+        md.update(input.getBytes("UTF-8"))
+        return new BigInteger(1, md.digest()).toString(16)
+    }
+
+    def "hashes correctly"() {
+        expect:
+        sha1(input) == output
+
+        where:
+        input                                     | output
+        "#!/bin/sh\necho Coder"                   | "2f1960264fc0f332a2a7fef2fe678f258dcdff9c"
+        "#!/bin/sh\necho 'override binary'"       | "1b562a4b8f2617b2b94a828479656daf2dde3619"
+        "#!/bin/sh\necho 'http://localhost:5678'" | "fd8d45a8a74475e560e2e57139923254aab75989"
+    }
+
     void setupSpec() {
         // Clean up from previous runs otherwise they get cluttered since the
         // mock server port is random.
         tmpdir.toFile().deleteDir()
     }
 
-    def "defaults to a sub-directory in the data directory"() {
+    def "uses a sub-directory"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"))
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid")
     }
 
     def "includes port in sub-directory if included"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"))
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid-3000")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid-3000")
     }
 
     def "encodes IDN with punycode"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"))
+        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.xn--n28h.invalid")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.xn--n28h.invalid")
     }
 
     def "fails to download"() {
@@ -124,6 +142,13 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         then:
         downloaded
         ccm.version().contains("Coder")
+
+        // Make sure login failures propagate correctly.
+        when:
+        ccm.login("jetbrains-ci-test")
+
+        then:
+        thrown(InvalidExitValueException)
     }
 
     def "downloads a mocked cli"() {
@@ -140,10 +165,21 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         // The mock does not serve a binary that works on Windows so do not
         // actually execute.  Checking the contents works just as well as proof
         // that the binary was correctly downloaded anyway.
-        ccm.localBinaryPath.toFile().readBytes() == mockBinaryContent.getBytes()
+        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
 
         cleanup:
         srv.stop(0)
+    }
+
+    def "fails to run non-existent binary"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://foo"), tmpdir.resolve("does-not-exist"))
+
+        when:
+        ccm.version()
+
+        then:
+        thrown(ProcessInitException)
     }
 
     def "overwrites cli if incorrect version"() {
@@ -161,6 +197,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         downloaded
         ccm.localBinaryPath.toFile().readBytes() != "cli".getBytes()
         ccm.localBinaryPath.toFile().lastModified() > 0
+        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
 
         cleanup:
         srv.stop(0)
@@ -172,12 +209,13 @@ class CoderCLIManagerTest extends spock.lang.Specification {
         def ccm = new CoderCLIManager(new URL(url), tmpdir)
 
         when:
-        ccm.downloadCLI()
+        def downloaded1 = ccm.downloadCLI()
         ccm.localBinaryPath.toFile().setLastModified(0)
-        def downloaded = ccm.downloadCLI()
+        def downloaded2 = ccm.downloadCLI()
 
         then:
-        !downloaded
+        downloaded1
+        !downloaded2
         ccm.localBinaryPath.toFile().lastModified() == 0
 
         cleanup:
@@ -197,12 +235,35 @@ class CoderCLIManagerTest extends spock.lang.Specification {
 
         then:
         ccm1.localBinaryPath != ccm2.localBinaryPath
-        ccm1.localBinaryPath.toFile().exists()
-        ccm2.localBinaryPath.toFile().exists()
+        ccm1.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url1'"
+        ccm2.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url2'"
 
         cleanup:
         srv1.stop(0)
         srv2.stop(0)
+    }
+
+    def "overrides binary URL"() {
+        given:
+        def (srv, url) = mockServer()
+        def ccm = new CoderCLIManager(new URL(url), tmpdir, override.replace("{{url}}", url))
+
+        when:
+        def downloaded = ccm.downloadCLI()
+
+        then:
+        downloaded
+        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '${expected.replace("{{url}}", url)}'"
+
+        cleanup:
+        srv.stop(0)
+
+        where:
+        override               | expected
+        "/bin/override"        | "override binary"
+        "{{url}}/bin/override" | "override binary"
+        "bin/override"         | "override binary"
+        ""                     | "{{url}}"
     }
 
     Map<String, String> testEnv = [
@@ -323,7 +384,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, sshConfigPath)
         if (input != null) {
             Files.createDirectories(sshConfigPath.getParent())
             def originalConf = Path.of("src/test/fixtures/inputs").resolve(input + ".conf").toFile().text
@@ -368,7 +429,7 @@ class CoderCLIManagerTest extends spock.lang.Specification {
     def "fails if config is malformed"() {
         given:
         def sshConfigPath = tmpdir.resolve("configured" + input + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, sshConfigPath)
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, sshConfigPath)
         Files.createDirectories(sshConfigPath.getParent())
         Files.copy(
                 Path.of("src/test/fixtures/inputs").resolve(input + ".conf"),

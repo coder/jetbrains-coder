@@ -15,10 +15,12 @@
     <depends optional="true">com.jetbrains.gateway</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="com.coder.gateway.sdk.CoderRestClientService"></applicationService>
-        <applicationService serviceImplementation="com.coder.gateway.sdk.TemplateIconDownloader"></applicationService>
-        <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"></applicationService>
-        <webHelpProvider implementation="com.coder.gateway.help.CoderWebHelp"></webHelpProvider>
+        <applicationService serviceImplementation="com.coder.gateway.sdk.CoderRestClientService"/>
+        <applicationService serviceImplementation="com.coder.gateway.sdk.TemplateIconDownloader"/>
+        <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"/>
+        <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsState"/>
+        <applicationConfigurable parentId="tools" instance="com.coder.gateway.CoderSettingsConfigurable"/>
+        <webHelpProvider implementation="com.coder.gateway.help.CoderWebHelp"/>
     </extensions>
     <extensions defaultExtensionNs="com.jetbrains">
         <gatewayConnector implementation="com.coder.gateway.CoderGatewayMainView"/>
