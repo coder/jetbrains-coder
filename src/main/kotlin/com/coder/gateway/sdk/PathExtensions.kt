@@ -10,9 +10,6 @@ import java.nio.file.Path
  * Unlike File.canWrite() or Files.isWritable() the directory does not need to
  * exist; it only needs a writable parent and the target needs to be
  * non-existent or a directory (not a regular file or nested under one).
- *
- * This check is deficient on Windows since directories that have write
- * permissions but are read-only will still return true.
  */
 fun Path.canCreateDirectory(): Boolean {
     var current: Path? = this.toAbsolutePath()
@@ -20,7 +17,8 @@ fun Path.canCreateDirectory(): Boolean {
         current = current.parent
     }
     // On Windows File.canWrite() only checks read-only while Files.isWritable()
-    // also checks permissions.  For directories neither of them seem to care if
-    // it is read-only.
+    // also checks permissions so use the latter.  Both check read-only only on
+    // files, not directories; on Windows you are allowed to create files inside
+    // read-only directories.
     return current != null && Files.isWritable(current) && Files.isDirectory(current)
 }
