@@ -84,28 +84,28 @@ class CoderCLIManagerTest extends Specification {
         tmpdir.toFile().deleteDir()
     }
 
-    def "defaults to a sub-directory in the data directory"() {
+    def "uses a sub-directory"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"))
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid")
     }
 
     def "includes port in sub-directory if included"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"))
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.coder.invalid-3000")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid-3000")
     }
 
     def "encodes IDN with punycode"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"))
+        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"), tmpdir)
 
         expect:
-        ccm.localBinaryPath.getParent() == CoderCLIManager.getDataDir().resolve("test.xn--n28h.invalid")
+        ccm.localBinaryPath.getParent() == tmpdir.resolve("test.xn--n28h.invalid")
     }
 
     def "fails to download"() {

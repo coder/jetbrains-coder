@@ -25,7 +25,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .comment(
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.binary-source.comment",
-                            CoderCLIManager(URL("http://localhost")).remoteBinaryURL.path,
+                            CoderCLIManager(URL("http://localhost"), CoderCLIManager.getDataDir()).remoteBinaryURL.path,
                         )
                     )
             }

@@ -467,7 +467,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 this.indicator.text = "Downloading Coder CLI..."
                 val cliManager = CoderCLIManager(
                     deploymentURL,
-                    if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination) else null,
+                    if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
+                    else CoderCLIManager.getDataDir(),
                     settings.binarySource,
                 )
                 cliManager.downloadCLI()
@@ -722,7 +723,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             logger.info("Configuring Coder CLI...")
             val cliManager = CoderCLIManager(
                 wizardModel.coderURL.toURL(),
-                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination) else null,
+                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
+                else CoderCLIManager.getDataDir(),
                 settings.binarySource,
             )
             cliManager.configSsh(listTableModelOfWorkspaces.items)

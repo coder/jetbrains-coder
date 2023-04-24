@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
  */
 class CoderCLIManager @JvmOverloads constructor(
     private val deploymentURL: URL,
-    destinationDir: Path? = null,
+    destinationDir: Path,
     remoteBinaryURLOverride: String? = null,
     private val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
 ) {
@@ -49,11 +49,10 @@ class CoderCLIManager @JvmOverloads constructor(
                 remoteBinaryURL.withPath(remoteBinaryURLOverride)
             }
         }
-        val dir = destinationDir ?: getDataDir()
         val host = getSafeHost(deploymentURL)
         val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
-        localBinaryPath = dir.resolve(subdir).resolve(binaryName).toAbsolutePath()
-        coderConfigPath = dir.resolve(subdir).resolve("config").toAbsolutePath()
+        localBinaryPath = destinationDir.resolve(subdir).resolve(binaryName).toAbsolutePath()
+        coderConfigPath = destinationDir.resolve(subdir).resolve("config").toAbsolutePath()
     }
 
     /**
