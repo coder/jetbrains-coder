@@ -3,6 +3,7 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
+import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAgentStatus
 import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
@@ -38,6 +39,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
+import com.intellij.openapi.ui.setEmptyState
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.AppIcon
@@ -55,10 +57,12 @@ import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.TableView
+import com.intellij.util.applyIf
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.ListTableModel
+import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.table.IconTableCellRenderer
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import kotlinx.coroutines.CoroutineScope
@@ -76,6 +80,7 @@ import java.awt.event.MouseListener
 import java.awt.event.MouseMotionListener
 import java.awt.font.TextAttribute
 import java.awt.font.TextAttribute.UNDERLINE_ON
+import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.file.Path
@@ -126,6 +131,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             minWidth = JBUI.scale(52)
         }
         rowHeight = 48
+        setEmptyState("Disconnected")
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             setNextButtonEnabled(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
@@ -345,7 +351,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
         listTableModelOfWorkspaces.items = emptyList()
-        if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token.isNotBlank()) {
+        if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token != null) {
             triggerWorkspacePolling(true)
         } else {
             val (url, token) = readStorageOrConfig()
@@ -354,15 +360,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 tfUrl?.text = url
             }
             if (!token.isNullOrBlank()) {
-                localWizardModel.token = token
+                localWizardModel.token = Pair(token, TokenSource.CONFIG)
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                // It could be jarring to suddenly ask for a token when you are
-                // just trying to launch the Coder plugin so in this case where
-                // we are trying to automatically connect to the last deployment
-                // (or the deployment in the CLI config) do not ask for the
-                // token again until they explicitly press connect.
-                connect(false)
+                connect(url.toURL(), Pair(token, TokenSource.CONFIG))
             }
         }
         updateWorkspaceActions()
@@ -415,20 +416,26 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     /**
      * Ask for a new token (regardless of whether we already have a token),
      * place it in the local model, then connect.
+     *
+     * If the token is invalid abort and start over from askTokenAndConnect()
+     * unless retry is false.
      */
-    private fun askTokenAndConnect(openBrowser: Boolean = true) {
+    private fun askTokenAndConnect(isRetry: Boolean = false) {
+        val oldURL = localWizardModel.coderURL.toURL()
         component.apply() // Force bindings to be filled.
+        val newURL = localWizardModel.coderURL.toURL()
         val pastedToken = askToken(
-            localWizardModel.coderURL.toURL(),
-            localWizardModel.token,
-            openBrowser,
+            newURL,
+            // If this is a new URL there is no point in trying to use the same
+            // token.
+            if (oldURL == newURL) localWizardModel.token else null,
+            isRetry,
             localWizardModel.useExistingToken,
-        )
-        if (pastedToken.isNullOrBlank()) {
-            return // User aborted.
-        }
+        ) ?: return // User aborted.
         localWizardModel.token = pastedToken
-        connect()
+        connect(newURL, pastedToken) {
+            askTokenAndConnect(true)
+        }
     }
 
     /**
@@ -439,80 +446,112 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * Existing workspaces will be immediately cleared before attempting to
      * connect to the new deployment.
      *
-     * If the token is invalid abort and start over from askTokenAndConnect()
-     * unless retry is false.
+     * If the token is invalid invoke onAuthFailure.
      */
-    private fun connect(retry: Boolean = true) {
+    private fun connect(
+        deploymentURL: URL,
+        token: Pair<String, TokenSource>,
+        onAuthFailure: (() -> Unit)? = null,
+    ): Job {
         // Clear out old deployment details.
         poller?.cancel()
+        tableOfWorkspaces.setEmptyState("Connecting to $deploymentURL...")
         listTableModelOfWorkspaces.items = emptyList()
-
-        val deploymentURL = localWizardModel.coderURL.toURL()
-        val token = localWizardModel.token
 
         // Authenticate and load in a background process with progress.
         // TODO: Make this cancelable.
-        LifetimeDefinition().launchUnderBackgroundProgress(
+        return LifetimeDefinition().launchUnderBackgroundProgress(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"),
             canBeCancelled = false,
             isIndeterminate = true
         ) {
+            val cliManager = CoderCLIManager(
+                deploymentURL,
+                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
+                else CoderCLIManager.getDataDir(),
+                settings.binarySource,
+            )
             try {
                 this.indicator.text = "Authenticating client..."
-                authenticate(deploymentURL, token)
+                authenticate(deploymentURL, token.first)
                 // Remember these in order to default to them for future attempts.
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
-                appPropertiesService.setValue(SESSION_TOKEN, token)
+                appPropertiesService.setValue(SESSION_TOKEN, token.first)
 
                 this.indicator.text = "Downloading Coder CLI..."
-                val cliManager = CoderCLIManager(
-                    deploymentURL,
-                    if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
-                    else CoderCLIManager.getDataDir(),
-                    settings.binarySource,
-                )
                 cliManager.downloadCLI()
 
                 this.indicator.text = "Authenticating Coder CLI..."
-                cliManager.login(token)
+                cliManager.login(token.first)
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
 
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
-            } catch (e: AuthenticationResponseException) {
-                logger.error("Token was rejected by $deploymentURL; has your token expired?", e)
-                if (retry) {
-                    askTokenAndConnect(false) // Try again but no more opening browser windows.
-                }
-            } catch (e: SocketTimeoutException) {
-                logger.error("Unable to connect to $deploymentURL; is it up?", e)
-            } catch (e: ResponseException) {
-                logger.error("Failed to download Coder CLI", e)
+
+                tableOfWorkspaces.setEmptyState("Connected to $deploymentURL")
             } catch (e: Exception) {
-                logger.error("Failed to configure connection to $deploymentURL", e)
+                val errorSummary = e.message ?: "No reason was provided"
+                var msg = CoderGatewayBundle.message(
+                    "gateway.connector.view.workspaces.connect.failed",
+                    deploymentURL,
+                    errorSummary,
+                )
+                when (e) {
+                    is AuthenticationResponseException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.unauthorized",
+                            deploymentURL,
+                        )
+                        cs.launch { onAuthFailure?.invoke() }
+                    }
+
+                    is SocketTimeoutException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.timeout",
+                            deploymentURL,
+                        )
+                    }
+
+                    is ResponseException, is ConnectException -> {
+                        msg = CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.download-failed",
+                            cliManager.remoteBinaryURL,
+                            errorSummary,
+                        )
+                    }
+                }
+                tableOfWorkspaces.setEmptyState(msg)
+                logger.error(msg, e)
             }
         }
     }
 
     /**
-     * Open a dialog for providing the token.  Show the existing token so the
-     * user can validate it if a previous connection failed.  Open a browser to
-     * the auth page if openBrowser is true and useExisting is false.  If
-     * useExisting is true then populate the dialog with the token on disk if
-     * there is one and it matches the url (this will overwrite the provided
-     * token).  Return the token submitted by the user.
+     * Open a dialog for providing the token.  Show any existing token so the
+     * user can validate it if a previous connection failed.  If we are not
+     * retrying and the user has not checked the existing token box then open a
+     * browser to the auth page.  If the user has checked the existing token box
+     * then populate the dialog with the token on disk (this will overwrite any
+     * other existing token) unless this is a retry to avoid clobbering the
+     * token that just failed.  Return the token submitted by the user.
      */
-    private fun askToken(url: URL, token: String, openBrowser: Boolean, useExisting: Boolean): String? {
-        var existingToken = token
+    private fun askToken(
+        url: URL,
+        token: Pair<String, TokenSource>?,
+        isRetry: Boolean,
+        useExisting: Boolean,
+    ): Pair<String, TokenSource>? {
+        var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
         val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
-        if (openBrowser && !useExisting) {
+        if (!isRetry && !useExisting) {
             BrowserUtil.browse(getTokenUrl)
-        } else if (useExisting) {
+        } else if (!isRetry && useExisting) {
             val (u, t) = CoderCLIManager.readConfig()
-            if (url == u?.toURL() && !t.isNullOrBlank()) {
-                logger.info("Injecting valid token from CLI config")
+            if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
+                logger.info("Injecting token from CLI config")
+                tokenSource = TokenSource.CONFIG
                 existingToken = t
             }
         }
@@ -525,11 +564,32 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                         CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
                         getTokenUrl.toString()
                     )
-                    sessionTokenTextField = textField().applyToComponent {
-                        text = existingToken
-                        minimumSize = Dimension(520, -1)
-                    }.component
-                }
+                    sessionTokenTextField = textField()
+                        .applyToComponent {
+                            text = existingToken
+                            minimumSize = Dimension(520, -1)
+                        }.component
+                }.layout(RowLayout.PARENT_GRID)
+                row {
+                    cell() // To align with the text box.
+                    cell(
+                        ComponentPanelBuilder.createCommentComponent(
+                            CoderGatewayBundle.message(
+                                if (isRetry) "gateway.connector.view.workspaces.token.rejected"
+                                else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
+                                else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
+                                else "gateway.connector.view.workspaces.token.none"
+                            ),
+                            false,
+                            -1,
+                            true
+                        ).applyIf(isRetry) {
+                            apply {
+                                foreground = UIUtil.getErrorForeground()
+                            }
+                        }
+                    )
+                }.layout(RowLayout.PARENT_GRID)
             }
             AppIcon.getInstance().requestAttention(null, true)
             if (!dialog(
@@ -542,7 +602,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
             tokenFromUser = sessionTokenTextField.text
         }, ModalityState.any())
-        return tokenFromUser
+        if (tokenFromUser.isNullOrBlank()) {
+            return null
+        }
+        if (tokenFromUser != existingToken) {
+            tokenSource = TokenSource.USER
+        }
+        return Pair(tokenFromUser!!, tokenSource)
     }
 
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
