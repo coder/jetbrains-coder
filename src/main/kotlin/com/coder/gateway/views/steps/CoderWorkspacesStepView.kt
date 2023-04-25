@@ -272,7 +272,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
     }.apply {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16, 0, 16)
+        border = JBUI.Borders.empty(0, 16)
     }
 
     override val previousActionText = IdeBundle.message("button.back")
@@ -799,7 +799,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
-                        border = JBUI.Borders.empty(8, 8)
+                        border = JBUI.Borders.empty(8)
                     }
                     return this
                 }
