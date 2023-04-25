@@ -2,6 +2,7 @@ package com.coder.gateway.models
 
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import java.util.UUID
 import javax.swing.Icon
@@ -15,11 +16,12 @@ data class WorkspaceAgentModel(
     val templateIconPath: String,
     var templateIcon: Icon?,
     val status: WorkspaceVersionStatus,
-    val agentStatus: WorkspaceAgentStatus,
+    val workspaceStatus: WorkspaceStatus,
+    val agentStatus: WorkspaceAndAgentStatus,
     val lastBuildTransition: WorkspaceTransition,
     val agentOS: OS?,
     val agentArch: Arch?,
-    val homeDirectory: String?
+    val homeDirectory: String?,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

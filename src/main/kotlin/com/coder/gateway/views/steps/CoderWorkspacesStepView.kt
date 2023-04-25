@@ -5,10 +5,7 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAgentStatus
-import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
-import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
-import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
+import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
@@ -24,6 +21,7 @@ import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.ide.ActivityTracker
@@ -134,8 +132,12 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         setEmptyState("Disconnected")
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            setNextButtonEnabled(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
-            if (selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS != OS.LINUX) {
+            val ready = listOf(
+                WorkspaceAndAgentStatus.READY, WorkspaceAndAgentStatus.START_ERROR,
+                WorkspaceAndAgentStatus.START_TIMEOUT, WorkspaceAndAgentStatus.AGENT_STARTING_READY
+            ).contains(selectedObject?.agentStatus)
+            setNextButtonEnabled(ready && selectedObject?.agentOS == OS.LINUX)
+            if (ready && selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
@@ -384,8 +386,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private fun updateWorkspaceActions() {
         goToDashboardAction.isEnabled = coderClient.isReady
         createWorkspaceAction.isEnabled = coderClient.isReady
-        when (tableOfWorkspaces.selectedObject?.agentStatus) {
-            RUNNING -> {
+        when (tableOfWorkspaces.selectedObject?.workspaceStatus) {
+            WorkspaceStatus.RUNNING -> {
                 startWorkspaceAction.isEnabled = false
                 stopWorkspaceAction.isEnabled = true
                 when (tableOfWorkspaces.selectedObject?.status) {
@@ -395,7 +397,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
             }
 
-            STOPPED, FAILED -> {
+            WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED -> {
                 startWorkspaceAction.isEnabled = true
                 stopWorkspaceAction.isEnabled = false
                 when (tableOfWorkspaces.selectedObject?.status) {
@@ -698,7 +700,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 this.templateIcon,
                 null,
                 WorkspaceVersionStatus.from(this),
-                WorkspaceAgentStatus.from(this),
+                this.latestBuild.status,
+                WorkspaceAndAgentStatus.from(this, agent),
                 this.latestBuild.transition,
                 OS.from(agent.operatingSystem),
                 Arch.from(agent.architecture),
@@ -723,7 +726,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 this.templateIcon,
                 null,
                 WorkspaceVersionStatus.from(this),
-                WorkspaceAgentStatus.from(this),
+                this.latestBuild.status,
+                WorkspaceAndAgentStatus.from(this),
                 this.latestBuild.transition,
                 null,
                 null,
@@ -918,7 +922,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
-                        foreground = WorkspaceAgentStatus.from(value).statusColor()
+                        foreground = WorkspaceAndAgentStatus.from(value).statusColor()
                     }
                     font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
