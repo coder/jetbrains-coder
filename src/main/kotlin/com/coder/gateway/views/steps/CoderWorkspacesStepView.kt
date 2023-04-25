@@ -687,86 +687,57 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     private fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
-        return when (this.latestBuild.resources.size) {
-            0 -> {
-                val wm = WorkspaceAgentModel(
-                    this.id,
-                    this.name,
-                    this.name,
-                    this.templateID,
-                    this.templateName,
-                    this.templateIcon,
-                    null,
-                    WorkspaceVersionStatus.from(this),
-                    WorkspaceAgentStatus.from(this),
-                    this.latestBuild.transition,
-                    null,
-                    null,
-                    null
-                )
-                cs.launch(Dispatchers.IO) {
-                    wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                    withContext(Dispatchers.Main) {
-                        tableOfWorkspaces.updateUI()
-                    }
+        val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+            val workspaceWithAgentName = "${this.name}.${agent.name}"
+            val wm = WorkspaceAgentModel(
+                this.id,
+                this.name,
+                workspaceWithAgentName,
+                this.templateID,
+                this.templateName,
+                this.templateIcon,
+                null,
+                WorkspaceVersionStatus.from(this),
+                WorkspaceAgentStatus.from(this),
+                this.latestBuild.transition,
+                OS.from(agent.operatingSystem),
+                Arch.from(agent.architecture),
+                agent.expandedDirectory ?: agent.directory,
+            )
+            cs.launch(Dispatchers.IO) {
+                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
+                withContext(Dispatchers.Main) {
+                    tableOfWorkspaces.updateUI()
                 }
-                setOf(wm)
             }
+            wm
+        }.toSet()
 
-            else -> {
-                val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-                    val workspaceWithAgentName = "${this.name}.${agent.name}"
-                    val wm = WorkspaceAgentModel(
-                        this.id,
-                        this.name,
-                        workspaceWithAgentName,
-                        this.templateID,
-                        this.templateName,
-                        this.templateIcon,
-                        null,
-                        WorkspaceVersionStatus.from(this),
-                        WorkspaceAgentStatus.from(this),
-                        this.latestBuild.transition,
-                        OS.from(agent.operatingSystem),
-                        Arch.from(agent.architecture),
-                        agent.expandedDirectory ?: agent.directory,
-                    )
-                    cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                        withContext(Dispatchers.Main) {
-                            tableOfWorkspaces.updateUI()
-                        }
-                    }
-                    wm
-                }.toSet()
-
-                if (wam.isNullOrEmpty()) {
-                    val wm = WorkspaceAgentModel(
-                        this.id,
-                        this.name,
-                        this.name,
-                        this.templateID,
-                        this.templateName,
-                        this.templateIcon,
-                        null,
-                        WorkspaceVersionStatus.from(this),
-                        WorkspaceAgentStatus.from(this),
-                        this.latestBuild.transition,
-                        null,
-                        null,
-                        null
-                    )
-                    cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                        withContext(Dispatchers.Main) {
-                            tableOfWorkspaces.updateUI()
-                        }
-                    }
-                    return setOf(wm)
+        if (wam.isNullOrEmpty()) {
+            val wm = WorkspaceAgentModel(
+                this.id,
+                this.name,
+                this.name,
+                this.templateID,
+                this.templateName,
+                this.templateIcon,
+                null,
+                WorkspaceVersionStatus.from(this),
+                WorkspaceAgentStatus.from(this),
+                this.latestBuild.transition,
+                null,
+                null,
+                null
+            )
+            cs.launch(Dispatchers.IO) {
+                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
+                withContext(Dispatchers.Main) {
+                    tableOfWorkspaces.updateUI()
                 }
-                return wam
             }
+            return setOf(wm)
         }
+        return wam
     }
 
     override fun onPrevious() {
