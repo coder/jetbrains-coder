@@ -814,10 +814,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.name.compareTo(b.name, ignoreCase = true)
             }
         }
@@ -845,10 +841,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.templateName.compareTo(b.templateName, ignoreCase = true)
             }
         }
@@ -908,10 +900,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.agentStatus.label.compareTo(b.agentStatus.label, ignoreCase = true)
             }
         }
