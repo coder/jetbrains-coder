@@ -906,11 +906,19 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
                         foreground = WorkspaceAndAgentStatus.from(value).statusColor()
+                        toolTipText = WorkspaceAndAgentStatus.from(value).description
                     }
                     font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)

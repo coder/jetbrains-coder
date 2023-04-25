@@ -11,20 +11,33 @@ import com.intellij.ui.JBColor
  * WorkspaceAndAgentStatus represents the combined status of a single agent and
  * its workspace (or just the workspace if there are no agents).
  */
-enum class WorkspaceAndAgentStatus(val label: String) {
+enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     // Workspace states.
-    QUEUED("◍ Queued"), STARTING("⦿ Starting"), FAILED("ⓧ Failed"),
-    DELETING("⦸ Deleting"), DELETED("⦸ Deleted"),
-    STOPPING("◍ Stopping"), STOPPED("◍ Stopped"),
-    CANCELING("◍ Canceling action"), CANCELED("◍ Canceled action"),
-    RUNNING("⦿ Running"),
+    QUEUED("◍ Queued", "The workspace is queueing to start."),
+    STARTING("⦿ Starting", "The workspace is starting."),
+    FAILED("ⓧ Failed", "The workspace has failed to start."),
+    DELETING("⦸ Deleting", "The workspace is being deleted."),
+    DELETED("⦸ Deleted", "The workspace has been deleted."),
+    STOPPING("◍ Stopping", "The workspace is stopping."),
+    STOPPED("◍ Stopped", "The workspace has stopped."),
+    CANCELING("◍ Canceling action", "The workspace is being canceled."),
+    CANCELED("◍ Canceled action", "The workspace has been canceled."),
+    RUNNING("⦿ Running", "The workspace is running, waiting for agents."),
 
     // Agent states.
-    OFF("⦸ Off"), CONNECTING("⦿ Connecting"), DISCONNECTED("⦸ Disconnected"), TIMEOUT("ⓧ Timeout"),
-    AGENT_STARTING("⦿ Starting"), AGENT_STARTING_READY("⦿ Starting"),
-    CREATED("⦿ Created"), START_ERROR("◍ Started with error"), START_TIMEOUT("◍ Started with timeout"),
-    SHUTTING_DOWN("◍ Shutting down"), SHUTDOWN_ERROR("⦸ Shutdown with error"), SHUTDOWN_TIMEOUT("⦸ Shutdown with timeout"),
-    READY("⦿ Ready");
+    CONNECTING("⦿ Connecting", "The agent is connecting."),
+    DISCONNECTED("⦸ Disconnected", "The agent has disconnected."),
+    TIMEOUT("ⓧ Timeout", "The agent has timed out."),
+    AGENT_STARTING("⦿ Starting", "The agent is running the startup script."),
+    AGENT_STARTING_READY("⦿ Starting", "The agent is running the startup script but is ready to accept connections."),
+    CREATED("⦿ Created", "The agent has been created."),
+    START_ERROR("◍ Started with error", "The agent is ready but the startup script errored."),
+    START_TIMEOUT("◍ Started with timeout", "The agent is ready but the startup script timed out"),
+    SHUTTING_DOWN("◍ Shutting down", "The agent is shutting down."),
+    SHUTDOWN_ERROR("⦸ Shutdown with error", "The agent shut down but the shutdown script errored."),
+    SHUTDOWN_TIMEOUT("⦸ Shutdown with timeout", "The agent shut down but the shutdown script timed out."),
+    OFF("⦸ Off", "The agent has shut down."),
+    READY("⦿ Ready", "The agent is ready to accept connections.");
 
     fun statusColor(): JBColor = when (this) {
         READY, AGENT_STARTING_READY -> JBColor.GREEN
