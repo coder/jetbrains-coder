@@ -5,10 +5,7 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAgentStatus
-import com.coder.gateway.models.WorkspaceAgentStatus.FAILED
-import com.coder.gateway.models.WorkspaceAgentStatus.RUNNING
-import com.coder.gateway.models.WorkspaceAgentStatus.STOPPED
+import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
@@ -24,6 +21,7 @@ import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.ide.ActivityTracker
@@ -134,8 +132,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         setEmptyState("Disconnected")
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            setNextButtonEnabled(selectedObject != null && selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS == OS.LINUX)
-            if (selectedObject?.agentStatus == RUNNING && selectedObject?.agentOS != OS.LINUX) {
+            setNextButtonEnabled(selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS == OS.LINUX)
+            if (selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
@@ -270,7 +268,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
     }.apply {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16, 0, 16)
+        border = JBUI.Borders.empty(0, 16)
     }
 
     override val previousActionText = IdeBundle.message("button.back")
@@ -384,8 +382,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private fun updateWorkspaceActions() {
         goToDashboardAction.isEnabled = coderClient.isReady
         createWorkspaceAction.isEnabled = coderClient.isReady
-        when (tableOfWorkspaces.selectedObject?.agentStatus) {
-            RUNNING -> {
+        when (tableOfWorkspaces.selectedObject?.workspaceStatus) {
+            WorkspaceStatus.RUNNING -> {
                 startWorkspaceAction.isEnabled = false
                 stopWorkspaceAction.isEnabled = true
                 when (tableOfWorkspaces.selectedObject?.status) {
@@ -395,7 +393,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
             }
 
-            STOPPED, FAILED -> {
+            WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED -> {
                 startWorkspaceAction.isEnabled = true
                 stopWorkspaceAction.isEnabled = false
                 when (tableOfWorkspaces.selectedObject?.status) {
@@ -687,86 +685,59 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     private fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
-        return when (this.latestBuild.resources.size) {
-            0 -> {
-                val wm = WorkspaceAgentModel(
-                    this.id,
-                    this.name,
-                    this.name,
-                    this.templateID,
-                    this.templateName,
-                    this.templateIcon,
-                    null,
-                    WorkspaceVersionStatus.from(this),
-                    WorkspaceAgentStatus.from(this),
-                    this.latestBuild.transition,
-                    null,
-                    null,
-                    null
-                )
-                cs.launch(Dispatchers.IO) {
-                    wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                    withContext(Dispatchers.Main) {
-                        tableOfWorkspaces.updateUI()
-                    }
+        val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+            val workspaceWithAgentName = "${this.name}.${agent.name}"
+            val wm = WorkspaceAgentModel(
+                this.id,
+                this.name,
+                workspaceWithAgentName,
+                this.templateID,
+                this.templateName,
+                this.templateIcon,
+                null,
+                WorkspaceVersionStatus.from(this),
+                this.latestBuild.status,
+                WorkspaceAndAgentStatus.from(this, agent),
+                this.latestBuild.transition,
+                OS.from(agent.operatingSystem),
+                Arch.from(agent.architecture),
+                agent.expandedDirectory ?: agent.directory,
+            )
+            cs.launch(Dispatchers.IO) {
+                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
+                withContext(Dispatchers.Main) {
+                    tableOfWorkspaces.updateUI()
                 }
-                setOf(wm)
             }
+            wm
+        }.toSet()
 
-            else -> {
-                val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-                    val workspaceWithAgentName = "${this.name}.${agent.name}"
-                    val wm = WorkspaceAgentModel(
-                        this.id,
-                        this.name,
-                        workspaceWithAgentName,
-                        this.templateID,
-                        this.templateName,
-                        this.templateIcon,
-                        null,
-                        WorkspaceVersionStatus.from(this),
-                        WorkspaceAgentStatus.from(this),
-                        this.latestBuild.transition,
-                        OS.from(agent.operatingSystem),
-                        Arch.from(agent.architecture),
-                        agent.expandedDirectory ?: agent.directory,
-                    )
-                    cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                        withContext(Dispatchers.Main) {
-                            tableOfWorkspaces.updateUI()
-                        }
-                    }
-                    wm
-                }.toSet()
-
-                if (wam.isNullOrEmpty()) {
-                    val wm = WorkspaceAgentModel(
-                        this.id,
-                        this.name,
-                        this.name,
-                        this.templateID,
-                        this.templateName,
-                        this.templateIcon,
-                        null,
-                        WorkspaceVersionStatus.from(this),
-                        WorkspaceAgentStatus.from(this),
-                        this.latestBuild.transition,
-                        null,
-                        null,
-                        null
-                    )
-                    cs.launch(Dispatchers.IO) {
-                        wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                        withContext(Dispatchers.Main) {
-                            tableOfWorkspaces.updateUI()
-                        }
-                    }
-                    return setOf(wm)
+        if (wam.isNullOrEmpty()) {
+            val wm = WorkspaceAgentModel(
+                this.id,
+                this.name,
+                this.name,
+                this.templateID,
+                this.templateName,
+                this.templateIcon,
+                null,
+                WorkspaceVersionStatus.from(this),
+                this.latestBuild.status,
+                WorkspaceAndAgentStatus.from(this),
+                this.latestBuild.transition,
+                null,
+                null,
+                null
+            )
+            cs.launch(Dispatchers.IO) {
+                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
+                withContext(Dispatchers.Main) {
+                    tableOfWorkspaces.updateUI()
                 }
-                return wam
             }
+            return setOf(wm)
         }
+        return wam
     }
 
     override fun onPrevious() {
@@ -824,7 +795,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
                 override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
-                        border = JBUI.Borders.empty(8, 8)
+                        border = JBUI.Borders.empty(8)
                     }
                     return this
                 }
@@ -839,10 +810,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.name.compareTo(b.name, ignoreCase = true)
             }
         }
@@ -870,10 +837,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.templateName.compareTo(b.templateName, ignoreCase = true)
             }
         }
@@ -933,21 +896,25 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
             return Comparator { a, b ->
-                if (a === b) 0
-                if (a == null) -1
-                if (b == null) 1
-
                 a.agentStatus.label.compareTo(b.agentStatus.label, ignoreCase = true)
             }
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
-                        foreground = WorkspaceAgentStatus.from(value).statusColor()
+                        foreground = WorkspaceAndAgentStatus.from(value).statusColor()
+                        toolTipText = WorkspaceAndAgentStatus.from(value).description
                     }
                     font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)

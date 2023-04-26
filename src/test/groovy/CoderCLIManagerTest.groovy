@@ -1,8 +1,9 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAgentStatus
+import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -373,7 +374,8 @@ class CoderCLIManagerTest extends Specification {
                 "template-icon-path",
                 null,
                 WorkspaceVersionStatus.UPDATED,
-                WorkspaceAgentStatus.RUNNING,
+                WorkspaceStatus.RUNNING,
+                WorkspaceAndAgentStatus.READY,
                 WorkspaceTransition.START,
                 null,
                 null,

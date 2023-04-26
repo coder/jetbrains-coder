@@ -26,23 +26,30 @@ data class WorkspaceAgent(
     @SerializedName("latency") val derpLatency: Map<String, DERPRegion>?,
     @SerializedName("connection_timeout_seconds") val connectionTimeoutSeconds: Int,
     @SerializedName("troubleshooting_url") val troubleshootingURL: String,
+    @SerializedName("lifecycle_state") val lifecycleState: WorkspaceAgentLifecycleState,
+    @SerializedName("login_before_ready") val loginBeforeReady: Boolean?,
 )
 
 enum class WorkspaceAgentStatus {
-    @SerializedName("connecting")
-    CONNECTING,
+    @SerializedName("connecting") CONNECTING,
+    @SerializedName("connected") CONNECTED,
+    @SerializedName("disconnected") DISCONNECTED,
+    @SerializedName("timeout") TIMEOUT
+}
 
-    @SerializedName("connected")
-    CONNECTED,
-
-    @SerializedName("disconnected")
-    DISCONNECTED,
-
-    @SerializedName("timeout")
-    TIMEOUT
+enum class WorkspaceAgentLifecycleState {
+    @SerializedName("created") CREATED,
+    @SerializedName("starting") STARTING,
+    @SerializedName("start_timeout") START_TIMEOUT,
+    @SerializedName("start_error") START_ERROR,
+    @SerializedName("ready") READY,
+    @SerializedName("shutting_down") SHUTTING_DOWN,
+    @SerializedName("shutdown_timeout") SHUTDOWN_TIMEOUT,
+    @SerializedName("shutdown_error") SHUTDOWN_ERROR,
+    @SerializedName("off") OFF,
 }
 
 data class DERPRegion(
     @SerializedName("preferred") val preferred: Boolean,
-    @SerializedName("latency_ms") val latencyMillis: Double
+    @SerializedName("latency_ms") val latencyMillis: Double,
 )
