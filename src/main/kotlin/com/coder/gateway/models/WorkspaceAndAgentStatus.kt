@@ -27,7 +27,7 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     // Agent states.
     CONNECTING("⦿ Connecting", "The agent is connecting."),
     DISCONNECTED("⦸ Disconnected", "The agent has disconnected."),
-    TIMEOUT("ⓧ Timeout", "The agent has timed out."),
+    TIMEOUT("ⓧ Timeout", "The agent is taking longer than expected to connect."),
     AGENT_STARTING("⦿ Starting", "The startup script is running."),
     AGENT_STARTING_READY("⦿ Starting", "The startup script is still running but the agent is ready to accept connections."),
     CREATED("⦿ Created", "The agent has been created."),
