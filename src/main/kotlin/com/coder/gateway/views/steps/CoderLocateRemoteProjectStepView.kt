@@ -134,7 +134,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
                     false, -1, true
                 )
-            ).component
+            ).resizableColumn().align(AlignX.FILL).component
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
         row {
             label("Project directory:")
