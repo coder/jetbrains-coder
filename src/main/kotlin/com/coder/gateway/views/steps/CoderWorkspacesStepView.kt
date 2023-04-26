@@ -132,14 +132,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         setEmptyState("Disconnected")
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            val ready = listOf(
-                WorkspaceAndAgentStatus.READY,
-                WorkspaceAndAgentStatus.START_ERROR,
-                WorkspaceAndAgentStatus.AGENT_STARTING_READY,
-                WorkspaceAndAgentStatus.START_TIMEOUT_READY,
-            ).contains(selectedObject?.agentStatus)
-            setNextButtonEnabled(ready && selectedObject?.agentOS == OS.LINUX)
-            if (ready && selectedObject?.agentOS != OS.LINUX) {
+            setNextButtonEnabled(selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS == OS.LINUX)
+            if (selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))

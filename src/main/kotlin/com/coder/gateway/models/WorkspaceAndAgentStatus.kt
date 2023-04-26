@@ -47,6 +47,14 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
         else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
     }
 
+    /**
+     * Return true if the agent is in a connectable state.
+     */
+    fun ready(): Boolean {
+        return listOf(READY, START_ERROR, AGENT_STARTING_READY, START_TIMEOUT_READY)
+            .contains(this)
+    }
+
     // We want to check that the workspace is `running`, the agent is
     // `connected`, and the agent lifecycle state is `ready` to ensure the best
     // possible scenario for attempting a connection.
