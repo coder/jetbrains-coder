@@ -28,21 +28,22 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     CONNECTING("⦿ Connecting", "The agent is connecting."),
     DISCONNECTED("⦸ Disconnected", "The agent has disconnected."),
     TIMEOUT("ⓧ Timeout", "The agent has timed out."),
-    AGENT_STARTING("⦿ Starting", "The agent is running the startup script."),
-    AGENT_STARTING_READY("⦿ Starting", "The agent is running the startup script but is ready to accept connections."),
+    AGENT_STARTING("⦿ Starting", "The startup script is running."),
+    AGENT_STARTING_READY("⦿ Starting", "The startup script is still running but the agent is ready to accept connections."),
     CREATED("⦿ Created", "The agent has been created."),
     START_ERROR("◍ Started with error", "The agent is ready but the startup script errored."),
-    START_TIMEOUT("◍ Started with timeout", "The agent is ready but the startup script timed out"),
+    START_TIMEOUT("◍ Starting", "The startup script is taking longer than expected."),
+    START_TIMEOUT_READY("◍ Starting", "The startup script is taking longer than expected but the agent is ready to accept connections."),
     SHUTTING_DOWN("◍ Shutting down", "The agent is shutting down."),
     SHUTDOWN_ERROR("⦸ Shutdown with error", "The agent shut down but the shutdown script errored."),
-    SHUTDOWN_TIMEOUT("⦸ Shutdown with timeout", "The agent shut down but the shutdown script timed out."),
+    SHUTDOWN_TIMEOUT("⦸ Shutting down", "The shutdown script is taking longer than expected."),
     OFF("⦸ Off", "The agent has shut down."),
     READY("⦿ Ready", "The agent is ready to accept connections.");
 
     fun statusColor(): JBColor = when (this) {
-        READY, AGENT_STARTING_READY -> JBColor.GREEN
-        START_ERROR, START_TIMEOUT -> JBColor.YELLOW
-        FAILED, DISCONNECTED, TIMEOUT, SHUTTING_DOWN, SHUTDOWN_ERROR, SHUTDOWN_TIMEOUT -> JBColor.RED
+        READY, AGENT_STARTING_READY, START_TIMEOUT_READY -> JBColor.GREEN
+        START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
+        FAILED, DISCONNECTED, TIMEOUT, SHUTDOWN_ERROR -> JBColor.RED
         else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
     }
 
@@ -50,12 +51,13 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     // `connected`, and the agent lifecycle state is `ready` to ensure the best
     // possible scenario for attempting a connection.
     //
-    // We can also choose to allow `start_timeout` and `start_error` for the
-    // agent state; this means the startup script did not successfully complete
-    // but the agent will accept SSH connections.
+    // We can also choose to allow `start_error` for the agent lifecycle state;
+    // this means the startup script did not successfully complete but the agent
+    // will still accept SSH connections.
     //
     // Lastly we can also allow connections when the agent lifecycle state is
-    // `starting` if `login_before_ready` is true on the workspace response.
+    // `starting` or `start_timeout` if `login_before_ready` is true on the
+    // workspace response since this bypasses the need to wait for the script.
     //
     // Note that latest_build.status is derived from latest_build.job.status and
     // latest_build.job.transition so there is no need to check those.
@@ -67,7 +69,7 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
                 WorkspaceAgentStatus.CONNECTED -> when (agent.lifecycleState) {
                     WorkspaceAgentLifecycleState.CREATED -> CREATED
                     WorkspaceAgentLifecycleState.STARTING -> if (agent.loginBeforeReady == true) AGENT_STARTING_READY else AGENT_STARTING
-                    WorkspaceAgentLifecycleState.START_TIMEOUT -> START_TIMEOUT
+                    WorkspaceAgentLifecycleState.START_TIMEOUT -> if (agent.loginBeforeReady == true) START_TIMEOUT_READY else START_TIMEOUT
                     WorkspaceAgentLifecycleState.START_ERROR -> START_ERROR
                     WorkspaceAgentLifecycleState.READY -> READY
                     WorkspaceAgentLifecycleState.SHUTTING_DOWN -> SHUTTING_DOWN
