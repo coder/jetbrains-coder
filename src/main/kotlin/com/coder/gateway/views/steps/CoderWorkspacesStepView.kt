@@ -669,11 +669,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
         }
         withContext(Dispatchers.Main) {
-            val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
+            val selectedWorkspace = tableOfWorkspaces.selectedObject
             tableOfWorkspaces.listTableModel.items = ws.toList()
-            if (selectedWorkspace != null) {
-                tableOfWorkspaces.selectItem(selectedWorkspace)
-            }
+            tableOfWorkspaces.selectItem(selectedWorkspace)
         }
     }
 
@@ -923,15 +921,31 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
 }
 
 class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
-    fun selectItem(workspaceName: String?) {
-        if (workspaceName != null) {
-            this.items.forEachIndexed { index, workspaceAgentModel ->
-                if (workspaceAgentModel.name == workspaceName) {
-                    selectionModel.addSelectionInterval(convertRowIndexToView(index), convertRowIndexToView(index))
-                    // fix cell selection case
-                    columnModel.selectionModel.addSelectionInterval(0, columnCount - 1)
-                }
-            }
+    /**
+     * Given either a workspace or an agent select in order of preference:
+     * 1. That same agent or workspace.
+     * 2. The first match for the workspace (workspace itself or first agent).
+     */
+    fun selectItem(workspace: WorkspaceAgentModel?) {
+        val index = getNewSelection(workspace)
+        if (index > -1) {
+            selectionModel.addSelectionInterval(convertRowIndexToView(index), convertRowIndexToView(index))
+            // Fix cell selection case.
+            columnModel.selectionModel.addSelectionInterval(0, columnCount - 1)
         }
     }
+
+    private fun getNewSelection(oldSelection: WorkspaceAgentModel?): Int {
+        if (oldSelection == null) {
+            return -1
+        }
+        val index = listTableModel.items.indexOfFirst {
+            it.name == oldSelection.name && it.workspaceName == oldSelection.workspaceName
+        }
+        if (index > -1) {
+            return index
+        }
+        return listTableModel.items.indexOfFirst { it.workspaceName == oldSelection.workspaceName }
+    }
+
 }
