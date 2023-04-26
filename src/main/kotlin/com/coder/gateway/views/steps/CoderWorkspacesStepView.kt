@@ -108,16 +108,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
     private var tfUrl: JTextField? = null
     private var cbExistingToken: JCheckBox? = null
-    private var listTableModelOfWorkspaces = ListTableModel<WorkspaceAgentModel>(
-        WorkspaceIconColumnInfo(""),
-        WorkspaceNameColumnInfo("Name"),
-        WorkspaceTemplateNameColumnInfo("Template"),
-        WorkspaceVersionColumnInfo("Version"),
-        WorkspaceStatusColumnInfo("Status")
-    )
 
     private val notificationBanner = NotificationBanner()
-    private var tableOfWorkspaces = TableView(listTableModelOfWorkspaces).apply {
+    private var tableOfWorkspaces = WorkspacesTable().apply {
         setEnableAntialiasing(true)
         rowSelectionAllowed = true
         columnSelectionAllowed = false
@@ -348,7 +341,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
-        listTableModelOfWorkspaces.items = emptyList()
+        tableOfWorkspaces.listTableModel.items = emptyList()
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token != null) {
             triggerWorkspacePolling(true)
         } else {
@@ -454,7 +447,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         // Clear out old deployment details.
         poller?.cancel()
         tableOfWorkspaces.setEmptyState("Connecting to $deploymentURL...")
-        listTableModelOfWorkspaces.items = emptyList()
+        tableOfWorkspaces.listTableModel.items = emptyList()
 
         // Authenticate and load in a background process with progress.
         // TODO: Make this cancelable.
@@ -677,7 +670,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
         withContext(Dispatchers.Main) {
             val selectedWorkspace = tableOfWorkspaces.selectedObject?.name
-            listTableModelOfWorkspaces.items = ws.toList()
+            tableOfWorkspaces.listTableModel.items = ws.toList()
             if (selectedWorkspace != null) {
                 tableOfWorkspaces.selectItem(selectedWorkspace)
             }
@@ -764,7 +757,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 else CoderCLIManager.getDataDir(),
                 settings.binarySource,
             )
-            cliManager.configSsh(listTableModelOfWorkspaces.items)
+            cliManager.configSsh(tableOfWorkspaces.items)
 
             logger.info("Opening IDE and Project Location window for ${workspace.name}")
             return true
@@ -776,6 +769,18 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         cs.cancel()
     }
 
+    companion object {
+        val logger = Logger.getInstance(CoderWorkspacesStepView::class.java.simpleName)
+    }
+}
+
+class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
+    WorkspaceIconColumnInfo(""),
+    WorkspaceNameColumnInfo("Name"),
+    WorkspaceTemplateNameColumnInfo("Template"),
+    WorkspaceVersionColumnInfo("Version"),
+    WorkspaceStatusColumnInfo("Status")
+) {
     private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
@@ -803,7 +808,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
-    private inner class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.name
         }
@@ -822,7 +827,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                         text = value
                     }
 
-                    font = RelativeFont.BOLD.derive(this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font)
+                    font = RelativeFont.BOLD.derive(table.tableHeader.font)
                     border = JBUI.Borders.empty(0, 8)
                     return this
                 }
@@ -830,7 +835,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
-    private inner class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private class WorkspaceTemplateNameColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.templateName
         }
@@ -842,11 +848,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
-            val simpleH3 = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
-
-            val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
-            h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
-            val underlinedH3 = JBFont.h3().deriveFont(h3AttributesWithUnderlining)
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
@@ -855,10 +856,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     }
                     border = JBUI.Borders.empty(0, 8)
 
+                    val simpleH3 = table.tableHeader.font
                     if (table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) != null) {
                         val mouseOverRow = table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) as Int
                         if (mouseOverRow >= 0 && mouseOverRow == row) {
-                            font = underlinedH3
+                            val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
+                            h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
+                            font = JBFont.h3().deriveFont(h3AttributesWithUnderlining)
                             return this
                         }
                     }
@@ -869,7 +873,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
-    private inner class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.status?.label
         }
@@ -881,7 +885,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     if (value is String) {
                         text = value
                     }
-                    font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
+                    font = table.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
                     return this
                 }
@@ -889,7 +893,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
-    private inner class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
+    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentModel?): String? {
             return workspace?.agentStatus?.label
         }
@@ -902,29 +906,24 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(
-                    table: JTable,
-                    value: Any,
-                    isSelected: Boolean,
-                    hasFocus: Boolean,
-                    row: Int,
-                    column: Int,
-                ): Component {
+                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
                         foreground = WorkspaceAndAgentStatus.from(value).statusColor()
                         toolTipText = WorkspaceAndAgentStatus.from(value).description
                     }
-                    font = this@CoderWorkspacesStepView.tableOfWorkspaces.tableHeader.font
+                    font = table.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
                     return this
                 }
             }
         }
     }
+}
 
-    private fun TableView<WorkspaceAgentModel>.selectItem(workspaceName: String?) {
+class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
+    fun selectItem(workspaceName: String?) {
         if (workspaceName != null) {
             this.items.forEachIndexed { index, workspaceAgentModel ->
                 if (workspaceAgentModel.name == workspaceName) {
@@ -934,9 +933,5 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 }
             }
         }
-    }
-
-    companion object {
-        val logger = Logger.getInstance(CoderWorkspacesStepView::class.java.simpleName)
     }
 }
