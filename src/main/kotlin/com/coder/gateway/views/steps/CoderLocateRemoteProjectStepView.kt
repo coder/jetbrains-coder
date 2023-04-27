@@ -180,6 +180,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         ideResolvingJob = cs.launch {
             val ides = suspendingRetryWithExponentialBackOff(
                 action={ attempt ->
+                    logger.info("Deploying to ${selectedWorkspace.name} on $deploymentURL (attempt $attempt)")
                     // Reset text in the select dropdown.
                     withContext(Dispatchers.Main) {
                         cbIDE.renderer = IDECellRenderer(
