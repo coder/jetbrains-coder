@@ -8,6 +8,7 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.toWorkspaceParams
@@ -27,7 +28,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
-import com.intellij.ssh.SshException
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.DocumentAdapter
@@ -52,31 +52,34 @@ import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
+import com.jetbrains.gateway.ssh.deploy.DeployException
 import com.jetbrains.gateway.ssh.util.validateRemotePath
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.time.withTimeout
 import kotlinx.coroutines.withContext
+import net.schmizz.sshj.common.SSHException
+import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Component
 import java.awt.FlowLayout
-import java.time.Duration
 import java.util.Locale
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
+import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
+import kotlin.coroutines.cancellation.CancellationException
 
 class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -102,11 +105,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         row {
             label("IDE:")
             cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
-                renderer = IDECellRenderer()
                 addActionListener {
                     setNextButtonEnabled(this.selectedItem != null)
                     ApplicationManager.getApplication().invokeLater {
                         logger.info("Selected IDE: ${this.selectedItem}")
+                        cbIDEComment.foreground = UIUtil.getContextHelpForeground()
                         when (this.selectedItem?.status) {
                             IdeStatus.ALREADY_INSTALLED ->
                                 cbIDEComment.text =
@@ -131,7 +134,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
                     false, -1, true
                 )
-            ).component
+            ).resizableColumn().align(AlignX.FILL).component
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
         row {
             label("Project directory:")
@@ -149,15 +152,19 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         gap(RightGap.SMALL)
     }.apply {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16, 0, 16)
+        border = JBUI.Borders.empty(0, 16)
     }
 
     override val previousActionText = IdeBundle.message("button.back")
     override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
-        cbIDE.renderer = IDECellRenderer()
+        // Clear contents from the last attempt if any.
+        cbIDEComment.foreground = UIUtil.getContextHelpForeground()
+        cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
         ideComboBoxModel.removeAllElements()
+        setNextButtonEnabled(false)
+
         val deploymentURL = wizardModel.coderURL.toURL()
         val selectedWorkspace = wizardModel.selectedWorkspace
         if (selectedWorkspace == null) {
@@ -171,53 +178,60 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         terminalLink.url = coderClient.coderURL.withPath("/@${coderClient.me.username}/${selectedWorkspace.name}/terminal").toString()
 
         ideResolvingJob = cs.launch {
-            try {
-                val executor = withTimeout(Duration.ofSeconds(60)) {
-                    createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
-                }
-                retrieveIDES(executor, selectedWorkspace)
-                if (ComponentValidator.getInstance(tfProject).isEmpty) {
-                    installRemotePathValidator(executor)
-                }
-            } catch (e: Exception) {
-                when (e) {
-                    is InterruptedException -> Unit
-                    is CancellationException -> Unit
-                    is TimeoutCancellationException,
-                    is SshException -> {
-                        logger.error("Can't connect to workspace ${selectedWorkspace.name}. Reason: $e")
-                        withContext(Dispatchers.Main) {
-                            setNextButtonEnabled(false)
-                            cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
-                                override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
-                                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                                    icon = UIUtil.getBalloonErrorIcon()
-                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ssh.error.text"))
+            val ides = suspendingRetryWithExponentialBackOff(
+                action={ attempt ->
+                    // Reset text in the select dropdown.
+                    withContext(Dispatchers.Main) {
+                        cbIDE.renderer = IDECellRenderer(
+                            if (attempt > 1) CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry.text", attempt)
+                            else CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.loading.text"))
+                    }
+                    try {
+                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                        if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                            installRemotePathValidator(executor)
+                        }
+                        retrieveIDEs(executor, selectedWorkspace)
+                    } catch (e: Exception) {
+                        when(e) {
+                            is InterruptedException -> Unit
+                            is CancellationException -> Unit
+                            // Throw to retry these.  The main one is
+                            // DeployException which fires when dd times out.
+                            is ConnectionException,  is TimeoutException,
+                            is SSHException, is DeployException -> throw e
+                            else -> {
+                                withContext(Dispatchers.Main) {
+                                    logger.error("Failed to retrieve IDEs (attempt $attempt)", e)
+                                    cbIDEComment.foreground = UIUtil.getErrorForeground()
+                                    cbIDEComment.text = e.message ?: "The error did not provide any further details"
+                                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())
                                 }
                             }
                         }
+                        null
                     }
-
-                    else -> {
-                        logger.error("Could not resolve any IDE for workspace ${selectedWorkspace.name}. Reason: $e")
-                        withContext(Dispatchers.Main) {
-                            setNextButtonEnabled(false)
-                            cbIDE.renderer = object : ColoredListCellRenderer<IdeWithStatus>() {
-                                override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
-                                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                                    icon = UIUtil.getBalloonErrorIcon()
-                                    append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.error.text"))
-                                }
-                            }
-                        }
-                    }
+                },
+                update = { attempt, retryMs, e ->
+                    logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $retryMs ms)", e)
+                    cbIDEComment.foreground = UIUtil.getErrorForeground()
+                    cbIDEComment.text = e.message ?: "The error did not provide any further details"
+                    val delayS = TimeUnit.MILLISECONDS.toSeconds(retryMs)
+                    val delay = if (delayS < 1) "now" else "in $delayS second${if (delayS > 1) "s" else ""}"
+                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", delay))
+                },
+            )
+            if (ides != null) {
+                withContext(Dispatchers.Main) {
+                    ideComboBoxModel.addAll(ides)
+                    cbIDE.selectedIndex = 0
                 }
             }
         }
     }
 
     private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
-        var disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderLocateRemoteProjectStepView.javaClass.name)
+        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderLocateRemoteProjectStepView::class.java.name)
         ComponentValidator(disposable).installOn(tfProject)
 
         tfProject.document.addDocumentListener(object : DocumentAdapter() {
@@ -258,7 +272,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         )
     }
 
-    private suspend fun retrieveIDES(executor: HighLevelHostAccessor, selectedWorkspace: WorkspaceAgentModel) {
+    private suspend fun retrieveIDEs(executor: HighLevelHostAccessor, selectedWorkspace: WorkspaceAgentModel): List<IdeWithStatus> {
         logger.info("Retrieving available IDE's for ${selectedWorkspace.name} workspace...")
         val workspaceOS = if (selectedWorkspace.agentOS != null && selectedWorkspace.agentArch != null) toDeployedOS(selectedWorkspace.agentOS, selectedWorkspace.agentArch) else withContext(Dispatchers.IO) {
             executor.guessOs()
@@ -279,21 +293,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         val idesWithStatus = idesWithStatusJob.await()
         if (installedIdes.isEmpty()) {
             logger.info("No IDE is installed in workspace ${selectedWorkspace.name}")
-        } else {
-            withContext(Dispatchers.Main) {
-                ideComboBoxModel.addAll(installedIdes)
-                cbIDE.selectedIndex = 0
-            }
         }
-
         if (idesWithStatus.isEmpty()) {
             logger.warn("Could not resolve any IDE for workspace ${selectedWorkspace.name}, probably $workspaceOS is not supported by Gateway")
-        } else {
-            withContext(Dispatchers.Main) {
-                ideComboBoxModel.addAll(idesWithStatus)
-                cbIDE.selectedIndex = 0
-            }
         }
+        return installedIdes + idesWithStatus
     }
 
     private fun toDeployedOS(os: OS, arch: Arch): DeployTargetOS {
@@ -363,12 +367,12 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         }
     }
 
-    private class IDECellRenderer : ListCellRenderer<IdeWithStatus> {
+    private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) : ListCellRenderer<IdeWithStatus> {
         private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> = object : ColoredListCellRenderer<IdeWithStatus>() {
             override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
                 background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                icon = AnimatedIcon.Default.INSTANCE
-                append(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.loading.text"))
+                icon = cellIcon
+                append(message)
             }
         }
 
