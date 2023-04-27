@@ -1,10 +1,5 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAndAgentStatus
-import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -364,25 +359,6 @@ class CoderCLIManagerTest extends Specification {
         Path.of("/tmp/coder-gateway-test/localappdata/coder-gateway") == dataDir()
     }
 
-    private WorkspaceAgentModel randWorkspace(String name) {
-        return new WorkspaceAgentModel(
-                UUID.randomUUID(),
-                name,
-                name,
-                UUID.randomUUID(),
-                "template-name",
-                "template-icon-path",
-                null,
-                WorkspaceVersionStatus.UPDATED,
-                WorkspaceStatus.RUNNING,
-                WorkspaceAndAgentStatus.READY,
-                WorkspaceTransition.START,
-                null,
-                null,
-                null
-        )
-    }
-
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
@@ -401,7 +377,7 @@ class CoderCLIManagerTest extends Specification {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
 
         when:
-        ccm.configSsh(workspaces.collect { randWorkspace(it) })
+        ccm.configSsh(workspaces.collect { DataGen.workspace(it) })
 
         then:
         sshConfigPath.toFile().text == expectedConf

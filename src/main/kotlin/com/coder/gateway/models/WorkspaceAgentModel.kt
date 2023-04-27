@@ -7,10 +7,16 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import java.util.UUID
 import javax.swing.Icon
 
+// TODO: Refactor to have a list of workspaces that each have agents.  We
+// present in the UI as a single flat list in the table (when there are no
+// agents we display a row for the workspace) but still, a list of workspaces
+// each with a list of agents might reflect reality more closely.  When we
+// iterate over the list we can add the workspace row if it has no agents
+// otherwise iterate over the agents and then flatten the result.
 data class WorkspaceAgentModel(
     val workspaceID: UUID,
     val workspaceName: String,
-    val name: String,
+    val name: String, // Name of the workspace OR the agent if this is for an agent.
     val templateID: UUID,
     val templateName: String,
     val templateIconPath: String,
