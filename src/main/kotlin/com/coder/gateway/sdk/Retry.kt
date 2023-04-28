@@ -1,11 +1,8 @@
 package com.coder.gateway.sdk
 
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
 import java.util.Random
 import java.util.concurrent.TimeUnit
-import kotlin.concurrent.timer
-import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -27,18 +24,13 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
           return action(attempt)
       }
       catch (e: Exception) {
-          val end = Clock.System.now().toEpochMilliseconds() + delayMs
-          val timer = timer(period = TimeUnit.SECONDS.toMillis(1)) {
-              val now = Clock.System.now().toEpochMilliseconds()
-              val next = max(end - now, 0)
-              if (next > 0) {
-                  update(attempt, next, e)
-              } else {
-                  this.cancel()
-              }
+          var remainingMs = delayMs
+          while (remainingMs > 0) {
+              update(attempt, remainingMs, e)
+              val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
+              remainingMs -= next
+              delay(next)
           }
-          delay(delayMs)
-          timer.cancel()
           delayMs = min(delayMs * backOffFactor, backOffLimitMs) + (random.nextGaussian() * delayMs * backOffJitter).toLong()
       }
     }
