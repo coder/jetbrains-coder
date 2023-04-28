@@ -68,7 +68,6 @@ import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Component
 import java.awt.FlowLayout
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
@@ -79,7 +78,6 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
-import kotlin.coroutines.cancellation.CancellationException
 
 class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -179,6 +177,8 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         ideResolvingJob = cs.launch {
             val ides = suspendingRetryWithExponentialBackOff(
+                label = "retrieve IDEs",
+                logger = logger,
                 action={ attempt ->
                     logger.info("Deploying to ${selectedWorkspace.name} on $deploymentURL (attempt $attempt)")
                     // Reset text in the select dropdown.
@@ -187,39 +187,22 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                             if (attempt > 1) CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry.text", attempt)
                             else CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.loading.text"))
                     }
-                    try {
-                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
-                        if (ComponentValidator.getInstance(tfProject).isEmpty) {
-                            installRemotePathValidator(executor)
-                        }
-                        retrieveIDEs(executor, selectedWorkspace)
-                    } catch (e: Exception) {
-                        when(e) {
-                            is InterruptedException -> Unit
-                            is CancellationException -> Unit
-                            // Throw to retry these.  The main one is
-                            // DeployException which fires when dd times out.
-                            is ConnectionException,  is TimeoutException,
-                            is SSHException, is DeployException -> throw e
-                            else -> {
-                                withContext(Dispatchers.Main) {
-                                    logger.error("Failed to retrieve IDEs (attempt $attempt)", e)
-                                    cbIDEComment.foreground = UIUtil.getErrorForeground()
-                                    cbIDEComment.text = e.message ?: "The error did not provide any further details"
-                                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())
-                                }
-                            }
-                        }
-                        null
+                    val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                    if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                        installRemotePathValidator(executor)
                     }
+                    retrieveIDEs(executor, selectedWorkspace)
                 },
-                update = { attempt, retryMs, e ->
-                    logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $retryMs ms)", e)
+                predicate = { e ->
+                    e is ConnectionException || e is TimeoutException
+                            || e is SSHException || e is DeployException
+                },
+                update = { _, e, remaining ->
                     cbIDEComment.foreground = UIUtil.getErrorForeground()
-                    cbIDEComment.text = e.message ?: "The error did not provide any further details"
-                    val delayS = TimeUnit.MILLISECONDS.toSeconds(retryMs)
-                    val delay = if (delayS < 1) "now" else "in $delayS second${if (delayS > 1) "s" else ""}"
-                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", delay))
+                    cbIDEComment.text = e?.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                    cbIDE.renderer =
+                        if (remaining != null) IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", remaining))
+                        else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())
                 },
             )
             if (ides != null) {
