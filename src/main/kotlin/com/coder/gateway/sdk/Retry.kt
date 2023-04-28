@@ -3,6 +3,7 @@ package com.coder.gateway.sdk
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.ssh.SshException
+import com.jetbrains.gateway.ssh.deploy.DeployException
 import kotlinx.coroutines.delay
 import java.util.Random
 import java.util.concurrent.TimeUnit
@@ -19,8 +20,9 @@ fun unwrap(ex: Exception): Throwable? {
 
 /**
  * Similar to Intellij's except it gives you the next delay, logs differently,
- * updates periodically (for counting down), runs forever, and takes a
- * predicate for determining whether we should retry.
+ * updates periodically (for counting down), runs forever, takes a predicate for
+ * determining whether we should retry, and has some special handling for
+ * exceptions to provide the true cause or better messages.
  *
  * The update will have a boolean to indicate whether it is the first update (so
  * things like duplicate logs can be avoided).  If remaining is null then no
@@ -67,7 +69,15 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
           while (remainingMs > 0) {
               val remainingS = TimeUnit.MILLISECONDS.toSeconds(remainingMs)
               val remaining = if (remainingS < 1) "now" else "in $remainingS second${if (remainingS > 1) "s" else ""}"
-              update(attempt, unwrappedEx, remaining)
+              // When the worker upload times out Gateway just says it failed.
+              // Even the root cause (IllegalStateException) is useless.  The
+              // error also includes a very long useless tmp path.  With all
+              // that in mind, provide a better error.
+              val mungedEx =
+                  if (unwrappedEx is DeployException && unwrappedEx.message.contains("Worker binary deploy failed"))
+                      DeployException("Failed to upload worker binary...it may have timed out", unwrappedEx)
+                  else unwrappedEx
+              update(attempt, mungedEx, remaining)
               val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
               remainingMs -= next
               delay(next)
