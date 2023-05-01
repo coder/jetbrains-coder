@@ -1,6 +1,5 @@
 package com.coder.gateway.sdk
 
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.ssh.SshException
 import com.jetbrains.gateway.ssh.deploy.DeployException
@@ -19,28 +18,35 @@ fun unwrap(ex: Exception): Throwable {
 }
 
 /**
- * Similar to Intellij's except it gives you the next delay, logs differently,
- * updates periodically (for counting down), runs forever, takes a predicate for
- * determining whether we should retry, and has some special handling for
- * exceptions to provide the true cause or better messages.
+ * Similar to Intellij's except it adds two new arguments: onCountdown (for
+ * displaying the time until the next try) and retryIf (to limit which
+ * exceptions can be retried).
  *
- * The update will have a boolean to indicate whether it is the first update (so
- * things like duplicate logs can be avoided).  If remaining is null then no
- * more retries will be attempted.
+ * Exceptions that cannot be retried will be thrown.
  *
- * If an exception related to canceling is received then return null.
+ * onException and onCountdown will be called immediately on retryable failures.
+ * onCountdown will also be called every second until the next try with the time
+ * left until that next try (the last interval might be less than one second if
+ * the total delay is not divisible by one second).
+ *
+ * Some other differences:
+ * - onException gives you the time until the next try (intended to be logged
+ *   with the error).
+ * - Infinite tries.
+ * - SshException is unwrapped.
+ *
+ * It is otherwise identical.
  */
 suspend fun <T> suspendingRetryWithExponentialBackOff(
     initialDelayMs: Long = TimeUnit.SECONDS.toMillis(5),
     backOffLimitMs: Long = TimeUnit.MINUTES.toMillis(3),
     backOffFactor: Int = 2,
     backOffJitter: Double = 0.1,
-    label: String,
-    logger: Logger,
-    predicate: (e: Throwable) -> Boolean,
-    update: (attempt: Int, e: Throwable, remaining: Long?) -> Unit,
-    action: suspend (attempt: Int) -> T?
-): T? {
+    retryIf: (e: Throwable) -> Boolean,
+    onException: (attempt: Int, nextMs: Long, e: Throwable) -> Unit,
+    onCountdown: (remaining: Long) -> Unit,
+    action: suspend (attempt: Int) -> T
+): T {
     val random = Random()
     var delayMs = initialDelayMs
     for (attempt in 1..Int.MAX_VALUE) {
@@ -51,23 +57,13 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
           // SshException can happen due to anything from a timeout to being
           // canceled so unwrap to find out.
           val unwrappedEx = if (originalEx is SshException) unwrap(originalEx) else originalEx
-          when (unwrappedEx) {
-              is InterruptedException,
-              is CancellationException,
-              is ProcessCanceledException -> {
-                  logger.info("Retrying $label canceled due to ${unwrappedEx.javaClass}")
-                  return null
-              }
+          if (!retryIf(unwrappedEx)) {
+              throw unwrappedEx
           }
-          if (!predicate(unwrappedEx)) {
-              logger.error("Failed to $label (attempt $attempt; will not retry)", originalEx)
-              update(attempt, unwrappedEx, null)
-              return null
-          }
-          logger.error("Failed to $label (attempt $attempt; will retry in $delayMs ms)", originalEx)
+          onException(attempt, delayMs, unwrappedEx)
           var remainingMs = delayMs
           while (remainingMs > 0) {
-              update(attempt, unwrappedEx, remainingMs)
+              onCountdown(remainingMs)
               val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
               remainingMs -= next
               delay(next)
@@ -97,4 +93,13 @@ fun humanizeDuration(durationMs: Long): String {
  */
 fun isWorkerTimeout(e: Throwable): Boolean {
     return e is DeployException && e.message.contains("Worker binary deploy failed")
+}
+
+/**
+ * Return true if the exception is some kind of cancellation.
+ */
+fun isCancellation(e: Throwable): Boolean {
+    return e is InterruptedException
+            || e is CancellationException
+            || e is ProcessCanceledException
 }

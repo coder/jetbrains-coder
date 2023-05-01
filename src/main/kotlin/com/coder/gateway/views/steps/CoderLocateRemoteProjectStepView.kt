@@ -9,6 +9,7 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
 import com.coder.gateway.sdk.humanizeDuration
+import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.isWorkerTimeout
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.sdk.toURL
@@ -162,6 +163,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         // Clear contents from the last attempt if any.
         cbIDEComment.foreground = UIUtil.getContextHelpForeground()
         cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
+        cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
         ideComboBoxModel.removeAllElements()
         setNextButtonEnabled(false)
 
@@ -178,41 +180,46 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         terminalLink.url = coderClient.coderURL.withPath("/@${coderClient.me.username}/${selectedWorkspace.name}/terminal").toString()
 
         ideResolvingJob = cs.launch {
-            val ides = suspendingRetryWithExponentialBackOff(
-                label = "retrieve IDEs",
-                logger = logger,
-                action={ attempt ->
-                    logger.info("Deploying to ${selectedWorkspace.name} on $deploymentURL (attempt $attempt)")
-                    // Reset text in the select dropdown.
-                    withContext(Dispatchers.Main) {
-                        cbIDE.renderer = IDECellRenderer(
-                            if (attempt > 1) CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry.text", attempt)
-                            else CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.loading.text"))
-                    }
-                    val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
-                    if (ComponentValidator.getInstance(tfProject).isEmpty) {
-                        installRemotePathValidator(executor)
-                    }
-                    retrieveIDEs(executor, selectedWorkspace)
-                },
-                predicate = { e ->
-                    e is ConnectionException || e is TimeoutException
-                            || e is SSHException || e is DeployException
-                },
-                update = { _, e, remainingMs ->
-                    cbIDEComment.foreground = UIUtil.getErrorForeground()
-                    cbIDEComment.text =
-                        if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out.  Check the command log for more details."
-                        else e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
-                    cbIDE.renderer =
-                        if (remainingMs != null) IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", humanizeDuration(remainingMs)))
-                        else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())
-                },
-            )
-            if (ides != null) {
+            try {
+                val ides = suspendingRetryWithExponentialBackOff(
+                    action = { attempt ->
+                        logger.info("Retrieving IDEs...(attempt $attempt)")
+                        if (attempt > 1) {
+                            cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve.ides.retry", attempt))
+                        }
+                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                        if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                            installRemotePathValidator(executor)
+                        }
+                        retrieveIDEs(executor, selectedWorkspace)
+                    },
+                    retryIf = {
+                        it is ConnectionException || it is TimeoutException
+                                || it is SSHException || it is DeployException
+                    },
+                    onException = { attempt, nextMs, e ->
+                        logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
+                        cbIDEComment.foreground = UIUtil.getErrorForeground()
+                        cbIDEComment.text =
+                            if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out.  Check the command log for more details."
+                            else e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                    },
+                    onCountdown = { remainingMs ->
+                        cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed.retry", humanizeDuration(remainingMs)))
+                    },
+                )
                 withContext(Dispatchers.Main) {
                     ideComboBoxModel.addAll(ides)
                     cbIDE.selectedIndex = 0
+                }
+            } catch (e: Exception) {
+                if (isCancellation(e)) {
+                    logger.info("Connection canceled due to ${e.javaClass}")
+                } else {
+                    logger.error("Failed to retrieve IDEs (will not retry)", e)
+                    cbIDEComment.foreground = UIUtil.getErrorForeground()
+                    cbIDEComment.text = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed"), UIUtil.getBalloonErrorIcon())
                 }
             }
         }
