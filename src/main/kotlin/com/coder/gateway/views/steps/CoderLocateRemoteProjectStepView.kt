@@ -8,6 +8,7 @@ import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.OS
+import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.withPath
@@ -197,11 +198,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     e is ConnectionException || e is TimeoutException
                             || e is SSHException || e is DeployException
                 },
-                update = { _, e, remaining ->
+                update = { _, e, remainingMs ->
                     cbIDEComment.foreground = UIUtil.getErrorForeground()
                     cbIDEComment.text = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
                     cbIDE.renderer =
-                        if (remaining != null) IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", remaining))
+                        if (remainingMs != null) IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", humanizeDuration(remainingMs)))
                         else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())
                 },
             )

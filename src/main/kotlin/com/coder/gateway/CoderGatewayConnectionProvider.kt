@@ -2,6 +2,7 @@
 
 package com.coder.gateway
 
+import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.openapi.application.ApplicationManager
@@ -45,10 +46,10 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     e is ConnectionException || e is TimeoutException
                             || e is SSHException || e is DeployException
                 },
-                update = { _, e, remaining, ->
-                    if (remaining != null) {
+                update = { _, e, remainingMs ->
+                    if (remainingMs != null) {
                         indicator.text2 = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
-                        indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connection.retry-error.text", remaining)
+                        indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connection.retry-error.text", humanizeDuration(remainingMs))
                     } else {
                         ApplicationManager.getApplication().invokeAndWait {
                             Messages.showMessageDialog(

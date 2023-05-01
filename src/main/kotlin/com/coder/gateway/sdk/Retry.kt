@@ -38,7 +38,7 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
     label: String,
     logger: Logger,
     predicate: (e: Throwable) -> Boolean,
-    update: (attempt: Int, e: Throwable, remaining: String?) -> Unit,
+    update: (attempt: Int, e: Throwable, remaining: Long?) -> Unit,
     action: suspend (attempt: Int) -> T?
 ): T? {
     val random = Random()
@@ -67,8 +67,6 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
           logger.error("Failed to $label (attempt $attempt; will retry in $delayMs ms)", originalEx)
           var remainingMs = delayMs
           while (remainingMs > 0) {
-              val remainingS = TimeUnit.MILLISECONDS.toSeconds(remainingMs)
-              val remaining = if (remainingS < 1) "now" else "in $remainingS second${if (remainingS > 1) "s" else ""}"
               // When the worker upload times out Gateway just says it failed.
               // Even the root cause (IllegalStateException) is useless.  The
               // error also includes a very long useless tmp path.  With all
@@ -77,7 +75,7 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
                   if (unwrappedEx is DeployException && unwrappedEx.message.contains("Worker binary deploy failed"))
                       DeployException("Failed to upload worker binary...it may have timed out", unwrappedEx)
                   else unwrappedEx
-              update(attempt, mungedEx, remaining)
+              update(attempt, mungedEx, remainingMs)
               val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
               remainingMs -= next
               delay(next)
@@ -86,4 +84,16 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
       }
     }
     error("Should never be reached")
+}
+
+/**
+ * Convert a millisecond duration into a human-readable string.
+ *
+ * < 1 second: "now"
+ * 1 second: "in one second"
+ * > 1 second: "in <duration> seconds"
+ */
+fun humanizeDuration(durationMs: Long): String {
+    val seconds = TimeUnit.MILLISECONDS.toSeconds(durationMs)
+    return if (seconds < 1) "now" else "in $seconds second${if (seconds > 1) "s" else ""}"
 }
