@@ -67,15 +67,7 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
           logger.error("Failed to $label (attempt $attempt; will retry in $delayMs ms)", originalEx)
           var remainingMs = delayMs
           while (remainingMs > 0) {
-              // When the worker upload times out Gateway just says it failed.
-              // Even the root cause (IllegalStateException) is useless.  The
-              // error also includes a very long useless tmp path.  With all
-              // that in mind, provide a better error.
-              val mungedEx =
-                  if (unwrappedEx is DeployException && unwrappedEx.message.contains("Worker binary deploy failed"))
-                      DeployException("Failed to upload worker binary...it may have timed out", unwrappedEx)
-                  else unwrappedEx
-              update(attempt, mungedEx, remainingMs)
+              update(attempt, unwrappedEx, remainingMs)
               val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
               remainingMs -= next
               delay(next)
@@ -96,4 +88,13 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
 fun humanizeDuration(durationMs: Long): String {
     val seconds = TimeUnit.MILLISECONDS.toSeconds(durationMs)
     return if (seconds < 1) "now" else "in $seconds second${if (seconds > 1) "s" else ""}"
+}
+
+/**
+ * When the worker upload times out Gateway just says it failed. Even the root
+ * cause (IllegalStateException) is useless.  The error also includes a very
+ * long useless tmp path.  Return true if the error looks like this timeout.
+ */
+fun isWorkerTimeout(e: Throwable): Boolean {
+    return e is DeployException && e.message.contains("Worker binary deploy failed")
 }

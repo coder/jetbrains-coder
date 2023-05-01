@@ -3,6 +3,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.sdk.humanizeDuration
+import com.coder.gateway.sdk.isWorkerTimeout
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.openapi.application.ApplicationManager
@@ -48,7 +49,9 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 },
                 update = { _, e, remainingMs ->
                     if (remainingMs != null) {
-                        indicator.text2 = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                        indicator.text2 =
+                            if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out"
+                            else e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connection.retry-error.text", humanizeDuration(remainingMs))
                     } else {
                         ApplicationManager.getApplication().invokeAndWait {
