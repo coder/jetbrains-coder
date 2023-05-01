@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.min
 
-fun unwrap(ex: Exception): Throwable? {
+fun unwrap(ex: Exception): Throwable {
     var cause = ex.cause
     while(cause?.cause != null) {
         cause = cause.cause
@@ -37,8 +37,8 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
     backOffJitter: Double = 0.1,
     label: String,
     logger: Logger,
-    predicate: (e: Throwable?) -> Boolean,
-    update: (attempt: Int, e: Throwable?, remaining: String?) -> Unit,
+    predicate: (e: Throwable) -> Boolean,
+    update: (attempt: Int, e: Throwable, remaining: String?) -> Unit,
     action: suspend (attempt: Int) -> T?
 ): T? {
     val random = Random()

@@ -199,7 +199,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                 },
                 update = { _, e, remaining ->
                     cbIDEComment.foreground = UIUtil.getErrorForeground()
-                    cbIDEComment.text = e?.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                    cbIDEComment.text = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
                     cbIDE.renderer =
                         if (remaining != null) IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.retry-error.text", remaining))
                         else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.error.text"), UIUtil.getBalloonErrorIcon())

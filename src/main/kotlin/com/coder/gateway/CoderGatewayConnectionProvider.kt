@@ -47,12 +47,12 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 },
                 update = { _, e, remaining, ->
                     if (remaining != null) {
-                        indicator.text2 = e?.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                        indicator.text2 = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connection.retry-error.text", remaining)
                     } else {
                         ApplicationManager.getApplication().invokeAndWait {
                             Messages.showMessageDialog(
-                                e?.message ?: CoderGatewayBundle.message("gateway.connector.no-details"),
+                                e.message ?: CoderGatewayBundle.message("gateway.connector.no-details"),
                                 CoderGatewayBundle.message("gateway.connector.coder.connection.error.text"),
                                 Messages.getErrorIcon())
                         }
