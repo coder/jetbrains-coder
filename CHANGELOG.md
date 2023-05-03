@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.3.0 - 2023-05-03
+
 ### Added
 - support connecting to multiple deployments (existing connections will still be
   using the old method; please re-add them if you connect to multiple
