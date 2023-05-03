@@ -73,8 +73,9 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                         override fun textChanged(e: DocumentEvent) {
                                             val toSearchFor = this@applyToComponent.text
                                             val filteredConnections = recentConnectionsService.getAllRecentConnections()
-                                                .filter { it.coderWorkspaceHostname?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false || it.projectPath?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false }
-                                            updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname })
+                                                .filter { it.coderWorkspaceHostname != null }
+                                                .filter { it.coderWorkspaceHostname!!.lowercase(Locale.getDefault()).contains(toSearchFor) || it.projectPath?.lowercase(Locale.getDefault())?.contains(toSearchFor) ?: false }
+                                            updateContentView(filteredConnections.groupBy { it.coderWorkspaceHostname!! })
                                         }
                                     })
                                 }.component
@@ -105,23 +106,24 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     override fun getRecentsTitle() = CoderGatewayBundle.message("gateway.connector.title")
 
     override fun updateRecentView() {
-        updateContentView(recentConnectionsService.getAllRecentConnections().groupBy { it.coderWorkspaceHostname })
+        val groupedConnections = recentConnectionsService.getAllRecentConnections()
+            .filter { it.coderWorkspaceHostname != null }
+            .groupBy { it.coderWorkspaceHostname!! }
+        updateContentView(groupedConnections)
     }
 
-    private fun updateContentView(groupedConnections: Map<String?, List<RecentWorkspaceConnection>>) {
+    private fun updateContentView(groupedConnections: Map<String, List<RecentWorkspaceConnection>>) {
         recentWorkspacesContentPanel.viewport.view = panel {
             groupedConnections.entries.forEach { (hostname, recentConnections) ->
                 row {
-                    if (hostname != null) {
-                        label(hostname).applyToComponent {
-                            font = JBFont.h3().asBold()
-                        }.align(AlignX.LEFT).gap(RightGap.SMALL)
-                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                BrowserUtil.browse(recentConnections[0].webTerminalLink ?: "")
-                            }
-                        })
-                    }
+                    label(hostname).applyToComponent {
+                        font = JBFont.h3().asBold()
+                    }.align(AlignX.LEFT).gap(RightGap.SMALL)
+                    actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            BrowserUtil.browse(recentConnections[0].webTerminalLink ?: "")
+                        }
+                    })
                 }.topGap(TopGap.MEDIUM)
 
                 recentConnections.forEach { connectionDetails ->
@@ -141,7 +143,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recentconnections.remove.button.tooltip"), "", CoderIcons.DELETE) {
                             override fun actionPerformed(e: AnActionEvent) {
                                 recentConnectionsService.removeConnection(connectionDetails)
-                                updateContentView(recentConnectionsService.getAllRecentConnections().groupBy { it.coderWorkspaceHostname })
+                                updateRecentView()
                             }
                         })
                     }
