@@ -757,6 +757,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             )
             cliManager.configSsh(tableOfWorkspaces.items)
 
+            // The config directory can be used to pull the URL and token in
+            // order to query this workspace's status in other flows, for
+            // example from the recent connections screen.
+            wizardModel.configDirectory = cliManager.coderConfigPath.toString()
+
             logger.info("Opening IDE and Project Location window for ${workspace.name}")
             return true
         }

@@ -16,6 +16,7 @@ import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.views.LazyBrowserLink
+import com.coder.gateway.withConfigDirectory
 import com.coder.gateway.withProjectPath
 import com.coder.gateway.withWebTerminalLink
 import com.coder.gateway.withWorkspaceHostname
@@ -334,6 +335,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
                     .withProjectPath(tfProject.text)
                     .withWebTerminalLink("${terminalLink.url}")
+                    .withConfigDirectory(wizardModel.configDirectory)
             )
         }
         return true

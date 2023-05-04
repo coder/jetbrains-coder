@@ -31,7 +31,7 @@ class CoderCLIManager @JvmOverloads constructor(
 ) {
     var remoteBinaryURL: URL
     var localBinaryPath: Path
-    private var coderConfigPath: Path
+    var coderConfigPath: Path
 
     init {
         val binaryName = getCoderCLIForOS(getOS(), getArch())

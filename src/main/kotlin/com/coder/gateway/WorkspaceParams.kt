@@ -23,6 +23,7 @@ private const val IDE_PRODUCT_CODE = "ide_product_code"
 private const val IDE_BUILD_NUMBER = "ide_build_number"
 private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 private const val WEB_TERMINAL_LINK = "web_terminal_link"
+private const val CONFIG_DIRECTORY = "config_directory"
 
 private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
 
@@ -33,7 +34,8 @@ fun RecentWorkspaceConnection.toWorkspaceParams(): Map<String, String> {
         PROJECT_PATH to this.projectPath!!,
         IDE_PRODUCT_CODE to IntelliJPlatformProduct.fromProductCode(this.ideProductCode!!)!!.productCode,
         IDE_BUILD_NUMBER to "${this.ideBuildNumber}",
-        WEB_TERMINAL_LINK to "${this.webTerminalLink}"
+        WEB_TERMINAL_LINK to "${this.webTerminalLink}",
+        CONFIG_DIRECTORY to "${this.configDirectory}"
     )
 
     if (!this.downloadSource.isNullOrBlank()) {
@@ -77,6 +79,12 @@ fun Map<String, String>.withProjectPath(projectPath: String): Map<String, String
 fun Map<String, String>.withWebTerminalLink(webTerminalLink: String): Map<String, String> {
     val map = this.toMutableMap()
     map[WEB_TERMINAL_LINK] = webTerminalLink
+    return map
+}
+
+fun Map<String, String>.withConfigDirectory(dir: String): Map<String, String> {
+    val map = this.toMutableMap()
+    map[CONFIG_DIRECTORY] = dir
     return map
 }
 
@@ -140,7 +148,8 @@ fun Map<String, String>.toRecentWorkspaceConnection(): RecentWorkspaceConnection
         this[IDE_BUILD_NUMBER]!!,
         this[IDE_DOWNLOAD_LINK]!!,
         null,
-        this[WEB_TERMINAL_LINK]!!
+        this[WEB_TERMINAL_LINK]!!,
+        this[CONFIG_DIRECTORY]!!
     ) else RecentWorkspaceConnection(
         this.workspaceHostname(),
         this.projectPath(),
@@ -149,6 +158,7 @@ fun Map<String, String>.toRecentWorkspaceConnection(): RecentWorkspaceConnection
         this[IDE_BUILD_NUMBER]!!,
         null,
         this[IDE_PATH_ON_HOST],
-        this[WEB_TERMINAL_LINK]!!
+        this[WEB_TERMINAL_LINK]!!,
+        this[CONFIG_DIRECTORY]!!
     )
 }

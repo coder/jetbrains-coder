@@ -11,4 +11,5 @@ data class CoderWorkspacesWizardModel(
     var token: Pair<String, TokenSource>? = null,
     var selectedWorkspace: WorkspaceAgentModel? = null,
     var useExistingToken: Boolean = false,
+    var configDirectory: String = "",
 )

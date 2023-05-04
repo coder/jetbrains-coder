@@ -4,7 +4,7 @@ import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
 class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConnection> {
-    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String) : this() {
+    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String, config: String) : this() {
         coderWorkspaceHostname = hostname
         projectPath = prjPath
         lastOpened = openedAt
@@ -13,6 +13,7 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         downloadSource = source
         idePathOnHost = idePath
         webTerminalLink = terminalLink
+        configDirectory = config
     }
 
     @get:Attribute
@@ -39,6 +40,9 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
 
     @get:Attribute
     var webTerminalLink by string()
+
+    @get:Attribute
+    var configDirectory by string()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -88,10 +92,10 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         if (m != null && m != 0) return m
 
         val n = other.idePathOnHost?.let { idePathOnHost?.compareTo(it) }
-        if (n != null && m != 0) return n
+        if (n != null && n != 0) return n
 
         val o = other.webTerminalLink?.let { webTerminalLink?.compareTo(it) }
-        if (o != null && n != 0) return o
+        if (o != null && o != 0) return o
 
         return 0
     }
