@@ -31,18 +31,30 @@ import java.util.UUID
 class CoderRestClientService {
     var isReady: Boolean = false
         private set
-    private lateinit var httpClient: OkHttpClient
-    private lateinit var retroRestClient: CoderV2RestFacade
-    private lateinit var sessionToken: String
-    lateinit var coderURL: URL
     lateinit var me: User
     lateinit var buildVersion: String
+    lateinit var client: CoderRestClient
 
     /**
-     * This must be called before anything else. It will authenticate with coder and retrieve a session token
+     * This must be called before anything else. It will authenticate and load
+     * information about the current user and the build version.
+     *
      * @throws [AuthenticationResponseException] if authentication failed.
      */
     fun initClientSession(url: URL, token: String): User {
+        client = CoderRestClient(url, token)
+        me = client.me()
+        buildVersion = client.buildInfo().version
+        isReady = true
+        return me
+    }
+}
+
+class CoderRestClient(var url: URL, private var token: String) {
+    private var httpClient: OkHttpClient
+    private var retroRestClient: CoderV2RestFacade
+
+    init {
         val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
         val pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!! // this is the id from the plugin.xml
 
@@ -54,18 +66,19 @@ class CoderRestClientService {
             .build()
 
         retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient).addConverterFactory(GsonConverterFactory.create(gson)).build().create(CoderV2RestFacade::class.java)
+    }
 
+    /**
+     * Retrieve the current user.
+     * @throws [AuthenticationResponseException] if authentication failed.
+     */
+    fun me(): User {
         val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
-            throw AuthenticationResponseException("Could not retrieve information about logged user:${userResponse.code()}, reason: ${userResponse.message()}")
+            throw AuthenticationResponseException("Could not retrieve information about logged user:${userResponse.code()}, reason: ${userResponse.message().ifBlank { "no reason provided" }}")
         }
 
-        coderURL = url
-        sessionToken = token
-        me = userResponse.body()!!
-        buildVersion = buildInfo().version
-        isReady = true
-        return me
+        return userResponse.body()!!
     }
 
     /**
@@ -75,24 +88,24 @@ class CoderRestClientService {
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
         if (!workspacesResponse.isSuccessful) {
-            throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message()}")
+            throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return workspacesResponse.body()!!.workspaces
     }
 
-    private fun buildInfo(): BuildInfo {
+    fun buildInfo(): BuildInfo {
         val buildInfoResponse = retroRestClient.buildInfo().execute()
         if (!buildInfoResponse.isSuccessful) {
-            throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $coderURL, reason:${buildInfoResponse.message()}")
+            throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $url, reason:${buildInfoResponse.message().ifBlank { "no reason provided" }}")
         }
         return buildInfoResponse.body()!!
     }
 
-    private fun template(templateID: UUID): Template {
+    fun template(templateID: UUID): Template {
         val templateResponse = retroRestClient.template(templateID).execute()
         if (!templateResponse.isSuccessful) {
-            throw TemplateResponseException("Failed to retrieve template with id: $templateID, reason: ${templateResponse.message()}")
+            throw TemplateResponseException("Failed to retrieve template with id: $templateID, reason: ${templateResponse.message().ifBlank { "no reason provided" }}")
         }
         return templateResponse.body()!!
     }
@@ -101,7 +114,7 @@ class CoderRestClientService {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to build workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+            throw WorkspaceResponseException("Failed to build workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!
@@ -111,7 +124,7 @@ class CoderRestClientService {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+            throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!
@@ -123,7 +136,7 @@ class CoderRestClientService {
         val buildRequest = CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to update workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message()}")
+            throw WorkspaceResponseException("Failed to update workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!

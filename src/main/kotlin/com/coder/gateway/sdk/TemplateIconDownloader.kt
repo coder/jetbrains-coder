@@ -18,7 +18,7 @@ import javax.swing.Icon
 
 @Service(Service.Level.APP)
 class TemplateIconDownloader {
-    private val coderClient: CoderRestClientService = service()
+    private val clientService: CoderRestClientService = service()
     private val cache = mutableMapOf<Pair<String, String>, Icon>()
 
     fun load(path: String, workspaceName: String): Icon {
@@ -26,7 +26,7 @@ class TemplateIconDownloader {
         if (path.startsWith("http")) {
             url = path.toURL()
         } else if (!path.contains(":") && !path.contains("//")) {
-            url = coderClient.coderURL.withPath(path)
+            url = clientService.client.url.withPath(path)
         }
 
         if (url != null) {

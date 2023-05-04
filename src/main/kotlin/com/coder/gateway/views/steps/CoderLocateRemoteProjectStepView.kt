@@ -84,7 +84,7 @@ import javax.swing.event.DocumentEvent
 
 class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
-    private val coderClient: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
+    private val clientService: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
 
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
 
@@ -177,7 +177,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         tfProject.text = if (selectedWorkspace.homeDirectory.isNullOrBlank()) "/home" else selectedWorkspace.homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
-        terminalLink.url = coderClient.coderURL.withPath("/@${coderClient.me.username}/${selectedWorkspace.name}/terminal").toString()
+        terminalLink.url = clientService.client.url.withPath("/@${clientService.me.username}/${selectedWorkspace.name}/terminal").toString()
 
         ideResolvingJob = cs.launch {
             try {
