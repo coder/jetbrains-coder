@@ -24,6 +24,7 @@ private const val IDE_BUILD_NUMBER = "ide_build_number"
 private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 private const val WEB_TERMINAL_LINK = "web_terminal_link"
 private const val CONFIG_DIRECTORY = "config_directory"
+private const val NAME = "name"
 
 private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
 
@@ -35,7 +36,8 @@ fun RecentWorkspaceConnection.toWorkspaceParams(): Map<String, String> {
         IDE_PRODUCT_CODE to IntelliJPlatformProduct.fromProductCode(this.ideProductCode!!)!!.productCode,
         IDE_BUILD_NUMBER to "${this.ideBuildNumber}",
         WEB_TERMINAL_LINK to "${this.webTerminalLink}",
-        CONFIG_DIRECTORY to "${this.configDirectory}"
+        CONFIG_DIRECTORY to "${this.configDirectory}",
+        NAME to "${this.name}"
     )
 
     if (!this.downloadSource.isNullOrBlank()) {
@@ -87,6 +89,13 @@ fun Map<String, String>.withConfigDirectory(dir: String): Map<String, String> {
     map[CONFIG_DIRECTORY] = dir
     return map
 }
+
+fun Map<String, String>.withName(name: String): Map<String, String> {
+    val map = this.toMutableMap()
+    map[NAME] = name
+    return map
+}
+
 
 fun Map<String, String>.areCoderType(): Boolean {
     return this[TYPE] == VALUE_FOR_TYPE && !this[CODER_WORKSPACE_HOSTNAME].isNullOrBlank() && !this[PROJECT_PATH].isNullOrBlank()
@@ -149,7 +158,8 @@ fun Map<String, String>.toRecentWorkspaceConnection(): RecentWorkspaceConnection
         this[IDE_DOWNLOAD_LINK]!!,
         null,
         this[WEB_TERMINAL_LINK]!!,
-        this[CONFIG_DIRECTORY]!!
+        this[CONFIG_DIRECTORY]!!,
+        this[NAME]!!,
     ) else RecentWorkspaceConnection(
         this.workspaceHostname(),
         this.projectPath(),
@@ -159,6 +169,7 @@ fun Map<String, String>.toRecentWorkspaceConnection(): RecentWorkspaceConnection
         null,
         this[IDE_PATH_ON_HOST],
         this[WEB_TERMINAL_LINK]!!,
-        this[CONFIG_DIRECTORY]!!
+        this[CONFIG_DIRECTORY]!!,
+        this[NAME]!!,
     )
 }

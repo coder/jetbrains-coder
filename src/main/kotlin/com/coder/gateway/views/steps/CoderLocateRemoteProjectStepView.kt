@@ -17,6 +17,7 @@ import com.coder.gateway.sdk.withPath
 import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.views.LazyBrowserLink
 import com.coder.gateway.withConfigDirectory
+import com.coder.gateway.withName
 import com.coder.gateway.withProjectPath
 import com.coder.gateway.withWebTerminalLink
 import com.coder.gateway.withWorkspaceHostname
@@ -184,7 +185,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             try {
                 val ides = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
-                        logger.info("Retrieving IDEs...(attempt $attempt)")
+                        logger.info("Retrieving IDEs... (attempt $attempt)")
                         if (attempt > 1) {
                             cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve.ides.retry", attempt))
                         }
@@ -336,6 +337,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     .withProjectPath(tfProject.text)
                     .withWebTerminalLink("${terminalLink.url}")
                     .withConfigDirectory(wizardModel.configDirectory)
+                    .withName(selectedWorkspace.name)
             )
         }
         return true

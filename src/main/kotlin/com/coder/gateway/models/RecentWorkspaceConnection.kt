@@ -4,7 +4,7 @@ import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
 class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConnection> {
-    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String, config: String) : this() {
+    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String, config: String, name: String) : this() {
         coderWorkspaceHostname = hostname
         projectPath = prjPath
         lastOpened = openedAt
@@ -14,6 +14,7 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         idePathOnHost = idePath
         webTerminalLink = terminalLink
         configDirectory = config
+        this.name = name
     }
 
     @get:Attribute
@@ -43,6 +44,9 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
 
     @get:Attribute
     var configDirectory by string()
+
+    @get:Attribute
+    var name by string()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
