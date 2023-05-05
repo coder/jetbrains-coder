@@ -8,6 +8,10 @@ object CoderIcons {
 
     val OPEN_TERMINAL = IconLoader.getIcon("open_terminal.svg", javaClass)
 
+    val PENDING = IconLoader.getIcon("pending.svg", javaClass)
+    val RUNNING = IconLoader.getIcon("running.svg", javaClass)
+    val OFF = IconLoader.getIcon("off.svg", javaClass)
+
     val HOME = IconLoader.getIcon("homeFolder.svg", javaClass)
     val CREATE = IconLoader.getIcon("create.svg", javaClass)
     val RUN = IconLoader.getIcon("run.svg", javaClass)

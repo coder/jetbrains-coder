@@ -5,7 +5,6 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
@@ -860,12 +859,13 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
 
         override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
+                private val workspace = item
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
-                        foreground = WorkspaceAndAgentStatus.from(value).statusColor()
-                        toolTipText = WorkspaceAndAgentStatus.from(value).description
+                        foreground = workspace?.agentStatus?.statusColor()
+                        toolTipText = workspace?.agentStatus?.description
                     }
                     font = table.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
