@@ -7,7 +7,6 @@ import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.sdk.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.CoderSemVer
@@ -20,8 +19,8 @@ import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.toURL
-import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
+import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.ide.ActivityTracker
@@ -659,7 +658,15 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
             try {
                 val ws = clientService.client.workspaces()
-                val ams = ws.flatMap { it.toAgentModels() }.toSet()
+                val ams = ws.flatMap { it.toAgentModels() }
+                ams.forEach {
+                    cs.launch(Dispatchers.IO) {
+                        it.templateIcon = iconDownloader.load(it.templateIconPath, it.name)
+                        withContext(Dispatchers.Main) {
+                            tableOfWorkspaces.updateUI()
+                        }
+                    }
+                }
                 val timeAfterRequestingWorkspaces = System.currentTimeMillis()
                 logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
                 return@withContext ams
@@ -673,62 +680,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             tableOfWorkspaces.listTableModel.items = ws.toList()
             tableOfWorkspaces.selectItem(selectedWorkspace)
         }
-    }
-
-    private fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
-        val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-            val workspaceWithAgentName = "${this.name}.${agent.name}"
-            val wm = WorkspaceAgentModel(
-                this.id,
-                this.name,
-                workspaceWithAgentName,
-                this.templateID,
-                this.templateName,
-                this.templateIcon,
-                null,
-                WorkspaceVersionStatus.from(this),
-                this.latestBuild.status,
-                WorkspaceAndAgentStatus.from(this, agent),
-                this.latestBuild.transition,
-                OS.from(agent.operatingSystem),
-                Arch.from(agent.architecture),
-                agent.expandedDirectory ?: agent.directory,
-            )
-            cs.launch(Dispatchers.IO) {
-                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                withContext(Dispatchers.Main) {
-                    tableOfWorkspaces.updateUI()
-                }
-            }
-            wm
-        }.toSet()
-
-        if (wam.isNullOrEmpty()) {
-            val wm = WorkspaceAgentModel(
-                this.id,
-                this.name,
-                this.name,
-                this.templateID,
-                this.templateName,
-                this.templateIcon,
-                null,
-                WorkspaceVersionStatus.from(this),
-                this.latestBuild.status,
-                WorkspaceAndAgentStatus.from(this),
-                this.latestBuild.transition,
-                null,
-                null,
-                null
-            )
-            cs.launch(Dispatchers.IO) {
-                wm.templateIcon = iconDownloader.load(wm.templateIconPath, wm.name)
-                withContext(Dispatchers.Main) {
-                    tableOfWorkspaces.updateUI()
-                }
-            }
-            return setOf(wm)
-        }
-        return wam
     }
 
     override fun onPrevious() {
