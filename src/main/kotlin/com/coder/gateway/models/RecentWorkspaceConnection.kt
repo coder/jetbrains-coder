@@ -3,51 +3,28 @@ package com.coder.gateway.models
 import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
-class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConnection> {
-    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String, config: String, name: String) : this() {
-        coderWorkspaceHostname = hostname
-        projectPath = prjPath
-        lastOpened = openedAt
-        ideProductCode = productCode
-        ideBuildNumber = buildNumber
-        downloadSource = source
-        idePathOnHost = idePath
-        webTerminalLink = terminalLink
-        configDirectory = config
-        this.name = name
-    }
-
+class RecentWorkspaceConnection(
     @get:Attribute
-    var coderWorkspaceHostname by string()
-
+    var coderWorkspaceHostname: String? = null,
     @get:Attribute
-    var projectPath by string()
-
+    var projectPath: String? = null,
     @get:Attribute
-    var lastOpened by string()
-
+    var lastOpened: String? = null,
     @get:Attribute
-    var ideProductCode by string()
-
+    var ideProductCode: String? = null,
     @get:Attribute
-    var ideBuildNumber by string()
-
+    var ideBuildNumber: String? = null,
     @get:Attribute
-    var downloadSource by string()
-
-
+    var downloadSource: String? = null,
     @get:Attribute
-    var idePathOnHost by string()
-
+    var idePathOnHost: String? = null,
     @get:Attribute
-    var webTerminalLink by string()
-
+    var webTerminalLink: String? = null,
     @get:Attribute
-    var configDirectory by string()
-
+    var configDirectory: String? = null,
     @get:Attribute
-    var name by string()
-
+    var name: String? = null,
+) : BaseState(), Comparable<RecentWorkspaceConnection> {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
