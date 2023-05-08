@@ -8,9 +8,9 @@ class RecentWorkspaceConnectionState : BaseState() {
     var recentConnections by treeSet<RecentWorkspaceConnection>()
 
     fun add(connection: RecentWorkspaceConnection): Boolean {
-        // if the item is already there but with a different last update timestamp, remove it
+        // If the item is already there but with a different last updated
+        // timestamp or config directory, remove it.
         recentConnections.remove(connection)
-        // and add it again with the new timestamp
         val result = recentConnections.add(connection)
         if (result) incrementModificationCount()
         return result

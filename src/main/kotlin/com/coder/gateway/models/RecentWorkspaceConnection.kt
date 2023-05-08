@@ -3,43 +3,28 @@ package com.coder.gateway.models
 import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
-class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConnection> {
-    constructor(hostname: String, prjPath: String, openedAt: String, productCode: String, buildNumber: String, source: String?, idePath: String?, terminalLink: String) : this() {
-        coderWorkspaceHostname = hostname
-        projectPath = prjPath
-        lastOpened = openedAt
-        ideProductCode = productCode
-        ideBuildNumber = buildNumber
-        downloadSource = source
-        idePathOnHost = idePath
-        webTerminalLink = terminalLink
-    }
-
+class RecentWorkspaceConnection(
     @get:Attribute
-    var coderWorkspaceHostname by string()
-
+    var coderWorkspaceHostname: String? = null,
     @get:Attribute
-    var projectPath by string()
-
+    var projectPath: String? = null,
     @get:Attribute
-    var lastOpened by string()
-
+    var lastOpened: String? = null,
     @get:Attribute
-    var ideProductCode by string()
-
+    var ideProductCode: String? = null,
     @get:Attribute
-    var ideBuildNumber by string()
-
+    var ideBuildNumber: String? = null,
     @get:Attribute
-    var downloadSource by string()
-
-
+    var downloadSource: String? = null,
     @get:Attribute
-    var idePathOnHost by string()
-
+    var idePathOnHost: String? = null,
     @get:Attribute
-    var webTerminalLink by string()
-
+    var webTerminalLink: String? = null,
+    @get:Attribute
+    var configDirectory: String? = null,
+    @get:Attribute
+    var name: String? = null,
+) : BaseState(), Comparable<RecentWorkspaceConnection> {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -88,10 +73,10 @@ class RecentWorkspaceConnection() : BaseState(), Comparable<RecentWorkspaceConne
         if (m != null && m != 0) return m
 
         val n = other.idePathOnHost?.let { idePathOnHost?.compareTo(it) }
-        if (n != null && m != 0) return n
+        if (n != null && n != 0) return n
 
         val o = other.webTerminalLink?.let { webTerminalLink?.compareTo(it) }
-        if (o != null && n != 0) return o
+        if (o != null && o != 0) return o
 
         return 0
     }
