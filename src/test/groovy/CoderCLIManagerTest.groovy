@@ -5,10 +5,7 @@ import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import org.zeroturnaround.exec.InvalidExitValueException
 import org.zeroturnaround.exec.ProcessInitException
-import spock.lang.Requires
-import spock.lang.Shared
-import spock.lang.Specification
-import spock.lang.Unroll
+import spock.lang.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -137,7 +134,7 @@ class CoderCLIManagerTest extends Specification {
 
         then:
         downloaded
-        ccm.version().contains("Coder")
+        CoderSemVer.isValidVersion(ccm.version())
 
         // Make sure login failures propagate correctly.
         when:
@@ -161,7 +158,7 @@ class CoderCLIManagerTest extends Specification {
         // The mock does not serve a binary that works on Windows so do not
         // actually execute.  Checking the contents works just as well as proof
         // that the binary was correctly downloaded anyway.
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
+        ccm.localBinaryPath.toFile().text.contains(url)
 
         cleanup:
         srv.stop(0)
@@ -172,7 +169,7 @@ class CoderCLIManagerTest extends Specification {
         def ccm = new CoderCLIManager(new URL("https://foo"), tmpdir.resolve("does-not-exist"))
 
         when:
-        ccm.version()
+        ccm.login("token")
 
         then:
         thrown(ProcessInitException)
@@ -193,7 +190,7 @@ class CoderCLIManagerTest extends Specification {
         downloaded
         ccm.localBinaryPath.toFile().readBytes() != "cli".getBytes()
         ccm.localBinaryPath.toFile().lastModified() > 0
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
+        ccm.localBinaryPath.toFile().text.contains(url)
 
         cleanup:
         srv.stop(0)
@@ -207,6 +204,7 @@ class CoderCLIManagerTest extends Specification {
         when:
         def downloaded1 = ccm.downloadCLI()
         ccm.localBinaryPath.toFile().setLastModified(0)
+        // Download will be skipped due to a 304.
         def downloaded2 = ccm.downloadCLI()
 
         then:
@@ -231,8 +229,8 @@ class CoderCLIManagerTest extends Specification {
 
         then:
         ccm1.localBinaryPath != ccm2.localBinaryPath
-        ccm1.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url1'"
-        ccm2.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url2'"
+        ccm1.localBinaryPath.toFile().text.contains(url1)
+        ccm2.localBinaryPath.toFile().text.contains(url2)
 
         cleanup:
         srv1.stop(0)
@@ -249,7 +247,7 @@ class CoderCLIManagerTest extends Specification {
 
         then:
         downloaded
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '${expected.replace("{{url}}", url)}'"
+        ccm.localBinaryPath.toFile().text.contains(expected.replace("{{url}}", url))
 
         cleanup:
         srv.stop(0)
@@ -428,5 +426,28 @@ class CoderCLIManagerTest extends Specification {
                 "malformed-no-start",
                 "malformed-start-after-end",
         ]
+    }
+
+    @IgnoreIf({ os.windows })
+    def "parses version"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+        ccm.localBinaryPath.toFile().setExecutable(true)
+
+        then:
+        ccm.version() == expected
+
+        where:
+        contents                                                 | expected
+        """echo '{"version": "1.0.0"}'"""                        | "1.0.0"
+        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | "1.0.0"
+        """echo '{"foo": true, "baz": 1}'"""                     | null
+        """echo '{"version: "1.0.0", "foo": true, "baz": 1}'"""  | null
+        "exit 0"                                                 | null
+        "exit 1"                                                 | null
     }
 }

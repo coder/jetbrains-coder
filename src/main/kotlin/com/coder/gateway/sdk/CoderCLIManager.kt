@@ -2,6 +2,7 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
+import com.google.gson.Gson
 import com.intellij.openapi.diagnostic.Logger
 import org.zeroturnaround.exec.ProcessExecutor
 import java.io.BufferedInputStream
@@ -277,10 +278,24 @@ class CoderCLIManager @JvmOverloads constructor(
     }
 
     /**
-     * Return the binary version.
+     * Version output from the CLI's version command.
      */
-    fun version(): String {
-        return exec("version")
+    private data class Version(
+        val version: String,
+    )
+
+    /**
+     * Return the binary version or null if it could not be determined.
+     */
+    fun version(): String? {
+        return try {
+            val raw = exec("version", "--output", "json")
+            val json = Gson().fromJson(raw, Version::class.java)
+            json.version
+        } catch (e: Exception) {
+            logger.warn("Unable to determine CLI version: ${e.message}")
+            null
+        }
     }
 
     private fun exec(vararg args: String): String {
