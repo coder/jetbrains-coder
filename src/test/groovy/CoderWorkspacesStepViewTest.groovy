@@ -51,4 +51,8 @@ class CoderWorkspacesStepViewTest extends Specification {
         DataGen.workspace("gone", "ws6")   | 7  // Agent gone, workspace comes first.
         DataGen.workspace("agent3", "ws6") | 8  // Agent exact match.
     }
+
+    def "gets cli manager"() {
+
+    }
 }

@@ -69,6 +69,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.zeroturnaround.exec.InvalidExitValueException
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.MouseEvent
@@ -79,7 +80,7 @@ import java.awt.font.TextAttribute.UNDERLINE_ON
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
-import java.nio.file.Path
+import java.net.UnknownHostException
 import javax.swing.Icon
 import javax.swing.JCheckBox
 import javax.swing.JTable
@@ -99,6 +100,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val clientService: CoderRestClientService = service()
+    private var cliManager: CoderCLIManager? = null
     private val iconDownloader: TemplateIconDownloader = service()
     private val settings: CoderSettingsState = service()
 
@@ -339,6 +341,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
+        cliManager = null
         tableOfWorkspaces.listTableModel.items = emptyList()
         if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token != null) {
             triggerWorkspacePolling(true)
@@ -443,6 +446,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         onAuthFailure: (() -> Unit)? = null,
     ): Job {
         // Clear out old deployment details.
+        cliManager = null
         poller?.cancel()
         tableOfWorkspaces.setEmptyState("Connecting to $deploymentURL...")
         tableOfWorkspaces.listTableModel.items = emptyList()
@@ -454,12 +458,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             canBeCancelled = false,
             isIndeterminate = true
         ) {
-            val cliManager = CoderCLIManager(
-                deploymentURL,
-                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
-                else CoderCLIManager.getDataDir(),
-                settings.binarySource,
-            )
             try {
                 this.indicator.text = "Authenticating client..."
                 authenticate(deploymentURL, token.first)
@@ -467,18 +465,15 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN, token.first)
 
-                // Short-circuit if we already have the expected version.  This
-                // lets us bypass the 304 which is slower and may not be
-                // supported if the binary is downloaded from alternate sources.
-                // For CLIs without the JSON output flag we will fall back to
-                // the 304 method.
-                if (!cliManager.matchesVersion(clientService.buildVersion)) {
-                    this.indicator.text = "Downloading Coder CLI..."
-                    cliManager.downloadCLI()
-                }
+                val cli = CoderCLIManager.ensureCLI(
+                    deploymentURL,
+                    clientService.buildVersion,
+                    settings,
+                    this.indicator,
+                )
 
                 this.indicator.text = "Authenticating Coder CLI..."
-                cliManager.login(token.first)
+                cli.login(token.first)
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
@@ -486,9 +481,15 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
 
+                cliManager = cli
                 tableOfWorkspaces.setEmptyState("Connected to $deploymentURL")
             } catch (e: Exception) {
-                val errorSummary = e.message ?: "No reason was provided"
+                val errorSummary = when (e) {
+                    is java.nio.file.AccessDeniedException -> "Access denied to ${e.file}"
+                    is UnknownHostException -> "Unknown host ${e.message}"
+                    is InvalidExitValueException -> "CLI exited unexpectedly with ${e.exitValue}"
+                    else -> e.message ?: "No reason was provided"
+                }
                 var msg = CoderGatewayBundle.message(
                     "gateway.connector.view.workspaces.connect.failed",
                     deploymentURL,
@@ -513,7 +514,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                     is ResponseException, is ConnectException -> {
                         msg = CoderGatewayBundle.message(
                             "gateway.connector.view.workspaces.connect.download-failed",
-                            cliManager.remoteBinaryURL,
                             errorSummary,
                         )
                     }
@@ -700,29 +700,30 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             token = localWizardModel.token
         }
 
+        // These being null would be a developer error.
         val workspace = tableOfWorkspaces.selectedObject
-        if (workspace != null) {
-            wizardModel.selectedWorkspace = workspace
-            poller?.cancel()
-
-            logger.info("Configuring Coder CLI...")
-            val cliManager = CoderCLIManager(
-                wizardModel.coderURL.toURL(),
-                if (settings.binaryDestination.isNotBlank()) Path.of(settings.binaryDestination)
-                else CoderCLIManager.getDataDir(),
-                settings.binarySource,
-            )
-            cliManager.configSsh(tableOfWorkspaces.items)
-
-            // The config directory can be used to pull the URL and token in
-            // order to query this workspace's status in other flows, for
-            // example from the recent connections screen.
-            wizardModel.configDirectory = cliManager.coderConfigPath.toString()
-
-            logger.info("Opening IDE and Project Location window for ${workspace.name}")
-            return true
+        val cli = cliManager
+        if (workspace == null) {
+            logger.error("No selected workspace")
+            return false
+        } else if (cli == null) {
+            logger.error("No configured CLI")
+            return false
         }
-        return false
+
+        wizardModel.selectedWorkspace = workspace
+        poller?.cancel()
+
+        logger.info("Configuring Coder CLI...")
+        cli.configSsh(tableOfWorkspaces.items)
+
+        // The config directory can be used to pull the URL and token in
+        // order to query this workspace's status in other flows, for
+        // example from the recent connections screen.
+        wizardModel.configDirectory = cli.coderConfigPath.toString()
+
+        logger.info("Opening IDE and Project Location window for ${workspace.name}")
+        return true
     }
 
     override fun dispose() {
@@ -910,5 +911,4 @@ class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
         }
         return listTableModel.items.indexOfFirst { it.workspaceName == oldSelection.workspaceName }
     }
-
 }
