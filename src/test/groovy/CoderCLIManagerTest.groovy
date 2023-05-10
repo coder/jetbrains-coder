@@ -446,7 +446,7 @@ class CoderCLIManagerTest extends Specification {
         """echo '{"version": "1.0.0"}'"""                        | "1.0.0"
         """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | "1.0.0"
         """echo '{"foo": true, "baz": 1}'"""                     | null
-        """echo '{"version: "1.0.0", "foo": true, "baz": 1}'"""  | null
+        """echo '{"version: """                                  | null
         "exit 0"                                                 | null
         "exit 1"                                                 | null
     }
