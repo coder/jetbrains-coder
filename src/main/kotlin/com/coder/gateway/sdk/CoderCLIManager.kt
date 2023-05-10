@@ -285,16 +285,33 @@ class CoderCLIManager @JvmOverloads constructor(
     )
 
     /**
-     * Return the binary version or null if it could not be determined.
+     * Return the binary version.
+     *
+     * Throws if it could not be determined.
      */
-    fun version(): String? {
+    fun version(): CoderSemVer {
+        val raw = exec("version", "--output", "json")
+        val json = Gson().fromJson(raw, Version::class.java)
+        if (json?.version == null) {
+            throw InvalidVersionException("No version found in output")
+        }
+        return CoderSemVer.parse(json.version)
+    }
+
+    /**
+     * Returns true if the CLI has the same major/minor/patch version as the
+     * provided version and false if it does not match or the CLI version could
+     * not be determined or the provided version is invalid.
+     */
+    fun matchesVersion(buildVersion: String): Boolean {
         return try {
-            val raw = exec("version", "--output", "json")
-            val json = Gson().fromJson(raw, Version::class.java)
-            json.version
+            val cliVersion = version()
+            val matches = cliVersion == CoderSemVer.parse(buildVersion)
+            logger.info("$localBinaryPath version $cliVersion matches $buildVersion: $matches")
+            matches
         } catch (e: Exception) {
-            logger.warn("Unable to determine CLI version: ${e.message}")
-            null
+            logger.info("Unable to determine $localBinaryPath version: ${e.message}")
+            false
         }
     }
 

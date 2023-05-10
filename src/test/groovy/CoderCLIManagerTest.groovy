@@ -1,5 +1,6 @@
 package com.coder.gateway.sdk
 
+import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -131,10 +132,11 @@ class CoderCLIManagerTest extends Specification {
 
         when:
         def downloaded = ccm.downloadCLI()
+        ccm.version()
 
         then:
         downloaded
-        CoderSemVer.isValidVersion(ccm.version())
+        noExceptionThrown()
 
         // Make sure login failures propagate correctly.
         when:
@@ -443,11 +445,67 @@ class CoderCLIManagerTest extends Specification {
 
         where:
         contents                                                 | expected
-        """echo '{"version": "1.0.0"}'"""                        | "1.0.0"
-        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | "1.0.0"
-        """echo '{"foo": true, "baz": 1}'"""                     | null
-        """echo '{"version: """                                  | null
-        "exit 0"                                                 | null
-        "exit 1"                                                 | null
+        """echo '{"version": "1.0.0"}'"""                        | CoderSemVer.parse("1.0.0")
+        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | CoderSemVer.parse("1.0.0")
+    }
+
+    @IgnoreIf({ os.windows })
+    def "fails to parse version"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.parse-fail.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        if (contents != null) {
+            ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+            ccm.localBinaryPath.toFile().setExecutable(true)
+        }
+        ccm.version()
+
+        then:
+        thrown(expected)
+
+        where:
+        contents                                                 | expected
+        null                                                     | ProcessInitException
+        """echo '{"foo": true, "baz": 1}'"""                     | InvalidVersionException
+        """echo '{"version: '"""                                 | JsonSyntaxException
+        "exit 0"                                                 | InvalidVersionException
+        "exit 1"                                                 | InvalidExitValueException
+    }
+
+    @IgnoreIf({ os.windows })
+    def "checks if version matches"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.version-matches.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        if (contents != null) {
+          ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+          ccm.localBinaryPath.toFile().setExecutable(true)
+        }
+
+        then:
+        ccm.matchesVersion(build) == matches
+
+        where:
+        contents                                          | build                   | matches
+        null                                              | "v1.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.0"                | true
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0"                | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0-devel+c6c6c6c6" | true
+        """echo '{"version": "v1.0.0-prod+b5b5b5b5"}'"""  | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.1"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v1.1.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v2.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v0.0.0"                | false
+        """echo '{"version": ""}'"""                      | "v1.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | ""                      | false
+        """echo '{"version'"""                            | "v1.0.0"                | false
+        """exit 0"""                                      | "v1.0.0"                | false
+        """exit 1"""                                      | "v1.0.0"                | false
     }
 }

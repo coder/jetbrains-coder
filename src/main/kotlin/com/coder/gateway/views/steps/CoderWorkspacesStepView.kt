@@ -472,11 +472,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 // supported if the binary is downloaded from alternate sources.
                 // For CLIs without the JSON output flag we will fall back to
                 // the 304 method.
-                if (cliManager.version() != clientService.buildVersion) {
+                if (!cliManager.matchesVersion(clientService.buildVersion)) {
                     this.indicator.text = "Downloading Coder CLI..."
                     cliManager.downloadCLI()
-                } else {
-                    logger.info("Found existing binary at ${cliManager.localBinaryPath} with the expected version ${clientService.buildVersion}")
                 }
 
                 this.indicator.text = "Authenticating Coder CLI..."
