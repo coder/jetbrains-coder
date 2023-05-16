@@ -1,14 +1,12 @@
 package com.coder.gateway.sdk
 
+import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import org.zeroturnaround.exec.InvalidExitValueException
 import org.zeroturnaround.exec.ProcessInitException
-import spock.lang.Requires
-import spock.lang.Shared
-import spock.lang.Specification
-import spock.lang.Unroll
+import spock.lang.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -134,10 +132,11 @@ class CoderCLIManagerTest extends Specification {
 
         when:
         def downloaded = ccm.downloadCLI()
+        ccm.version()
 
         then:
         downloaded
-        ccm.version().contains("Coder")
+        noExceptionThrown()
 
         // Make sure login failures propagate correctly.
         when:
@@ -161,7 +160,7 @@ class CoderCLIManagerTest extends Specification {
         // The mock does not serve a binary that works on Windows so do not
         // actually execute.  Checking the contents works just as well as proof
         // that the binary was correctly downloaded anyway.
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
+        ccm.localBinaryPath.toFile().text.contains(url)
 
         cleanup:
         srv.stop(0)
@@ -172,7 +171,7 @@ class CoderCLIManagerTest extends Specification {
         def ccm = new CoderCLIManager(new URL("https://foo"), tmpdir.resolve("does-not-exist"))
 
         when:
-        ccm.version()
+        ccm.login("token")
 
         then:
         thrown(ProcessInitException)
@@ -193,7 +192,7 @@ class CoderCLIManagerTest extends Specification {
         downloaded
         ccm.localBinaryPath.toFile().readBytes() != "cli".getBytes()
         ccm.localBinaryPath.toFile().lastModified() > 0
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url'"
+        ccm.localBinaryPath.toFile().text.contains(url)
 
         cleanup:
         srv.stop(0)
@@ -207,6 +206,7 @@ class CoderCLIManagerTest extends Specification {
         when:
         def downloaded1 = ccm.downloadCLI()
         ccm.localBinaryPath.toFile().setLastModified(0)
+        // Download will be skipped due to a 304.
         def downloaded2 = ccm.downloadCLI()
 
         then:
@@ -231,8 +231,8 @@ class CoderCLIManagerTest extends Specification {
 
         then:
         ccm1.localBinaryPath != ccm2.localBinaryPath
-        ccm1.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url1'"
-        ccm2.localBinaryPath.toFile().text == "#!/bin/sh\necho '$url2'"
+        ccm1.localBinaryPath.toFile().text.contains(url1)
+        ccm2.localBinaryPath.toFile().text.contains(url2)
 
         cleanup:
         srv1.stop(0)
@@ -249,7 +249,7 @@ class CoderCLIManagerTest extends Specification {
 
         then:
         downloaded
-        ccm.localBinaryPath.toFile().text == "#!/bin/sh\necho '${expected.replace("{{url}}", url)}'"
+        ccm.localBinaryPath.toFile().text.contains(expected.replace("{{url}}", url))
 
         cleanup:
         srv.stop(0)
@@ -428,5 +428,84 @@ class CoderCLIManagerTest extends Specification {
                 "malformed-no-start",
                 "malformed-start-after-end",
         ]
+    }
+
+    @IgnoreIf({ os.windows })
+    def "parses version"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+        ccm.localBinaryPath.toFile().setExecutable(true)
+
+        then:
+        ccm.version() == expected
+
+        where:
+        contents                                                 | expected
+        """echo '{"version": "1.0.0"}'"""                        | CoderSemVer.parse("1.0.0")
+        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | CoderSemVer.parse("1.0.0")
+    }
+
+    @IgnoreIf({ os.windows })
+    def "fails to parse version"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.parse-fail.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        if (contents != null) {
+            ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+            ccm.localBinaryPath.toFile().setExecutable(true)
+        }
+        ccm.version()
+
+        then:
+        thrown(expected)
+
+        where:
+        contents                                                 | expected
+        null                                                     | ProcessInitException
+        """echo '{"foo": true, "baz": 1}'"""                     | InvalidVersionException
+        """echo '{"version: '"""                                 | JsonSyntaxException
+        "exit 0"                                                 | InvalidVersionException
+        "exit 1"                                                 | InvalidExitValueException
+    }
+
+    @IgnoreIf({ os.windows })
+    def "checks if version matches"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.version-matches.invalid"), tmpdir)
+        Files.createDirectories(ccm.localBinaryPath.parent)
+
+        when:
+        if (contents != null) {
+          ccm.localBinaryPath.toFile().text = "#!/bin/sh\n$contents"
+          ccm.localBinaryPath.toFile().setExecutable(true)
+        }
+
+        then:
+        ccm.matchesVersion(build) == matches
+
+        where:
+        contents                                          | build                   | matches
+        null                                              | "v1.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.0"                | true
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0"                | true
+        """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0-devel+c6c6c6c6" | true
+        """echo '{"version": "v1.0.0-prod+b5b5b5b5"}'"""  | "v1.0.0-devel+b5b5b5b5" | true
+        """echo '{"version": "v1.0.0"}'"""                | "v1.0.1"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v1.1.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v2.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | "v0.0.0"                | false
+        """echo '{"version": ""}'"""                      | "v1.0.0"                | false
+        """echo '{"version": "v1.0.0"}'"""                | ""                      | false
+        """echo '{"version'"""                            | "v1.0.0"                | false
+        """exit 0"""                                      | "v1.0.0"                | false
+        """exit 1"""                                      | "v1.0.0"                | false
     }
 }

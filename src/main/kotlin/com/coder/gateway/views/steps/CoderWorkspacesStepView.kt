@@ -467,8 +467,15 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN, token.first)
 
-                this.indicator.text = "Downloading Coder CLI..."
-                cliManager.downloadCLI()
+                // Short-circuit if we already have the expected version.  This
+                // lets us bypass the 304 which is slower and may not be
+                // supported if the binary is downloaded from alternate sources.
+                // For CLIs without the JSON output flag we will fall back to
+                // the 304 method.
+                if (!cliManager.matchesVersion(clientService.buildVersion)) {
+                    this.indicator.text = "Downloading Coder CLI..."
+                    cliManager.downloadCLI()
+                }
 
                 this.indicator.text = "Authenticating Coder CLI..."
                 cliManager.login(token.first)

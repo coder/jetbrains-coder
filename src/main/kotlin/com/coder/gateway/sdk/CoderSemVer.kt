@@ -14,7 +14,7 @@ class CoderSemVer(private val major: Long = 0, private val minor: Long = 0, priv
 
 
     override fun toString(): String {
-        return "CoderSemVer(major=$major, minor=$minor)"
+        return "CoderSemVer(major=$major, minor=$minor, patch=$patch)"
     }
 
     override fun equals(other: Any?): Boolean {
