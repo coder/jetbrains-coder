@@ -22,6 +22,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
+import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
@@ -72,11 +73,6 @@ import kotlinx.coroutines.withContext
 import org.zeroturnaround.exec.InvalidExitValueException
 import java.awt.Component
 import java.awt.Dimension
-import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
-import java.awt.event.MouseMotionListener
-import java.awt.font.TextAttribute
-import java.awt.font.TextAttribute.UNDERLINE_ON
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
@@ -93,8 +89,6 @@ import javax.swing.table.TableCellRenderer
 private const val CODER_URL_KEY = "coder-url"
 
 private const val SESSION_TOKEN = "session-token"
-
-private const val MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW = "MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW"
 
 class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -136,52 +130,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }
             updateWorkspaceActions()
         }
-
-        addMouseListener(object : MouseListener {
-            override fun mouseClicked(e: MouseEvent?) {
-                if (e?.source is TableView<*>) {
-                    val tblView = e.source as TableView<WorkspaceAgentModel>
-                    val col = tblView.selectedColumn
-                    val workspace = tblView.selectedObject
-
-                    if (col == 2 && workspace != null) {
-                        BrowserUtil.browse(clientService.client.url.toURI().resolve("/templates/${workspace.templateName}"))
-                    }
-                }
-            }
-
-            override fun mousePressed(e: MouseEvent?) {
-            }
-
-            override fun mouseReleased(e: MouseEvent?) {
-            }
-
-            override fun mouseEntered(e: MouseEvent?) {
-            }
-
-            override fun mouseExited(e: MouseEvent?) {
-            }
-        })
-        addMouseMotionListener(object : MouseMotionListener {
-            override fun mouseMoved(e: MouseEvent?) {
-                if (e?.source is TableView<*>) {
-                    val tblView = e.source as TableView<WorkspaceAgentModel>
-                    val row = tblView.rowAtPoint(e.point)
-                    if (tblView.columnAtPoint(e.point) == 2 && row in 0 until tblView.listTableModel.rowCount) {
-                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, row)
-                    } else {
-                        tblView.putClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW, -1)
-                    }
-                }
-
-            }
-
-            override fun mouseDragged(e: MouseEvent?) {
-            }
-        })
     }
 
     private val goToDashboardAction = GoToDashboardAction()
+    private val goToTemplateAction = GoToTemplateAction()
     private val startWorkspaceAction = StartWorkspaceAction()
     private val stopWorkspaceAction = StopWorkspaceAction()
     private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
@@ -191,7 +143,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         .disableAddAction()
         .disableRemoveAction()
         .disableUpDownActions()
-        .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction as AnAction)
+        .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction, goToTemplateAction as AnAction)
 
 
     private var poller: Job? = null
@@ -271,6 +223,16 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
         override fun actionPerformed(p0: AnActionEvent) {
             BrowserUtil.browse(clientService.client.url)
+        }
+    }
+
+    private inner class GoToTemplateAction :
+        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
+        override fun actionPerformed(p0: AnActionEvent) {
+            if (tableOfWorkspaces.selectedObject != null) {
+                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                BrowserUtil.browse(clientService.client.url.toURI().resolve("/templates/${workspace.templateName}"))
+            }
         }
     }
 
@@ -376,6 +338,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private fun updateWorkspaceActions() {
         goToDashboardAction.isEnabled = clientService.isReady
         createWorkspaceAction.isEnabled = clientService.isReady
+        goToTemplateAction.isEnabled = tableOfWorkspaces.selectedObject != null
         when (tableOfWorkspaces.selectedObject?.workspaceStatus) {
             WorkspaceStatus.RUNNING -> {
                 startWorkspaceAction.isEnabled = false
@@ -815,19 +778,8 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
                     if (value is String) {
                         text = value
                     }
+                    font = table.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
-
-                    val simpleH3 = table.tableHeader.font
-                    if (table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) != null) {
-                        val mouseOverRow = table.getClientProperty(MOUSE_OVER_TEMPLATE_NAME_COLUMN_ON_ROW) as Int
-                        if (mouseOverRow >= 0 && mouseOverRow == row) {
-                            val h3AttributesWithUnderlining = simpleH3.attributes as MutableMap<TextAttribute, Any>
-                            h3AttributesWithUnderlining[TextAttribute.UNDERLINE] = UNDERLINE_ON
-                            font = JBFont.h3().deriveFont(h3AttributesWithUnderlining)
-                            return this
-                        }
-                    }
-                    font = simpleH3
                     return this
                 }
             }
