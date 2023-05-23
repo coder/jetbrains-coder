@@ -14,7 +14,10 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 )
 class CoderSettingsState : PersistentStateComponent<CoderSettingsState> {
     var binarySource: String = ""
-    var binaryDestination: String = ""
+    var binaryDirectory: String = ""
+    var dataDirectory: String = ""
+    var enableDownloads: Boolean = true
+    var enableBinaryDirectoryFallback: Boolean = false
     override fun getState(): CoderSettingsState {
         return this
     }

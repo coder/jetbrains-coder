@@ -1,5 +1,6 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.services.CoderSettingsState
 import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -8,6 +9,7 @@ import org.zeroturnaround.exec.InvalidExitValueException
 import org.zeroturnaround.exec.ProcessInitException
 import spock.lang.*
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -113,6 +115,25 @@ class CoderCLIManagerTest extends Specification {
         then:
         def e = thrown(ResponseException)
         e.code == HttpURLConnection.HTTP_INTERNAL_ERROR
+
+        cleanup:
+        srv.stop(0)
+    }
+
+    @IgnoreIf({ os.windows })
+    def "fails to write"() {
+        given:
+        def (srv, url) = mockServer()
+        def dir = tmpdir.resolve("cli-dir-fallver")
+        def ccm = new CoderCLIManager(new URL(url), tmpdir, dir)
+        Files.createDirectories(ccm.localBinaryPath.getParent())
+        ccm.localBinaryPath.parent.toFile().setWritable(false)
+
+        when:
+        ccm.downloadCLI()
+
+        then:
+        thrown(AccessDeniedException)
 
         cleanup:
         srv.stop(0)
@@ -242,7 +263,7 @@ class CoderCLIManagerTest extends Specification {
     def "overrides binary URL"() {
         given:
         def (srv, url) = mockServer()
-        def ccm = new CoderCLIManager(new URL(url), tmpdir, override.replace("{{url}}", url))
+        def ccm = new CoderCLIManager(new URL(url), tmpdir, null, override.replace("{{url}}", url))
 
         when:
         def downloaded = ccm.downloadCLI()
@@ -362,7 +383,7 @@ class CoderCLIManagerTest extends Specification {
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, sshConfigPath)
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
         if (input != null) {
             Files.createDirectories(sshConfigPath.getParent())
             def originalConf = Path.of("src/test/fixtures/inputs").resolve(input + ".conf").toFile().text
@@ -407,7 +428,7 @@ class CoderCLIManagerTest extends Specification {
     def "fails if config is malformed"() {
         given:
         def sshConfigPath = tmpdir.resolve("configured" + input + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, sshConfigPath)
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
         Files.createDirectories(sshConfigPath.getParent())
         Files.copy(
                 Path.of("src/test/fixtures/inputs").resolve(input + ".conf"),
@@ -468,9 +489,10 @@ class CoderCLIManagerTest extends Specification {
         where:
         contents                                                 | expected
         null                                                     | ProcessInitException
-        """echo '{"foo": true, "baz": 1}'"""                     | InvalidVersionException
+        """echo '{"foo": true, "baz": 1}'"""                     | MissingVersionException
         """echo '{"version: '"""                                 | JsonSyntaxException
-        "exit 0"                                                 | InvalidVersionException
+        """echo '{"version": "invalid"}'"""                      | IllegalArgumentException
+        "exit 0"                                                 | MissingVersionException
         "exit 1"                                                 | InvalidExitValueException
     }
 
@@ -491,7 +513,7 @@ class CoderCLIManagerTest extends Specification {
 
         where:
         contents                                          | build                   | matches
-        null                                              | "v1.0.0"                | false
+        null                                              | "v1.0.0"                | null
         """echo '{"version": "v1.0.0"}'"""                | "v1.0.0"                | true
         """echo '{"version": "v1.0.0"}'"""                | "v1.0.0-devel+b5b5b5b5" | true
         """echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""" | "v1.0.0-devel+b5b5b5b5" | true
@@ -505,7 +527,94 @@ class CoderCLIManagerTest extends Specification {
         """echo '{"version": ""}'"""                      | "v1.0.0"                | false
         """echo '{"version": "v1.0.0"}'"""                | ""                      | false
         """echo '{"version'"""                            | "v1.0.0"                | false
-        """exit 0"""                                      | "v1.0.0"                | false
-        """exit 1"""                                      | "v1.0.0"                | false
+        """exit 0"""                                      | "v1.0.0"                | null
+        """exit 1"""                                      | "v1.0.0"                | null
+    }
+
+    def "separately configures cli path from data dir"() {
+        given:
+        def dir = tmpdir.resolve("cli-dir")
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, dir)
+
+        expect:
+        ccm.localBinaryPath.getParent() == dir.resolve("test.coder.invalid")
+    }
+
+    enum Result {
+        ERROR,
+        USE_BIN,
+        USE_DATA,
+    }
+
+    @IgnoreIf({ os.windows })
+    def "use a separate cli dir"() {
+        given:
+        def (srv, url) = mockServer()
+        def dataDir = tmpdir.resolve("data-dir")
+        def binDir = tmpdir.resolve("bin-dir")
+        def mainCCM = new CoderCLIManager(new URL(url), dataDir, binDir)
+        def fallbackCCM = new CoderCLIManager(new URL(url), dataDir)
+
+        when:
+        def settings = new CoderSettingsState()
+        settings.binaryDirectory = binDir.toAbsolutePath()
+        settings.dataDirectory = dataDir.toAbsolutePath()
+        settings.enableDownloads = download
+        settings.enableBinaryDirectoryFallback = fallback
+        Files.createDirectories(mainCCM.localBinaryPath.parent)
+        if (version != null) {
+            mainCCM.localBinaryPath.toFile().text = """#!/bin/sh\necho '{"version": "$version"}'"""
+            mainCCM.localBinaryPath.toFile().setExecutable(true)
+        }
+        mainCCM.localBinaryPath.parent.toFile().setWritable(writable)
+        if (fallver != null) {
+            Files.createDirectories(fallbackCCM.localBinaryPath.parent)
+            fallbackCCM.localBinaryPath.toFile().text = """#!/bin/sh\necho '{"version": "$fallver"}'"""
+            fallbackCCM.localBinaryPath.toFile().setExecutable(true)
+        }
+        def ccm
+        try {
+            ccm = CoderCLIManager.ensureCLI(new URL(url), build, settings)
+        } catch (Exception e) {
+            ccm = e
+        }
+
+        then:
+        expect == Result.ERROR
+                ? ccm instanceof AccessDeniedException
+                : ccm.localBinaryPath.parent.parent == (expect == Result.USE_DATA ? dataDir : binDir)
+        mainCCM.localBinaryPath.toFile().exists() == (version != null || (download && writable))
+        fallbackCCM.localBinaryPath.toFile().exists() == (fallver != null || (download && !writable && fallback))
+
+
+        cleanup:
+        srv.stop(0)
+        mainCCM.localBinaryPath.parent.toFile().setWritable(true) // So it can get cleaned up.
+
+        where:
+        version | fallver | build   | writable | download | fallback | expect
+
+        // CLI is writable.
+        null    | null    | "1.0.0" | true     | true     | true     | Result.USE_BIN // Download.
+        null    | null    | "1.0.0" | true     | false    | true     | Result.USE_BIN // No download, error when used.
+        "1.0.1" | null    | "1.0.0" | true     | true     | true     | Result.USE_BIN // Update.
+        "1.0.1" | null    | "1.0.0" | true     | false    | true     | Result.USE_BIN // No update, use outdated.
+        "1.0.0" | null    | "1.0.0" | true     | false    | true     | Result.USE_BIN // Use existing.
+
+        // CLI is *not* writable and fallback is disabled.
+        null    | null    | "1.0.0" | false    | true     | false    | Result.ERROR   // Fail to download.
+        null    | null    | "1.0.0" | false    | false    | false    | Result.USE_BIN // No download, error when used.
+        "1.0.1" | null    | "1.0.0" | false    | true     | false    | Result.ERROR   // Fail to update.
+        "1.0.1" | null    | "1.0.0" | false    | false    | false    | Result.USE_BIN // No update, use outdated.
+        "1.0.0" | null    | "1.0.0" | false    | false    | false    | Result.USE_BIN // Use existing.
+
+        // CLI is *not* writable and fallback is enabled.
+        null    | null    | "1.0.0" | false    | true     | true     | Result.USE_DATA // Download to fallback.
+        null    | null    | "1.0.0" | false    | false    | true     | Result.USE_BIN  // No download, error when used.
+        "1.0.1" | "1.0.1" | "1.0.0" | false    | true     | true     | Result.USE_DATA // Update fallback.
+        "1.0.1" | "1.0.2" | "1.0.0" | false    | false    | true     | Result.USE_BIN  // No update, use outdated.
+        null    | "1.0.2" | "1.0.0" | false    | false    | true     | Result.USE_DATA // No update, use outdated fallback.
+        "1.0.0" | null    | "1.0.0" | false    | false    | true     | Result.USE_BIN  // Use existing.
+        "1.0.1" | "1.0.0" | "1.0.0" | false    | false    | true     | Result.USE_DATA // Use existing fallback.
     }
 }
