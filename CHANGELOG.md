@@ -4,6 +4,18 @@
 
 ## Unreleased
 
+### Added
+
+- allow configuring the binary directory separately from data.
+- add status and start/stop buttons to the recent connections view.
+
+### Changed
+
+- check binary version with `version --output json` (if available) since this is
+  faster than waiting for the round trip checking etags. It also covers cases
+  where the binary is hosted somewhere that does not support etags.
+- move the template link from the row to a dedicated button on the toolbar.
+
 ## 2.3.0 - 2023-05-03
 
 ### Added
