@@ -4,13 +4,13 @@
 
 ## Unreleased
 
-### Added
+## 2.4.0 - 2023-06-02
 
+### Added
 - Allow configuring the binary directory separately from data.
 - Add status and start/stop buttons to the recent connections view.
 
 ### Changed
-
 - Check binary version with `version --output json` (if available) since this is
   faster than waiting for the round trip checking etags. It also covers cases
   where the binary is hosted somewhere that does not support etags.
