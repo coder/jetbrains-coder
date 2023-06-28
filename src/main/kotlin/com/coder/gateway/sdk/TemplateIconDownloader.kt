@@ -4,7 +4,7 @@ import com.coder.gateway.icons.CoderIcons
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.ui.JreHiDpiUtil
-import com.intellij.ui.paint.alignToInt
+import com.intellij.ui.paint.PaintUtil
 import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ImageLoader
 import com.intellij.util.ui.ImageUtil
@@ -15,6 +15,16 @@ import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.net.URL
 import javax.swing.Icon
+
+fun alignToInt(g: Graphics) {
+    if (g !is Graphics2D) {
+        return
+    }
+
+    val rm = PaintUtil.RoundingMode.ROUND_FLOOR_BIAS
+    PaintUtil.alignTxToInt(g, null, true, true, rm)
+    PaintUtil.alignClipToInt(g, true, true, rm, rm)
+}
 
 @Service(Service.Level.APP)
 class TemplateIconDownloader {
@@ -45,6 +55,8 @@ class TemplateIconDownloader {
         return iconForChar(workspaceName.lowercase().first())
     }
 
+    // We could replace this with com.intellij.ui.icons.toRetinaAwareIcon at
+    // some point if we want to break support for Gateway < 232.
     private fun toRetinaAwareIcon(image: BufferedImage): Icon {
         val sysScale = JBUIScale.sysScale()
         return object : Icon {
