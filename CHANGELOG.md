@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+### Added
+- Support for Gateway 2023.2.
+
 ## 2.4.0 - 2023-06-02
 
 ### Added
