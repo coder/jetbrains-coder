@@ -150,4 +150,8 @@ tasks {
     test {
         useJUnitPlatform()
     }
+
+    runPluginVerifier {
+        ideVersions.set(properties("verifyVersions").split(","))
+    }
 }
