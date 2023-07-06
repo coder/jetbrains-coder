@@ -33,8 +33,6 @@ import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.TopGap
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.util.maximumWidth
-import com.intellij.ui.util.minimumWidth
 import com.intellij.util.io.readText
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -182,8 +180,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             toolTipText = "Querying workspace status..."
                         }
                     }).align(AlignX.LEFT).gap(RightGap.SMALL).applyToComponent {
-                        maximumWidth = JBUI.scale(16)
-                        minimumWidth = JBUI.scale(16)
+                        size = Dimension(JBUI.scale(16), JBUI.scale(16))
                     }
                     label(hostname.removePrefix("coder-jetbrains--")).applyToComponent {
                         font = JBFont.h3().asBold()
