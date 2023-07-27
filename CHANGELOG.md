@@ -4,10 +4,14 @@
 
 ## Unreleased
 
-## 2.5.1 - 2023-07-07
-
 ### Fixed
 - Inability to connect to a workspace after going back to the workspaces view.
+
+### Changed
+- Add a message to distinguish between connecting to the worker and querying for
+  IDEs.
+
+## 2.5.1 - 2023-07-07
 
 ### Fixed
 - Inability to download new editors in older versions of Gateway.

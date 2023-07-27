@@ -165,7 +165,6 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         // Clear contents from the last attempt if any.
         cbIDEComment.foreground = UIUtil.getContextHelpForeground()
         cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
-        cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
         ideComboBoxModel.removeAllElements()
         setNextButtonEnabled(false)
 
@@ -185,14 +184,23 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             try {
                 val ides = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
-                        logger.info("Retrieving IDEs... (attempt $attempt)")
-                        if (attempt > 1) {
-                            cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve.ides.retry", attempt))
-                        }
+                        logger.info("Connecting with SSH and uploading worker if missing... (attempt $attempt)")
+                        cbIDE.renderer =
+                            if (attempt > 1)
+                                IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt))
+                            else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                         val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+
                         if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                            logger.info("Installing remote path validator...")
                             installRemotePathValidator(executor)
                         }
+
+                        logger.info("Retrieving IDEs... (attempt $attempt)")
+                        cbIDE.renderer =
+                            if (attempt > 1)
+                                IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt))
+                            else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
                         retrieveIDEs(executor, selectedWorkspace)
                     },
                     retryIf = {
