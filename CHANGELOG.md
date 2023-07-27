@@ -5,6 +5,9 @@
 ## Unreleased
 
 ### Fixed
+- Inability to connect to a workspace after going back to the workspaces view.
+
+### Fixed
 - Inability to download new editors in older versions of Gateway.
 
 ## 2.5.0 - 2023-06-29
