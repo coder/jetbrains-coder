@@ -77,8 +77,10 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import javax.net.ssl.SSLHandshakeException
 import javax.swing.Icon
 import javax.swing.JCheckBox
+import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
@@ -101,6 +103,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private val appPropertiesService: PropertiesComponent = service()
 
     private var tfUrl: JTextField? = null
+    private var tfUrlComment: JLabel? = null
     private var cbExistingToken: JCheckBox? = null
 
     private val notificationBanner = NotificationBanner()
@@ -116,7 +119,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             minWidth = JBUI.scale(52)
         }
         rowHeight = 48
-        setEmptyState("Disconnected")
+        setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
             setNextButtonEnabled(selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS == OS.LINUX)
@@ -185,6 +188,16 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }.applyToComponent {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             }
+        }.layout(RowLayout.PARENT_GRID)
+        row {
+            cell() // Empty cells for alignment.
+            tfUrlComment = cell(
+                ComponentPanelBuilder.createCommentComponent(
+                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.comment",
+                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")),
+                    false, -1, true
+                )
+            ).resizableColumn().align(AlignX.FILL).component
         }.layout(RowLayout.PARENT_GRID)
         row {
             cell() // Empty cell for alignment.
@@ -410,7 +423,9 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         // Clear out old deployment details.
         cliManager = null
         poller?.cancel()
-        tableOfWorkspaces.setEmptyState("Connecting to $deploymentURL...")
+        tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
+        tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
+        tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host))
         tableOfWorkspaces.listTableModel.items = emptyList()
 
         // Authenticate and load in a background process with progress.
@@ -444,44 +459,55 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 triggerWorkspacePolling(false)
 
                 cliManager = cli
-                tableOfWorkspaces.setEmptyState("Connected to $deploymentURL")
+                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
+                tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
             } catch (e: Exception) {
-                val errorSummary = when (e) {
-                    is java.nio.file.AccessDeniedException -> "Access denied to ${e.file}"
-                    is UnknownHostException -> "Unknown host ${e.message}"
-                    is InvalidExitValueException -> "CLI exited unexpectedly with ${e.exitValue}"
-                    else -> e.message ?: "No reason was provided"
-                }
-                var msg = CoderGatewayBundle.message(
-                    "gateway.connector.view.workspaces.connect.failed",
-                    deploymentURL,
-                    errorSummary,
-                )
-                when (e) {
+                val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
+                val msg = when (e) {
+                    is java.nio.file.AccessDeniedException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.access-denied", e.file)
+                    is UnknownHostException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unknown-host", e.message ?: deploymentURL.host)
+                    is InvalidExitValueException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unexpected-exit", e.exitValue)
                     is AuthenticationResponseException -> {
-                        msg = CoderGatewayBundle.message(
+                        CoderGatewayBundle.message(
                             "gateway.connector.view.workspaces.connect.unauthorized",
                             deploymentURL,
                         )
-                        cs.launch { onAuthFailure?.invoke() }
                     }
-
                     is SocketTimeoutException -> {
-                        msg = CoderGatewayBundle.message(
+                        CoderGatewayBundle.message(
                             "gateway.connector.view.workspaces.connect.timeout",
                             deploymentURL,
                         )
                     }
-
                     is ResponseException, is ConnectException -> {
-                        msg = CoderGatewayBundle.message(
+                        CoderGatewayBundle.message(
                             "gateway.connector.view.workspaces.connect.download-failed",
-                            errorSummary,
+                            reason,
                         )
                     }
+                    is SSLHandshakeException -> {
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.ssl-error",
+                            deploymentURL.host,
+                            reason,
+                        )
+                    }
+                    else -> reason
                 }
-                tableOfWorkspaces.setEmptyState(msg)
+                // It would be nice to place messages directly into the table
+                // but it does not support wrapping or markup so place it in the
+                // comment field of the URL input instead.
+                tfUrlComment?.foreground = UIUtil.getErrorForeground()
+                tfUrlComment?.text = msg
+                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
+                    "gateway.connector.view.workspaces.connect.failed",
+                    deploymentURL.host,
+                ))
                 logger.error(msg, e)
+
+                if (e is AuthenticationResponseException) {
+                    cs.launch { onAuthFailure?.invoke() }
+                }
             }
         }
     }
