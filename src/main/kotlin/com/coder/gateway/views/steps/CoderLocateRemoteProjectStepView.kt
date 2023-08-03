@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
@@ -338,7 +339,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             return false
         }
         cs.launch {
-            GatewayUI.getInstance().connect(
+            CoderRemoteConnectionHandle().connect(
                 selectedIDE
                     .toWorkspaceParams()
                     .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
@@ -347,6 +348,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     .withConfigDirectory(wizardModel.configDirectory)
                     .withName(selectedWorkspace.name)
             )
+            GatewayUI.getInstance().reset()
         }
         return true
     }
