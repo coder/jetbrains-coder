@@ -1,6 +1,7 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
+import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
@@ -20,7 +21,6 @@ import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
-import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
@@ -30,8 +30,6 @@ import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
@@ -39,11 +37,8 @@ import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.ui.setEmptyState
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
-import com.intellij.ui.AppIcon
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
-import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.dialog
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
@@ -54,7 +49,6 @@ import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.TableView
-import com.intellij.util.applyIf
 import com.intellij.util.ui.ColumnInfo
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
@@ -391,7 +385,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         val oldURL = localWizardModel.coderURL.toURL()
         component.apply() // Force bindings to be filled.
         val newURL = localWizardModel.coderURL.toURL()
-        val pastedToken = askToken(
+        val pastedToken = CoderRemoteConnectionHandle.askToken(
             newURL,
             // If this is a new URL there is no point in trying to use the same
             // token.
@@ -510,89 +504,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 }
             }
         }
-    }
-
-    /**
-     * Open a dialog for providing the token.  Show any existing token so the
-     * user can validate it if a previous connection failed.  If we are not
-     * retrying and the user has not checked the existing token box then open a
-     * browser to the auth page.  If the user has checked the existing token box
-     * then populate the dialog with the token on disk (this will overwrite any
-     * other existing token) unless this is a retry to avoid clobbering the
-     * token that just failed.  Return the token submitted by the user.
-     */
-    private fun askToken(
-        url: URL,
-        token: Pair<String, TokenSource>?,
-        isRetry: Boolean,
-        useExisting: Boolean,
-    ): Pair<String, TokenSource>? {
-        var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
-        val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
-        if (!isRetry && !useExisting) {
-            BrowserUtil.browse(getTokenUrl)
-        } else if (!isRetry && useExisting) {
-            val (u, t) = CoderCLIManager.readConfig()
-            if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
-                logger.info("Injecting token from CLI config")
-                tokenSource = TokenSource.CONFIG
-                existingToken = t
-            }
-        }
-        var tokenFromUser: String? = null
-        ApplicationManager.getApplication().invokeAndWait({
-            lateinit var sessionTokenTextField: JBTextField
-            val panel = panel {
-                row {
-                    browserLink(
-                        CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
-                        getTokenUrl.toString()
-                    )
-                    sessionTokenTextField = textField()
-                        .applyToComponent {
-                            text = existingToken
-                            minimumSize = Dimension(520, -1)
-                        }.component
-                }.layout(RowLayout.PARENT_GRID)
-                row {
-                    cell() // To align with the text box.
-                    cell(
-                        ComponentPanelBuilder.createCommentComponent(
-                            CoderGatewayBundle.message(
-                                if (isRetry) "gateway.connector.view.workspaces.token.rejected"
-                                else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
-                                else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
-                                else "gateway.connector.view.workspaces.token.none"
-                            ),
-                            false,
-                            -1,
-                            true
-                        ).applyIf(isRetry) {
-                            apply {
-                                foreground = UIUtil.getErrorForeground()
-                            }
-                        }
-                    )
-                }.layout(RowLayout.PARENT_GRID)
-            }
-            AppIcon.getInstance().requestAttention(null, true)
-            if (!dialog(
-                    CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
-                    panel = panel,
-                    focusedComponent = sessionTokenTextField
-                ).showAndGet()
-            ) {
-                return@invokeAndWait
-            }
-            tokenFromUser = sessionTokenTextField.text
-        }, ModalityState.any())
-        if (tokenFromUser.isNullOrBlank()) {
-            return null
-        }
-        if (tokenFromUser != existingToken) {
-            tokenSource = TokenSource.USER
-        }
-        return Pair(tokenFromUser!!, tokenSource)
     }
 
     private fun triggerWorkspacePolling(fetchNow: Boolean) {

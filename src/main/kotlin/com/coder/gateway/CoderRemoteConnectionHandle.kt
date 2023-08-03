@@ -2,16 +2,30 @@
 
 package com.coder.gateway
 
+import com.coder.gateway.models.TokenSource
+import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.isWorkerTimeout
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
+import com.coder.gateway.sdk.toURL
+import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.panel.ComponentPanelBuilder
+import com.intellij.ui.AppIcon
+import com.intellij.ui.components.JBTextField
+import com.intellij.ui.components.dialog
+import com.intellij.ui.dsl.builder.RowLayout
+import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.applyIf
+import com.intellij.util.ui.UIUtil
 import com.jetbrains.gateway.ssh.SshDeployFlowUtil
 import com.jetbrains.gateway.ssh.SshMultistagePanelContext
 import com.jetbrains.gateway.ssh.deploy.DeployException
@@ -19,6 +33,8 @@ import com.jetbrains.rd.util.lifetime.LifetimeDefinition
 import kotlinx.coroutines.launch
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
+import java.awt.Dimension
+import java.net.URL
 import java.time.Duration
 import java.util.concurrent.TimeoutException
 
@@ -31,8 +47,6 @@ class CoderRemoteConnectionHandle {
     suspend fun connect(parameters: Map<String, String>) {
         logger.debug("Creating connection handle", parameters)
         val clientLifetime = LifetimeDefinition()
-        // TODO: If this fails determine if it is an auth error and if so prompt
-        // for a new token, configure the CLI, then try again.
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title"), canBeCancelled = true, isIndeterminate = true, project = null) {
             try {
                 indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting")
@@ -88,5 +102,89 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
+
+        /**
+         * Open a dialog for providing the token.  Show any existing token so the
+         * user can validate it if a previous connection failed.  If we are not
+         * retrying and the user has not checked the existing token box then open a
+         * browser to the auth page.  If the user has checked the existing token box
+         * then populate the dialog with the token on disk (this will overwrite any
+         * other existing token) unless this is a retry to avoid clobbering the
+         * token that just failed.  Return the token submitted by the user.
+         */
+        @JvmStatic
+        fun askToken(
+            url: URL,
+            token: Pair<String, TokenSource>?,
+            isRetry: Boolean,
+            useExisting: Boolean,
+        ): Pair<String, TokenSource>? {
+            var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
+            val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
+            if (!isRetry && !useExisting) {
+                BrowserUtil.browse(getTokenUrl)
+            } else if (!isRetry && useExisting) {
+                val (u, t) = CoderCLIManager.readConfig()
+                if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
+                    logger.info("Injecting token from CLI config")
+                    tokenSource = TokenSource.CONFIG
+                    existingToken = t
+                }
+            }
+            var tokenFromUser: String? = null
+            ApplicationManager.getApplication().invokeAndWait({
+                lateinit var sessionTokenTextField: JBTextField
+                val panel = panel {
+                    row {
+                        browserLink(
+                            CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
+                            getTokenUrl.toString()
+                        )
+                        sessionTokenTextField = textField()
+                            .applyToComponent {
+                                text = existingToken
+                                minimumSize = Dimension(520, -1)
+                            }.component
+                    }.layout(RowLayout.PARENT_GRID)
+                    row {
+                        cell() // To align with the text box.
+                        cell(
+                            ComponentPanelBuilder.createCommentComponent(
+                                CoderGatewayBundle.message(
+                                    if (isRetry) "gateway.connector.view.workspaces.token.rejected"
+                                    else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
+                                    else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
+                                    else "gateway.connector.view.workspaces.token.none"
+                                ),
+                                false,
+                                -1,
+                                true
+                            ).applyIf(isRetry) {
+                                apply {
+                                    foreground = UIUtil.getErrorForeground()
+                                }
+                            }
+                        )
+                    }.layout(RowLayout.PARENT_GRID)
+                }
+                AppIcon.getInstance().requestAttention(null, true)
+                if (!dialog(
+                        CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
+                        panel = panel,
+                        focusedComponent = sessionTokenTextField
+                    ).showAndGet()
+                ) {
+                    return@invokeAndWait
+                }
+                tokenFromUser = sessionTokenTextField.text
+            }, ModalityState.any())
+            if (tokenFromUser.isNullOrBlank()) {
+                return null
+            }
+            if (tokenFromUser != existingToken) {
+                tokenSource = TokenSource.USER
+            }
+            return Pair(tokenFromUser!!, tokenSource)
+        }
     }
 }
