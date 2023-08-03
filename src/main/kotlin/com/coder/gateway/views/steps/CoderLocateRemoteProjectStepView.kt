@@ -339,7 +339,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             return false
         }
         cs.launch {
-            CoderRemoteConnectionHandle().connect(
+            CoderRemoteConnectionHandle().connect{
                 selectedIDE
                     .toWorkspaceParams()
                     .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
@@ -347,7 +347,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                     .withWebTerminalLink("${terminalLink.url}")
                     .withConfigDirectory(wizardModel.configDirectory)
                     .withName(selectedWorkspace.name)
-            )
+            }
             GatewayUI.getInstance().reset()
         }
         return true

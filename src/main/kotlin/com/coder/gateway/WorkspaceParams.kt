@@ -98,7 +98,7 @@ fun Map<String, String>.withName(name: String): Map<String, String> {
 
 
 fun Map<String, String>.areCoderType(): Boolean {
-    return this[TYPE] == VALUE_FOR_TYPE && !this[CODER_WORKSPACE_HOSTNAME].isNullOrBlank() && !this[PROJECT_PATH].isNullOrBlank()
+    return this[TYPE] == VALUE_FOR_TYPE
 }
 
 fun Map<String, String>.toSshConfig(): SshConfig {

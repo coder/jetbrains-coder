@@ -216,7 +216,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         icon(product.icon)
                         cell(ActionLink(connectionDetails.projectPath!!) {
                             cs.launch {
-                                CoderRemoteConnectionHandle().connect(connectionDetails.toWorkspaceParams())
+                                CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceParams() }
                                 GatewayUI.getInstance().reset()
                             }
                         })

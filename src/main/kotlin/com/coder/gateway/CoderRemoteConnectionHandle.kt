@@ -16,6 +16,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
@@ -44,11 +45,12 @@ import java.util.concurrent.TimeoutException
 class CoderRemoteConnectionHandle {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
 
-    suspend fun connect(parameters: Map<String, String>) {
-        logger.debug("Creating connection handle", parameters)
+    suspend fun connect(getParameters: (indicator: ProgressIndicator) -> Map<String, String>) {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title"), canBeCancelled = true, isIndeterminate = true, project = null) {
             try {
+                val parameters = getParameters(indicator)
+                logger.debug("Creating connection handle", parameters)
                 indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting")
                 val context = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
