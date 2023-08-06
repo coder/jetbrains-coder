@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2023-08-06
+
 ### Fixed
 - Inability to connect to a workspace after going back to the workspaces view.
 - Remove version warning for 2.x release.
