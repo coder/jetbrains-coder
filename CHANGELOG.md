@@ -6,6 +6,7 @@
 
 ### Fixed
 - Inability to connect to a workspace after going back to the workspaces view.
+- Remove version warning for 2.x release.
 
 ### Changed
 - Add a message to distinguish between connecting to the worker and querying for
