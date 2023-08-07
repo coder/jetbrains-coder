@@ -104,6 +104,49 @@ class CoderRemoteConnectionHandle {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
 
         /**
+         * Generic function to ask for input.
+         */
+        @JvmStatic
+        fun ask(comment: String, isError: Boolean, link: Pair<String, String>?, default: String?): String? {
+            var inputFromUser: String? = null
+            ApplicationManager.getApplication().invokeAndWait({
+                lateinit var inputTextField: JBTextField
+                val panel = panel {
+                    row {
+                        if (link != null) browserLink(link.first, link.second)
+                        inputTextField = textField()
+                            .applyToComponent {
+                                text = default ?: ""
+                                minimumSize = Dimension(520, -1)
+                            }.component
+                    }.layout(RowLayout.PARENT_GRID)
+                    row {
+                        cell() // To align with the text box.
+                        cell(
+                            ComponentPanelBuilder.createCommentComponent(comment, false, -1, true)
+                                .applyIf(isError) {
+                                    apply {
+                                        foreground = UIUtil.getErrorForeground()
+                                    }
+                                }
+                        )
+                    }.layout(RowLayout.PARENT_GRID)
+                }
+                AppIcon.getInstance().requestAttention(null, true)
+                if (!dialog(
+                        CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
+                        panel = panel,
+                        focusedComponent = inputTextField
+                    ).showAndGet()
+                ) {
+                    return@invokeAndWait
+                }
+                inputFromUser = inputTextField.text
+            }, ModalityState.any())
+            return inputFromUser
+        }
+
+        /**
          * Open a dialog for providing the token.  Show any existing token so the
          * user can validate it if a previous connection failed.  If we are not
          * retrying and the user has not checked the existing token box then open a
@@ -131,60 +174,27 @@ class CoderRemoteConnectionHandle {
                     existingToken = t
                 }
             }
-            var tokenFromUser: String? = null
-            ApplicationManager.getApplication().invokeAndWait({
-                lateinit var sessionTokenTextField: JBTextField
-                val panel = panel {
-                    row {
-                        browserLink(
-                            CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
-                            getTokenUrl.toString()
-                        )
-                        sessionTokenTextField = textField()
-                            .applyToComponent {
-                                text = existingToken
-                                minimumSize = Dimension(520, -1)
-                            }.component
-                    }.layout(RowLayout.PARENT_GRID)
-                    row {
-                        cell() // To align with the text box.
-                        cell(
-                            ComponentPanelBuilder.createCommentComponent(
-                                CoderGatewayBundle.message(
-                                    if (isRetry) "gateway.connector.view.workspaces.token.rejected"
-                                    else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
-                                    else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
-                                    else "gateway.connector.view.workspaces.token.none"
-                                ),
-                                false,
-                                -1,
-                                true
-                            ).applyIf(isRetry) {
-                                apply {
-                                    foreground = UIUtil.getErrorForeground()
-                                }
-                            }
-                        )
-                    }.layout(RowLayout.PARENT_GRID)
-                }
-                AppIcon.getInstance().requestAttention(null, true)
-                if (!dialog(
-                        CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
-                        panel = panel,
-                        focusedComponent = sessionTokenTextField
-                    ).showAndGet()
-                ) {
-                    return@invokeAndWait
-                }
-                tokenFromUser = sessionTokenTextField.text
-            }, ModalityState.any())
+            val tokenFromUser = ask(
+                CoderGatewayBundle.message(
+                    if (isRetry) "gateway.connector.view.workspaces.token.rejected"
+                    else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
+                    else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
+                    else "gateway.connector.view.workspaces.token.none"
+                ),
+                isRetry,
+                Pair(
+                    CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
+                    getTokenUrl.toString()
+                ),
+                existingToken,
+            )
             if (tokenFromUser.isNullOrBlank()) {
                 return null
             }
             if (tokenFromUser != existingToken) {
                 tokenSource = TokenSource.USER
             }
-            return Pair(tokenFromUser!!, tokenSource)
+            return Pair(tokenFromUser, tokenSource)
         }
     }
 }
