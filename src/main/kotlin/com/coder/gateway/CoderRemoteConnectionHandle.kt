@@ -107,7 +107,7 @@ class CoderRemoteConnectionHandle {
          * Generic function to ask for input.
          */
         @JvmStatic
-        fun ask(comment: String, isError: Boolean, link: Pair<String, String>?, default: String?): String? {
+        fun ask(comment: String, isError: Boolean = false, link: Pair<String, String>? = null, default: String? = null): String? {
             var inputFromUser: String? = null
             ApplicationManager.getApplication().invokeAndWait({
                 lateinit var inputTextField: JBTextField
@@ -169,7 +169,7 @@ class CoderRemoteConnectionHandle {
             } else if (!isRetry && useExisting) {
                 val (u, t) = CoderCLIManager.readConfig()
                 if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
-                    logger.info("Injecting token from CLI config")
+                    logger.info("Injecting token for $url from CLI config")
                     tokenSource = TokenSource.CONFIG
                     existingToken = t
                 }
@@ -178,8 +178,10 @@ class CoderRemoteConnectionHandle {
                 CoderGatewayBundle.message(
                     if (isRetry) "gateway.connector.view.workspaces.token.rejected"
                     else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
+                    else if (tokenSource == TokenSource.QUERY) "gateway.connector.view.workspaces.token.query"
                     else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
-                    else "gateway.connector.view.workspaces.token.none"
+                    else "gateway.connector.view.workspaces.token.none",
+                    url.host,
                 ),
                 isRetry,
                 Pair(
