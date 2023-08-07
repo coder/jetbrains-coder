@@ -68,7 +68,7 @@ class CoderRemoteConnectionHandle {
                         // indicator.text2 is the text below the progress bar.
                         indicator.text2 =
                             if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out"
-                            else e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                            else e.message ?: e.javaClass.simpleName
                     },
                     onCountdown = { remainingMs ->
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.failed.retry", humanizeDuration(remainingMs))
@@ -84,14 +84,14 @@ class CoderRemoteConnectionHandle {
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
             } catch (e: Exception) {
                 if (isCancellation(e)) {
-                    logger.info("Connection canceled due to ${e.javaClass}")
+                    logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
-                    logger.info("Failed to connect (will not retry)", e)
+                    logger.error("Failed to connect (will not retry)", e)
                     // The dialog will close once we return so write the error
                     // out into a new dialog.
                     ApplicationManager.getApplication().invokeAndWait {
                         Messages.showMessageDialog(
-                            e.message ?: CoderGatewayBundle.message("gateway.connector.no-details"),
+                            e.message ?: e.javaClass.simpleName,
                             CoderGatewayBundle.message("gateway.connector.coder.connection.failed"),
                             Messages.getErrorIcon())
                     }

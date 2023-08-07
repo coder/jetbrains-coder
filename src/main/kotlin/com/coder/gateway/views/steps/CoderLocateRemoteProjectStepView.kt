@@ -213,7 +213,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                         cbIDEComment.foreground = UIUtil.getErrorForeground()
                         cbIDEComment.text =
                             if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out.  Check the command log for more details."
-                            else e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                            else e.message ?: e.javaClass.simpleName
                     },
                     onCountdown = { remainingMs ->
                         cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed.retry", humanizeDuration(remainingMs)))
@@ -225,11 +225,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                 }
             } catch (e: Exception) {
                 if (isCancellation(e)) {
-                    logger.info("Connection canceled due to ${e.javaClass}")
+                    logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
                     logger.error("Failed to retrieve IDEs (will not retry)", e)
                     cbIDEComment.foreground = UIUtil.getErrorForeground()
-                    cbIDEComment.text = e.message ?: CoderGatewayBundle.message("gateway.connector.no-details")
+                    cbIDEComment.text = e.message ?: e.javaClass.simpleName
                     cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed"), UIUtil.getBalloonErrorIcon())
                 }
             }
