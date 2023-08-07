@@ -50,7 +50,7 @@ class CoderRestClientService {
     }
 }
 
-class CoderRestClient(var url: URL, private var token: String) {
+class CoderRestClient(var url: URL, var token: String) {
     private var httpClient: OkHttpClient
     private var retroRestClient: CoderV2RestFacade
 
@@ -75,7 +75,7 @@ class CoderRestClient(var url: URL, private var token: String) {
     fun me(): User {
         val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
-            throw AuthenticationResponseException("Could not retrieve information about logged user:${userResponse.code()}, reason: ${userResponse.message().ifBlank { "no reason provided" }}")
+            throw AuthenticationResponseException("Authentication to $url failed with code ${userResponse.code()}, ${userResponse.message().ifBlank { "has your token expired?" }}")
         }
 
         return userResponse.body()!!
@@ -88,7 +88,7 @@ class CoderRestClient(var url: URL, private var token: String) {
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
         if (!workspacesResponse.isSuccessful) {
-            throw WorkspaceResponseException("Could not retrieve Coder Workspaces:${workspacesResponse.code()}, reason: ${workspacesResponse.message().ifBlank { "no reason provided" }}")
+            throw WorkspaceResponseException("Retrieving workspaces from $url failed with code ${workspacesResponse.code()}, reason: ${workspacesResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return workspacesResponse.body()!!.workspaces
@@ -97,15 +97,15 @@ class CoderRestClient(var url: URL, private var token: String) {
     fun buildInfo(): BuildInfo {
         val buildInfoResponse = retroRestClient.buildInfo().execute()
         if (!buildInfoResponse.isSuccessful) {
-            throw java.lang.IllegalStateException("Could not retrieve build information for Coder instance $url, reason:${buildInfoResponse.message().ifBlank { "no reason provided" }}")
+            throw java.lang.IllegalStateException("Retrieving build information for $url failed with code ${buildInfoResponse.code()}, reason:${buildInfoResponse.message().ifBlank { "no reason provided" }}")
         }
         return buildInfoResponse.body()!!
     }
 
-    fun template(templateID: UUID): Template {
+    private fun template(templateID: UUID): Template {
         val templateResponse = retroRestClient.template(templateID).execute()
         if (!templateResponse.isSuccessful) {
-            throw TemplateResponseException("Failed to retrieve template with id: $templateID, reason: ${templateResponse.message().ifBlank { "no reason provided" }}")
+            throw TemplateResponseException("Retrieving template with id $templateID from $url failed with code ${templateResponse.code()}, reason: ${templateResponse.message().ifBlank { "no reason provided" }}")
         }
         return templateResponse.body()!!
     }
@@ -114,7 +114,7 @@ class CoderRestClient(var url: URL, private var token: String) {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to build workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
+            throw WorkspaceResponseException("Building workspace $workspaceName on $url failed with code ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!
@@ -124,7 +124,7 @@ class CoderRestClient(var url: URL, private var token: String) {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to stop workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
+            throw WorkspaceResponseException("Stopping workspace $workspaceName on $url failed with code ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!
@@ -136,7 +136,7 @@ class CoderRestClient(var url: URL, private var token: String) {
         val buildRequest = CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HTTP_CREATED) {
-            throw WorkspaceResponseException("Failed to update workspace ${workspaceName}: ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
+            throw WorkspaceResponseException("Updating workspace $workspaceName on $url failed with code ${buildResponse.code()}, reason: ${buildResponse.message().ifBlank { "no reason provided" }}")
         }
 
         return buildResponse.body()!!
