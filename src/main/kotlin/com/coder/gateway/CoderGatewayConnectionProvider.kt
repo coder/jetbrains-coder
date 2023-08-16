@@ -7,6 +7,7 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.toURL
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.sdk.withPath
 import com.coder.gateway.services.CoderSettingsState
@@ -46,19 +47,48 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
             val (client, username) = authenticate(deploymentURL.toURL(), parameters[TOKEN])
 
-            // TODO: If these are missing we could launch the wizard.
-            val name = parameters[WORKSPACE] ?: throw IllegalArgumentException("Query parameter \"$WORKSPACE\" is missing")
-            val agent = parameters[AGENT] ?: throw IllegalArgumentException("Query parameter \"$AGENT\" is missing")
+            // TODO: If the workspace is missing we could launch the wizard.
+            val workspaceName = parameters[WORKSPACE] ?: throw IllegalArgumentException("Query parameter \"$WORKSPACE\" is missing")
 
             val workspaces = client.workspaces()
-            val agents = workspaces.flatMap { it.toAgentModels() }
-            val workspace = agents.firstOrNull { it.name == "$name.$agent" }
-                ?: throw IllegalArgumentException("The agent $agent does not exist on the workspace $name or the workspace is off")
+            val workspace = workspaces.firstOrNull{ it.name == workspaceName } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
 
-            // TODO: Turn on the workspace if it is off then wait for the agent
-            //       to be ready.  Also, distinguish between whether the
-            //       workspace is off or the agent does not exist in the error
-            //       above instead of showing a combined error.
+            when (workspace.latestBuild.status) {
+                WorkspaceStatus.PENDING, WorkspaceStatus.STARTING ->
+                    // TODO: Wait for the workspace to turn on.
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please wait then try again")
+                WorkspaceStatus.STOPPING, WorkspaceStatus.STOPPED,
+                WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+                WorkspaceStatus.FAILED, ->
+                    // TODO: Turn on the workspace.
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please turn on the workspace and try again")
+                WorkspaceStatus.DELETING, WorkspaceStatus.DELETED, ->
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect")
+                WorkspaceStatus.RUNNING -> Unit // All is well
+            }
+
+            val agents = workspace.toAgentModels()
+            if (agents.isEmpty()) {
+                throw IllegalArgumentException("The workspace \"$workspaceName\" has no agents")
+            }
+
+            // If the agent is missing and the workspace has only one, use that.
+            val agent = if (!parameters[AGENT].isNullOrBlank())
+                agents.firstOrNull { it.name == "$workspaceName.${parameters[AGENT]}"}
+            else if (agents.size == 1) agents.first()
+            else null
+
+            if (agent == null) {
+                // TODO: Show a dropdown and ask for an agent.
+                throw IllegalArgumentException("Query parameter \"$AGENT\" is missing")
+            }
+
+            if (agent.agentStatus.pending()) {
+                // TODO: Wait for the agent to be ready.
+                throw IllegalArgumentException("The agent \"${agent.name}\" is ${agent.agentStatus.toString().lowercase()}; please wait then try again")
+            } else if (!agent.agentStatus.ready()) {
+                throw IllegalArgumentException("The agent \"${agent.name}\" is ${agent.agentStatus.toString().lowercase()}; unable to connect")
+            }
 
             val cli = CoderCLIManager.ensureCLI(
                 deploymentURL.toURL(),
@@ -71,7 +101,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(agents)
+            cli.configSsh(workspaces.flatMap { it.toAgentModels() })
 
             // TODO: Ask for these if missing.  Maybe we can reuse the second
             //  step of the wizard?  Could also be nice if we automatically used
@@ -90,11 +120,11 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             val folder = parameters[FOLDER] ?: throw IllegalArgumentException("Query parameter \"$FOLDER\" is missing")
 
             parameters
-                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), workspace))
+                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), agent))
                 .withProjectPath(folder)
                 .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
                 .withConfigDirectory(cli.coderConfigPath.toString())
-                .withName(name)
+                .withName(workspaceName)
         }
         return null
     }
