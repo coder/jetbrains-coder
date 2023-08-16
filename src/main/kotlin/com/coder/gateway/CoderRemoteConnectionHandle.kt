@@ -166,16 +166,25 @@ class CoderRemoteConnectionHandle {
         ): Pair<String, TokenSource>? {
             var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
             val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
-            if (!isRetry && !useExisting) {
-                BrowserUtil.browse(getTokenUrl)
-            } else if (!isRetry && useExisting) {
-                val (u, t) = CoderCLIManager.readConfig()
-                if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
-                    logger.info("Injecting token for $url from CLI config")
-                    tokenSource = TokenSource.CONFIG
-                    existingToken = t
+
+            // On the first run either open a browser to generate a new token
+            // or, if using an existing token, use the token on disk if it
+            // exists otherwise assume the user already copied an existing
+            // token and they will paste in.
+            if (!isRetry) {
+                if (!useExisting) {
+                    BrowserUtil.browse(getTokenUrl)
+                } else {
+                    val (u, t) = CoderCLIManager.readConfig()
+                    if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
+                        logger.info("Injecting token for $url from CLI config")
+                        return Pair(t, TokenSource.CONFIG)
+                    }
                 }
             }
+
+            // On subsequent tries or if not using an existing token, ask the user
+            // for the token.
             val tokenFromUser = ask(
                 CoderGatewayBundle.message(
                     if (isRetry) "gateway.connector.view.workspaces.token.rejected"
