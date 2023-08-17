@@ -35,9 +35,11 @@ import kotlinx.coroutines.launch
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Dimension
+import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Duration
 import java.util.concurrent.TimeoutException
+import javax.net.ssl.SSLHandshakeException
 
 // CoderRemoteConnection uses the provided workspace SSH parameters to launch an
 // IDE against the workspace.  If successful the connection is added to recent
@@ -104,6 +106,33 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
+
+        /**
+         * Generic function to ask for consent.
+         */
+        fun confirm(title: String, comment: String, details: String): Boolean {
+            var inputFromUser = false
+            ApplicationManager.getApplication().invokeAndWait({
+                val panel = panel {
+                    row {
+                        label(comment)
+                    }
+                    row {
+                        label(details)
+                    }
+                }
+                AppIcon.getInstance().requestAttention(null, true)
+                if (!dialog(
+                        title = title,
+                        panel = panel,
+                    ).showAndGet()
+                ) {
+                    return@invokeAndWait
+                }
+                inputFromUser = true
+            }, ModalityState.defaultModalityState())
+            return inputFromUser
+        }
 
         /**
          * Generic function to ask for input.
@@ -208,6 +237,67 @@ class CoderRemoteConnectionHandle {
                 tokenSource = TokenSource.USER
             }
             return Pair(tokenFromUser, tokenSource)
+        }
+
+        /**
+         * Return if the URL is whitelisted, https, and the URL and its final
+         * destination, if it is a different host.
+         */
+        @JvmStatic
+        fun isWhitelisted(url: URL, deploymentURL: URL): Triple<Boolean, Boolean, String> {
+            // TODO: Setting for the whitelist, and remember previously allowed
+            //  domains.
+            val domainWhitelist = listOf("intellij.net", "jetbrains.com", deploymentURL.host)
+
+            // Resolve any redirects.
+            val finalUrl = try {
+                resolveRedirects(url)
+            } catch (e: Exception) {
+                when (e) {
+                    is SSLHandshakeException ->
+                    throw Exception(CoderGatewayBundle.message(
+                        "gateway.connector.view.workspaces.connect.ssl-error",
+                        url.host,
+                        e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
+                    ))
+                    else -> throw e
+                }
+            }
+
+            var linkWithRedirect = url.toString()
+            if (finalUrl.host != url.host) {
+                linkWithRedirect = "$linkWithRedirect (redirects to to $finalUrl)"
+            }
+
+            val whitelisted = domainWhitelist.any { url.host == it || url.host.endsWith(".$it") }
+                    && domainWhitelist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
+            val https = url.protocol == "https" && finalUrl.protocol == "https"
+            return Triple(whitelisted, https, linkWithRedirect)
+        }
+
+        /**
+         * Follow a URL's redirects to its final destination.
+         */
+        @JvmStatic
+        fun resolveRedirects(url: URL): URL {
+            var location = url
+            val maxRedirects = 10
+            for (i in 1..maxRedirects) {
+                val conn = location.openConnection() as HttpURLConnection
+                conn.instanceFollowRedirects = false
+                conn.connect()
+                val code = conn.responseCode
+                val nextLocation = conn.getHeaderField("Location");
+                conn.disconnect()
+                // Redirects are triggered by any code starting with 3 plus a
+                // location header.
+                if (code < 300 || code >= 400 || nextLocation.isNullOrBlank()) {
+                    return location
+                }
+                // Location headers might be relative.
+                location = URL(location, nextLocation)
+            }
+            throw Exception("Too many redirects")
         }
     }
 }

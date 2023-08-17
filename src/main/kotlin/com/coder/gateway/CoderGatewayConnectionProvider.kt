@@ -58,11 +58,10 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     // TODO: Wait for the workspace to turn on.
                     throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please wait then try again")
                 WorkspaceStatus.STOPPING, WorkspaceStatus.STOPPED,
-                WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-                WorkspaceStatus.FAILED, ->
+                WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED ->
                     // TODO: Turn on the workspace.
-                    throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please turn on the workspace and try again")
-                WorkspaceStatus.DELETING, WorkspaceStatus.DELETED, ->
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please start the workspace and try again")
+                WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED, ->
                     throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect")
                 WorkspaceStatus.RUNNING -> Unit // All is well
             }
@@ -116,6 +115,10 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 throw IllegalArgumentException("One of \"$IDE_PATH_ON_HOST\" or \"$IDE_DOWNLOAD_LINK\" is required")
             }
 
+            // Check that both the domain and the redirected domain are
+            // whitelisted.  If not, check with the user whether to proceed.
+            verifyDownloadLink(parameters, deploymentURL.toURL())
+
             // TODO: Ask for the project path if missing and validate the path.
             val folder = parameters[FOLDER] ?: throw IllegalArgumentException("Query parameter \"$FOLDER\" is missing")
 
@@ -152,6 +155,43 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {
             authenticate(deploymentURL, queryToken, token)
+        }
+    }
+
+    /**
+     * Check that the link is whitelisted.  If not, confirm with the user.
+     */
+    private fun verifyDownloadLink(parameters: Map<String, String>, deploymentURL: URL) {
+        val link = parameters[IDE_DOWNLOAD_LINK]
+        if (link.isNullOrBlank()) {
+            return // Nothing to verify
+        }
+
+        val url = try {
+            link.toURL()
+        } catch (ex: Exception) {
+            throw IllegalArgumentException("$link is not a valid URL")
+        }
+
+        val (whitelisted, https, linkWithRedirect) = try {
+            CoderRemoteConnectionHandle.isWhitelisted(url, deploymentURL)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Unable to verify $url: $e")
+        }
+        if (whitelisted && https) {
+            return
+        }
+
+        val comment = if (whitelisted) "The download link is from a non-whitelisted URL"
+        else if (https) "The download link is not using HTTPS"
+        else "The download link is from a non-whitelisted URL and is not using HTTPS"
+
+        if (!CoderRemoteConnectionHandle.confirm(
+                "Confirm download URL",
+                "$comment. Would you like to proceed?",
+                linkWithRedirect,
+            )) {
+            throw IllegalArgumentException("$linkWithRedirect is not whitelisted")
         }
     }
 
