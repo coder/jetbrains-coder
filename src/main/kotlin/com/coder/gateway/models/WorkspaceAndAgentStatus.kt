@@ -57,6 +57,14 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
             .contains(this)
     }
 
+    /**
+     * Return true if the agent might soon be in a connectable state.
+     */
+    fun pending(): Boolean {
+        return listOf(CONNECTING, TIMEOUT, CREATED, AGENT_STARTING, START_TIMEOUT)
+            .contains(this)
+    }
+
     // We want to check that the workspace is `running`, the agent is
     // `connected`, and the agent lifecycle state is `ready` to ensure the best
     // possible scenario for attempting a connection.

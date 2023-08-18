@@ -39,6 +39,16 @@ To manually install a local build:
 
 Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the one specified in `gradle.properties` - `platformVersion`) with the latest plugin changes deployed.
 
+To simulate opening a workspace from the dashboard pass the Gateway link via `--args`. For example:
+
+```
+./gradlew clean runIDE --args="jetbrains-gateway://connect#type=coder&workspace=dev&agent=coder&folder=/home/coder&url=https://dev.coder.com&token=<redacted>&ide_product_code=IU&ide_build_number=223.8836.41&ide_download_link=https://download.jetbrains.com/idea/ideaIU-2022.3.3.tar.gz"
+```
+
+Alternatively, if you have separately built the plugin and already installed it
+in a Gateway distribution you can launch that distribution with the URL as the
+first argument (no `--args` in this case).
+
 ### Plugin Structure
 
 ```

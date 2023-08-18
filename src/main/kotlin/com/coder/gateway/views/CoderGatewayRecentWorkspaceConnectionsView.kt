@@ -4,6 +4,7 @@ package com.coder.gateway.views
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderGatewayConstants
+import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentModel
@@ -215,7 +216,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         icon(product.icon)
                         cell(ActionLink(connectionDetails.projectPath!!) {
                             cs.launch {
-                                GatewayUI.getInstance().connect(connectionDetails.toWorkspaceParams())
+                                CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceParams() }
+                                GatewayUI.getInstance().reset()
                             }
                         })
                         label("").resizableColumn().align(AlignX.FILL)
