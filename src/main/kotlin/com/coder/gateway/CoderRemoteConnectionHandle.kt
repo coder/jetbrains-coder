@@ -240,14 +240,14 @@ class CoderRemoteConnectionHandle {
         }
 
         /**
-         * Return if the URL is whitelisted, https, and the URL and its final
+         * Return if the URL is allowlisted, https, and the URL and its final
          * destination, if it is a different host.
          */
         @JvmStatic
-        fun isWhitelisted(url: URL, deploymentURL: URL): Triple<Boolean, Boolean, String> {
-            // TODO: Setting for the whitelist, and remember previously allowed
+        fun isAllowlisted(url: URL, deploymentURL: URL): Triple<Boolean, Boolean, String> {
+            // TODO: Setting for the allowlist, and remember previously allowed
             //  domains.
-            val domainWhitelist = listOf("intellij.net", "jetbrains.com", deploymentURL.host)
+            val domainAllowlist = listOf("intellij.net", "jetbrains.com", deploymentURL.host)
 
             // Resolve any redirects.
             val finalUrl = try {
@@ -269,10 +269,10 @@ class CoderRemoteConnectionHandle {
                 linkWithRedirect = "$linkWithRedirect (redirects to to $finalUrl)"
             }
 
-            val whitelisted = domainWhitelist.any { url.host == it || url.host.endsWith(".$it") }
-                    && domainWhitelist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
+            val allowlisted = domainAllowlist.any { url.host == it || url.host.endsWith(".$it") }
+                    && domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
             val https = url.protocol == "https" && finalUrl.protocol == "https"
-            return Triple(whitelisted, https, linkWithRedirect)
+            return Triple(allowlisted, https, linkWithRedirect)
         }
 
         /**

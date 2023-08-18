@@ -116,7 +116,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             // Check that both the domain and the redirected domain are
-            // whitelisted.  If not, check with the user whether to proceed.
+            // allowlisted.  If not, check with the user whether to proceed.
             verifyDownloadLink(parameters, deploymentURL.toURL())
 
             // TODO: Ask for the project path if missing and validate the path.
@@ -159,7 +159,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     }
 
     /**
-     * Check that the link is whitelisted.  If not, confirm with the user.
+     * Check that the link is allowlisted.  If not, confirm with the user.
      */
     private fun verifyDownloadLink(parameters: Map<String, String>, deploymentURL: URL) {
         val link = parameters[IDE_DOWNLOAD_LINK]
@@ -173,25 +173,25 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             throw IllegalArgumentException("$link is not a valid URL")
         }
 
-        val (whitelisted, https, linkWithRedirect) = try {
-            CoderRemoteConnectionHandle.isWhitelisted(url, deploymentURL)
+        val (allowlisted, https, linkWithRedirect) = try {
+            CoderRemoteConnectionHandle.isAllowlisted(url, deploymentURL)
         } catch (e: Exception) {
             throw IllegalArgumentException("Unable to verify $url: $e")
         }
-        if (whitelisted && https) {
+        if (allowlisted && https) {
             return
         }
 
-        val comment = if (whitelisted) "The download link is from a non-whitelisted URL"
+        val comment = if (allowlisted) "The download link is from a non-allowlisted URL"
         else if (https) "The download link is not using HTTPS"
-        else "The download link is from a non-whitelisted URL and is not using HTTPS"
+        else "The download link is from a non-allowlisted URL and is not using HTTPS"
 
         if (!CoderRemoteConnectionHandle.confirm(
                 "Confirm download URL",
                 "$comment. Would you like to proceed?",
                 linkWithRedirect,
             )) {
-            throw IllegalArgumentException("$linkWithRedirect is not whitelisted")
+            throw IllegalArgumentException("$linkWithRedirect is not allowlisted")
         }
     }
 
