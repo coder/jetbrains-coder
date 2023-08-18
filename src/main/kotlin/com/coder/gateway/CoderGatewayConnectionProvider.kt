@@ -117,7 +117,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
             // Check that both the domain and the redirected domain are
             // allowlisted.  If not, check with the user whether to proceed.
-            verifyDownloadLink(parameters, deploymentURL.toURL())
+            verifyDownloadLink(parameters)
 
             // TODO: Ask for the project path if missing and validate the path.
             val folder = parameters[FOLDER] ?: throw IllegalArgumentException("Query parameter \"$FOLDER\" is missing")
@@ -161,7 +161,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     /**
      * Check that the link is allowlisted.  If not, confirm with the user.
      */
-    private fun verifyDownloadLink(parameters: Map<String, String>, deploymentURL: URL) {
+    private fun verifyDownloadLink(parameters: Map<String, String>) {
         val link = parameters[IDE_DOWNLOAD_LINK]
         if (link.isNullOrBlank()) {
             return // Nothing to verify
@@ -174,7 +174,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         }
 
         val (allowlisted, https, linkWithRedirect) = try {
-            CoderRemoteConnectionHandle.isAllowlisted(url, deploymentURL)
+            CoderRemoteConnectionHandle.isAllowlisted(url)
         } catch (e: Exception) {
             throw IllegalArgumentException("Unable to verify $url: $e")
         }

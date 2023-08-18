@@ -244,10 +244,10 @@ class CoderRemoteConnectionHandle {
          * destination, if it is a different host.
          */
         @JvmStatic
-        fun isAllowlisted(url: URL, deploymentURL: URL): Triple<Boolean, Boolean, String> {
+        fun isAllowlisted(url: URL): Triple<Boolean, Boolean, String> {
             // TODO: Setting for the allowlist, and remember previously allowed
             //  domains.
-            val domainAllowlist = listOf("intellij.net", "jetbrains.com", deploymentURL.host)
+            val domainAllowlist = listOf("intellij.net", "jetbrains.com")
 
             // Resolve any redirects.
             val finalUrl = try {
