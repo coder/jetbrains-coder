@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Added
+- Initial support for Gateway links (jetbrains-gateway://). See the readme for
+  the expected parameters.
+- Support for Gateway 232.9921.
+
 ## 2.5.2 - 2023-08-06
 
 ### Fixed
