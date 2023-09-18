@@ -150,7 +150,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         if (token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
         }
-        val client = CoderRestClient(deploymentURL, token.first)
+        val client = CoderRestClient(deploymentURL, token.first, settings.headerCommand)
         return try {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {
