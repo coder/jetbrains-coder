@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.6.0 - 2023-09-06
+
 ### Added
 - Initial support for Gateway links (jetbrains-gateway://). See the readme for
   the expected parameters.
