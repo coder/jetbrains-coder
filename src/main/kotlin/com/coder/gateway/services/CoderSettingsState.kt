@@ -18,6 +18,7 @@ class CoderSettingsState : PersistentStateComponent<CoderSettingsState> {
     var dataDirectory: String = ""
     var enableDownloads: Boolean = true
     var enableBinaryDirectoryFallback: Boolean = false
+    var headerCommand: String = ""
     override fun getState(): CoderSettingsState {
         return this
     }
