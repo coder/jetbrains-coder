@@ -100,7 +100,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(workspaces.flatMap { it.toAgentModels() })
+            cli.configSsh(workspaces.flatMap { it.toAgentModels() }, settings.headerCommand)
 
             // TODO: Ask for these if missing.  Maybe we can reuse the second
             //  step of the wizard?  Could also be nice if we automatically used

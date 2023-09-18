@@ -614,7 +614,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         poller?.cancel()
 
         logger.info("Configuring Coder CLI...")
-        cli.configSsh(tableOfWorkspaces.items)
+        cli.configSsh(tableOfWorkspaces.items, settings.headerCommand)
 
         // The config directory can be used to pull the URL and token in
         // order to query this workspace's status in other flows, for

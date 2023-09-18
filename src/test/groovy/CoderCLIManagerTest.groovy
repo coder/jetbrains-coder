@@ -398,7 +398,7 @@ class CoderCLIManagerTest extends Specification {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
 
         when:
-        ccm.configSsh(workspaces.collect { DataGen.workspace(it) })
+        ccm.configSsh(workspaces.collect { DataGen.workspace(it) }, headerCommand)
 
         then:
         sshConfigPath.toFile().text == expectedConf
@@ -410,19 +410,20 @@ class CoderCLIManagerTest extends Specification {
         sshConfigPath.toFile().text == Path.of("src/test/fixtures/inputs").resolve(remove + ".conf").toFile().text
 
         where:
-        workspaces     | input                           | output                            | remove
-        ["foo", "bar"] | null                            | "multiple-workspaces"             | "blank"
-        ["foo-bar"]    | "blank"                         | "append-blank"                    | "blank"
-        ["foo-bar"]    | "blank-newlines"                | "append-blank-newlines"           | "blank"
-        ["foo-bar"]    | "existing-end"                  | "replace-end"                     | "no-blocks"
-        ["foo-bar"]    | "existing-end-no-newline"       | "replace-end-no-newline"          | "no-blocks"
-        ["foo-bar"]    | "existing-middle"               | "replace-middle"                  | "no-blocks"
-        ["foo-bar"]    | "existing-middle-and-unrelated" | "replace-middle-ignore-unrelated" | "no-related-blocks"
-        ["foo-bar"]    | "existing-only"                 | "replace-only"                    | "blank"
-        ["foo-bar"]    | "existing-start"                | "replace-start"                   | "no-blocks"
-        ["foo-bar"]    | "no-blocks"                     | "append-no-blocks"                | "no-blocks"
-        ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks"
-        ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"
+        workspaces     | input                           | output                            | remove              | headerCommand
+        ["foo", "bar"] | null                            | "multiple-workspaces"             | "blank"             | null
+        ["foo-bar"]    | "blank"                         | "append-blank"                    | "blank"             | null
+        ["foo-bar"]    | "blank-newlines"                | "append-blank-newlines"           | "blank"             | null
+        ["foo-bar"]    | "existing-end"                  | "replace-end"                     | "no-blocks"         | null
+        ["foo-bar"]    | "existing-end-no-newline"       | "replace-end-no-newline"          | "no-blocks"         | null
+        ["foo-bar"]    | "existing-middle"               | "replace-middle"                  | "no-blocks"         | null
+        ["foo-bar"]    | "existing-middle-and-unrelated" | "replace-middle-ignore-unrelated" | "no-related-blocks" | null
+        ["foo-bar"]    | "existing-only"                 | "replace-only"                    | "blank"             | null
+        ["foo-bar"]    | "existing-start"                | "replace-start"                   | "no-blocks"         | null
+        ["foo-bar"]    | "no-blocks"                     | "append-no-blocks"                | "no-blocks"         | null
+        ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks" | null
+        ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"         | null
+        ["header"]     | null                            | "header-command"                  | "blank"             | "my-header-command \"test\""
     }
 
     def "fails if config is malformed"() {

@@ -179,8 +179,9 @@ class CoderCLIManager @JvmOverloads constructor(
     /**
      * Configure SSH to use this binary.
      */
-    fun configSsh(workspaces: List<WorkspaceAgentModel>) {
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces))
+    @JvmOverloads
+    fun configSsh(workspaces: List<WorkspaceAgentModel>, headerCommand: String? = null) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces, headerCommand))
     }
 
     /**
@@ -195,15 +196,34 @@ class CoderCLIManager @JvmOverloads constructor(
     }
 
     /**
+     * Escape a command argument by wrapping it in double quotes and escaping
+     * any double quotes in the argument.  For example, echo "test" becomes
+     * "echo \"test\"".
+     */
+    private fun escape(s: String): String {
+        return "\"" + s.replace("\"", "\\\"") + "\""
+    }
+
+    /**
      * Given an existing SSH config modify it to add or remove the config for
      * this deployment and return the modified config or null if it does not
      * need to be modified.
      */
-    private fun modifySSHConfig(contents: String?, workspaces: List<WorkspaceAgentModel>): String? {
+    private fun modifySSHConfig(
+        contents: String?,
+        workspaces: List<WorkspaceAgentModel>,
+        headerCommand: String?,
+    ): String? {
         val host = getSafeHost(deploymentURL)
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
         val isRemoving = workspaces.isEmpty()
+        val proxyArgs = listOfNotNull(
+            escape(localBinaryPath.toString()),
+            "--global-config", escape(coderConfigPath.toString()),
+            if (!headerCommand.isNullOrBlank()) "--header-command" else null,
+            if (!headerCommand.isNullOrBlank()) escape(headerCommand) else null,
+           "ssh", "--stdio")
         val blockContent = workspaces.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
@@ -212,7 +232,7 @@ class CoderCLIManager @JvmOverloads constructor(
                 """
                 Host ${getHostName(deploymentURL, it)}
                   HostName coder.${it.name}
-                  ProxyCommand "$localBinaryPath" --global-config "$coderConfigPath" ssh --stdio ${it.name}
+                  ProxyCommand ${proxyArgs.joinToString(" ")} ${it.name}
                   ConnectTimeout 0
                   StrictHostKeyChecking no
                   UserKnownHostsFile /dev/null
