@@ -32,7 +32,7 @@ jobs:
       - uses: gradle/wrapper-validation-action@v1.1.0
 
       # Run tests
-      - run: ./gradlew test
+      - run: ./gradlew test --info
 
       # Collect Tests Result of failed tests
       - if: ${{ failure() }}
