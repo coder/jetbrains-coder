@@ -195,13 +195,15 @@ class CoderCLIManager @JvmOverloads constructor(
         }
     }
 
+    var escapeRegex = """(["\\])""".toRegex()
+
     /**
      * Escape a command argument by wrapping it in double quotes and escaping
-     * any double quotes in the argument.  For example, echo "test" becomes
-     * "echo \"test\"".
+     * any slashes and double quotes in the argument.  For example, echo "te\st"
+     *  becomes "echo \"te\\st\"".
      */
     private fun escape(s: String): String {
-        return "\"" + s.replace("\"", "\\\"") + "\""
+        return "\"" + s.replace(escapeRegex, """\\$1""") + "\""
     }
 
     /**

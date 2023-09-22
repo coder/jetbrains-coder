@@ -424,6 +424,7 @@ class CoderCLIManagerTest extends Specification {
         ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks" | null
         ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"         | null
         ["header"]     | null                            | "header-command"                  | "blank"             | "my-header-command \"test\""
+        ["header"]     | null                            | "header-command-windows"          | "blank"             | $/C:\Program Files\My Header Command\"also has quotes"\HeaderCommand.exe/$
     }
 
     def "fails if config is malformed"() {
