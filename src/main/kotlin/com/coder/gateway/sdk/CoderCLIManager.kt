@@ -179,8 +179,9 @@ class CoderCLIManager @JvmOverloads constructor(
     /**
      * Configure SSH to use this binary.
      */
-    fun configSsh(workspaces: List<WorkspaceAgentModel>) {
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces))
+    @JvmOverloads
+    fun configSsh(workspaces: List<WorkspaceAgentModel>, headerCommand: String? = null) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces, headerCommand))
     }
 
     /**
@@ -199,11 +200,21 @@ class CoderCLIManager @JvmOverloads constructor(
      * this deployment and return the modified config or null if it does not
      * need to be modified.
      */
-    private fun modifySSHConfig(contents: String?, workspaces: List<WorkspaceAgentModel>): String? {
+    private fun modifySSHConfig(
+        contents: String?,
+        workspaces: List<WorkspaceAgentModel>,
+        headerCommand: String?,
+    ): String? {
         val host = getSafeHost(deploymentURL)
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
         val isRemoving = workspaces.isEmpty()
+        val proxyArgs = listOfNotNull(
+            escape(localBinaryPath.toString()),
+            "--global-config", escape(coderConfigPath.toString()),
+            if (!headerCommand.isNullOrBlank()) "--header-command" else null,
+            if (!headerCommand.isNullOrBlank()) escape(headerCommand) else null,
+           "ssh", "--stdio")
         val blockContent = workspaces.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
@@ -212,7 +223,7 @@ class CoderCLIManager @JvmOverloads constructor(
                 """
                 Host ${getHostName(deploymentURL, it)}
                   HostName coder.${it.name}
-                  ProxyCommand "$localBinaryPath" --global-config "$coderConfigPath" ssh --stdio ${it.name}
+                  ProxyCommand ${proxyArgs.joinToString(" ")} ${it.name}
                   ConnectTimeout 0
                   StrictHostKeyChecking no
                   UserKnownHostsFile /dev/null
@@ -494,6 +505,24 @@ class CoderCLIManager @JvmOverloads constructor(
             // Prefer the binary directory unless the data directory has a
             // working binary and the binary directory does not.
             return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
+        }
+
+        /**
+         * Escape a command argument to be used in the ProxyCommand of an SSH
+         * config.  Surround with double quotes if the argument contains
+         * whitespace and escape any existing double quotes.
+         *
+         * Throws if the argument is invalid.
+         */
+        @JvmStatic
+        fun escape(s: String): String {
+            if (s.contains("\n")) {
+                throw Exception("argument cannot contain newlines")
+            }
+            if (s.contains(" ") || s.contains("\t")) {
+                return "\"" + s.replace("\"", "\\\"") + "\""
+            }
+            return s.replace("\"", "\\\"")
         }
     }
 }

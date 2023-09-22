@@ -13,6 +13,7 @@ import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.toWorkspaceParams
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
@@ -72,6 +73,7 @@ data class DeploymentInfo(
 )
 
 class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
+    private val settings: CoderSettingsState = service()
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
@@ -259,7 +261,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 deployments[dir] ?: try {
                     val url = Path.of(dir).resolve("url").readText()
                     val token = Path.of(dir).resolve("session").readText()
-                    DeploymentInfo(CoderRestClient(url.toURL(), token))
+                    DeploymentInfo(CoderRestClient(url.toURL(), token, settings.headerCommand))
                 } catch (e: Exception) {
                     logger.error("Unable to create client from $dir", e)
                     DeploymentInfo(error = "Error trying to read $dir: ${e.message}")

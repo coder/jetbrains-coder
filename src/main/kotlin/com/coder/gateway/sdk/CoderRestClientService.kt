@@ -20,6 +20,7 @@ import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.zeroturnaround.exec.ProcessExecutor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.HttpURLConnection.HTTP_CREATED
@@ -41,8 +42,8 @@ class CoderRestClientService {
      *
      * @throws [AuthenticationResponseException] if authentication failed.
      */
-    fun initClientSession(url: URL, token: String): User {
-        client = CoderRestClient(url, token)
+    fun initClientSession(url: URL, token: String, headerCommand: String?): User {
+        client = CoderRestClient(url, token, headerCommand)
         me = client.me()
         buildVersion = client.buildInfo().version
         isReady = true
@@ -50,7 +51,7 @@ class CoderRestClientService {
     }
 }
 
-class CoderRestClient(var url: URL, var token: String) {
+class CoderRestClient(var url: URL, var token: String, var headerCommand: String?) {
     private var httpClient: OkHttpClient
     private var retroRestClient: CoderV2RestFacade
 
@@ -61,6 +62,16 @@ class CoderRestClient(var url: URL, var token: String) {
         httpClient = OkHttpClient.Builder()
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion.version} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
+            .addInterceptor {
+                var request = it.request()
+                val headers = getHeaders(url, headerCommand)
+                if (headers.size > 0) {
+                    val builder = request.newBuilder()
+                    headers.forEach { h -> builder.addHeader(h.key, h.value) }
+                    request = builder.build()
+                }
+                it.proceed(request)
+            }
             // this should always be last if we want to see previous interceptors logged
             .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
             .build()
@@ -140,5 +151,46 @@ class CoderRestClient(var url: URL, var token: String) {
         }
 
         return buildResponse.body()!!
+    }
+
+    companion object {
+        private val newlineRegex = "\r?\n".toRegex()
+        private val endingNewlineRegex = "\r?\n$".toRegex()
+
+        // TODO: This really only needs to be a private function, but
+        // unfortunately it is not possible to test the client because it fails
+        // on the plugin manager core call and I do not know how to fix it.  So,
+        // for now make this static and test it directly instead.
+        @JvmStatic
+        fun getHeaders(url: URL, headerCommand: String?): Map<String, String> {
+            if (headerCommand.isNullOrBlank()) {
+                return emptyMap()
+            }
+            val (shell, caller) = when (getOS()) {
+                OS.WINDOWS -> Pair("cmd.exe", "/c")
+                else -> Pair("sh", "-c")
+            }
+            return ProcessExecutor()
+                .command(shell, caller, headerCommand)
+                .environment("CODER_URL", url.toString())
+                .exitValues(0)
+                .readOutput(true)
+                .execute()
+                .outputUTF8()
+                .replaceFirst(endingNewlineRegex, "")
+                .split(newlineRegex)
+                .associate {
+                    // Header names cannot be blank or contain whitespace and
+                    // the Coder CLI requires that there be an equals sign (the
+                    // value can be blank though).  The second case is taken
+                    // care of by the destructure here, as it will throw if
+                    // there are not enough parts.
+                    val (name, value) = it.split("=", limit=2)
+                    if (name.contains(" ") || name == "") {
+                        throw Exception("\"$name\" is not a valid header name")
+                    }
+                    name to value
+                }
+        }
     }
 }

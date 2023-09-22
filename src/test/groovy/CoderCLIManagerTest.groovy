@@ -380,6 +380,21 @@ class CoderCLIManagerTest extends Specification {
         Path.of("/tmp/coder-gateway-test/localappdata/coder-gateway") == dataDir()
     }
 
+    def "escapes arguments"() {
+        expect:
+        CoderCLIManager.escape(str) == expected
+
+        where:
+        str                                             | expected
+        $//tmp/coder/$                                  | $//tmp/coder/$
+        $//tmp/c o d e r/$                              | $/"/tmp/c o d e r"/$
+        $/C:\no\spaces.exe/$                            | $/C:\no\spaces.exe/$
+        $/C:\"quote after slash"/$                      | $/"C:\\"quote after slash\""/$
+        $/C:\echo "hello world"/$                       | $/"C:\echo \"hello world\""/$
+        $/C:\"no"\"spaces"/$                            | $/C:\\"no\"\\"spaces\"/$
+        $/"C:\Program Files\HeaderCommand.exe" --flag/$ | $/"\"C:\Program Files\HeaderCommand.exe\" --flag"/$
+    }
+
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
@@ -394,11 +409,11 @@ class CoderCLIManagerTest extends Specification {
 
         def expectedConf = Path.of("src/test/fixtures/outputs/").resolve(output + ".conf").toFile().text
                 .replaceAll("\\r?\\n", System.lineSeparator())
-                .replace("/tmp/coder-gateway/test.coder.invalid/config", coderConfigPath.toString())
-                .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
+                .replace("/tmp/coder-gateway/test.coder.invalid/config", CoderCLIManager.escape(coderConfigPath.toString()))
+                .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", CoderCLIManager.escape(ccm.localBinaryPath.toString()))
 
         when:
-        ccm.configSsh(workspaces.collect { DataGen.workspace(it) })
+        ccm.configSsh(workspaces.collect { DataGen.workspace(it) }, headerCommand)
 
         then:
         sshConfigPath.toFile().text == expectedConf
@@ -410,19 +425,21 @@ class CoderCLIManagerTest extends Specification {
         sshConfigPath.toFile().text == Path.of("src/test/fixtures/inputs").resolve(remove + ".conf").toFile().text
 
         where:
-        workspaces     | input                           | output                            | remove
-        ["foo", "bar"] | null                            | "multiple-workspaces"             | "blank"
-        ["foo-bar"]    | "blank"                         | "append-blank"                    | "blank"
-        ["foo-bar"]    | "blank-newlines"                | "append-blank-newlines"           | "blank"
-        ["foo-bar"]    | "existing-end"                  | "replace-end"                     | "no-blocks"
-        ["foo-bar"]    | "existing-end-no-newline"       | "replace-end-no-newline"          | "no-blocks"
-        ["foo-bar"]    | "existing-middle"               | "replace-middle"                  | "no-blocks"
-        ["foo-bar"]    | "existing-middle-and-unrelated" | "replace-middle-ignore-unrelated" | "no-related-blocks"
-        ["foo-bar"]    | "existing-only"                 | "replace-only"                    | "blank"
-        ["foo-bar"]    | "existing-start"                | "replace-start"                   | "no-blocks"
-        ["foo-bar"]    | "no-blocks"                     | "append-no-blocks"                | "no-blocks"
-        ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks"
-        ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"
+        workspaces     | input                           | output                            | remove              | headerCommand
+        ["foo", "bar"] | null                            | "multiple-workspaces"             | "blank"             | null
+        ["foo-bar"]    | "blank"                         | "append-blank"                    | "blank"             | null
+        ["foo-bar"]    | "blank-newlines"                | "append-blank-newlines"           | "blank"             | null
+        ["foo-bar"]    | "existing-end"                  | "replace-end"                     | "no-blocks"         | null
+        ["foo-bar"]    | "existing-end-no-newline"       | "replace-end-no-newline"          | "no-blocks"         | null
+        ["foo-bar"]    | "existing-middle"               | "replace-middle"                  | "no-blocks"         | null
+        ["foo-bar"]    | "existing-middle-and-unrelated" | "replace-middle-ignore-unrelated" | "no-related-blocks" | null
+        ["foo-bar"]    | "existing-only"                 | "replace-only"                    | "blank"             | null
+        ["foo-bar"]    | "existing-start"                | "replace-start"                   | "no-blocks"         | null
+        ["foo-bar"]    | "no-blocks"                     | "append-no-blocks"                | "no-blocks"         | null
+        ["foo-bar"]    | "no-related-blocks"             | "append-no-related-blocks"        | "no-related-blocks" | null
+        ["foo-bar"]    | "no-newline"                    | "append-no-newline"               | "no-blocks"         | null
+        ["header"]     | null                            | "header-command"                  | "blank"             | "my-header-command \"test\""
+        ["header"]     | null                            | "header-command-windows"          | "blank"             | $/C:\Program Files\My Header Command\"also has quotes"\HeaderCommand.exe/$
     }
 
     def "fails if config is malformed"() {
@@ -448,6 +465,22 @@ class CoderCLIManagerTest extends Specification {
                 "malformed-no-end",
                 "malformed-no-start",
                 "malformed-start-after-end",
+        ]
+    }
+
+    def "fails if header command is malformed"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+
+        when:
+        ccm.configSsh(["foo", "bar"].collect { DataGen.workspace(it) }, headerCommand)
+
+        then:
+        thrown(Exception)
+
+        where:
+        headerCommand << [
+            "new\nline",
         ]
     }
 
