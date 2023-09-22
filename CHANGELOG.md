@@ -5,7 +5,7 @@
 ## Unreleased
 
 ### Added
-- Add a path for a command to run to get headers that will be set on all
+- Add a setting for a command to run to get headers that will be set on all
   requests to the Coder deployment.
 
 ## 2.6.0 - 2023-09-06
