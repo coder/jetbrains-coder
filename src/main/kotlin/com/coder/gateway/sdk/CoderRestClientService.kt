@@ -67,7 +67,7 @@ class CoderRestClient(var url: URL, var token: String, var headerCommand: String
                 val headers = getHeaders(url, headerCommand)
                 if (headers.size > 0) {
                     val builder = request.newBuilder()
-                    headers.forEach { builder.addHeader(it.key, it.value) }
+                    headers.forEach { h -> builder.addHeader(h.key, h.value) }
                     request = builder.build()
                 }
                 it.proceed(request)
