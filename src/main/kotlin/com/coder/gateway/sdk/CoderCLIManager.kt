@@ -507,12 +507,10 @@ class CoderCLIManager @JvmOverloads constructor(
             return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
         }
 
-        var escapeRegex = """(["\\])""".toRegex()
-
         /**
-         * Escape a command argument by wrapping it in double quotes and escaping
-         * any slashes and double quotes in the argument.  For example, echo "te\st"
-         *  becomes "echo \"te\\st\"".
+         * Escape a command argument to be used in the ProxyCommand of an SSH
+         * config.  Surround with double quotes if the argument contains
+         * whitespace and escape any existing double quotes.
          *
          * Throws if the argument is invalid.
          */
@@ -521,7 +519,10 @@ class CoderCLIManager @JvmOverloads constructor(
             if (s.contains("\n")) {
                 throw Exception("argument cannot contain newlines")
             }
-            return "\"" + s.replace(escapeRegex, """\\$1""") + "\""
+            if (s.contains(" ") || s.contains("\t")) {
+                return "\"" + s.replace("\"", "\\\"") + "\""
+            }
+            return s.replace("\"", "\\\"")
         }
     }
 }
