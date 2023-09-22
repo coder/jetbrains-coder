@@ -453,6 +453,22 @@ class CoderCLIManagerTest extends Specification {
         ]
     }
 
+    def "fails if header command is malformed"() {
+        given:
+        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+
+        when:
+        ccm.configSsh(["foo", "bar"].collect { DataGen.workspace(it) }, headerCommand)
+
+        then:
+        thrown(Exception)
+
+        where:
+        headerCommand << [
+            "new\nline",
+        ]
+    }
+
     @IgnoreIf({ os.windows })
     def "parses version"() {
         given:

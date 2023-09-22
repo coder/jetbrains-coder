@@ -201,8 +201,13 @@ class CoderCLIManager @JvmOverloads constructor(
      * Escape a command argument by wrapping it in double quotes and escaping
      * any slashes and double quotes in the argument.  For example, echo "te\st"
      *  becomes "echo \"te\\st\"".
+     *
+     * Throws if the argument is invalid.
      */
     private fun escape(s: String): String {
+        if (s.contains("\n")) {
+            throw Exception("argument cannot contain newlines")
+        }
         return "\"" + s.replace(escapeRegex, """\\$1""") + "\""
     }
 
