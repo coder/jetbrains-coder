@@ -380,6 +380,17 @@ class CoderCLIManagerTest extends Specification {
         Path.of("/tmp/coder-gateway-test/localappdata/coder-gateway") == dataDir()
     }
 
+    def "escapes arguments"() {
+        expect:
+        CoderCLIManager.escape(str) == expected
+
+        where:
+        str                                             | expected
+        $/C:\"quote after slash"/$                      | $/"C:\\\"quote after slash\""/$
+        $/C:\echo "hello world"/$                       | $/"C:\\echo \"hello world\""/$
+        $/"C:\Program Files\HeaderCommand.exe" --flag/$ | $/"\"C:\\Program Files\\HeaderCommand.exe\" --flag"/$
+    }
+
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
@@ -394,8 +405,8 @@ class CoderCLIManagerTest extends Specification {
 
         def expectedConf = Path.of("src/test/fixtures/outputs/").resolve(output + ".conf").toFile().text
                 .replaceAll("\\r?\\n", System.lineSeparator())
-                .replace("/tmp/coder-gateway/test.coder.invalid/config", coderConfigPath.toString())
-                .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", ccm.localBinaryPath.toString())
+                .replace("\"/tmp/coder-gateway/test.coder.invalid/config\"", CoderCLIManager.escape(coderConfigPath.toString()))
+                .replace("\"/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64\"", CoderCLIManager.escape(ccm.localBinaryPath.toString()))
 
         when:
         ccm.configSsh(workspaces.collect { DataGen.workspace(it) }, headerCommand)

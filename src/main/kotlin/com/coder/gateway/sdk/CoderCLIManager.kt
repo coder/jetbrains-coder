@@ -195,22 +195,6 @@ class CoderCLIManager @JvmOverloads constructor(
         }
     }
 
-    var escapeRegex = """(["\\])""".toRegex()
-
-    /**
-     * Escape a command argument by wrapping it in double quotes and escaping
-     * any slashes and double quotes in the argument.  For example, echo "te\st"
-     *  becomes "echo \"te\\st\"".
-     *
-     * Throws if the argument is invalid.
-     */
-    private fun escape(s: String): String {
-        if (s.contains("\n")) {
-            throw Exception("argument cannot contain newlines")
-        }
-        return "\"" + s.replace(escapeRegex, """\\$1""") + "\""
-    }
-
     /**
      * Given an existing SSH config modify it to add or remove the config for
      * this deployment and return the modified config or null if it does not
@@ -521,6 +505,23 @@ class CoderCLIManager @JvmOverloads constructor(
             // Prefer the binary directory unless the data directory has a
             // working binary and the binary directory does not.
             return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
+        }
+
+        var escapeRegex = """(["\\])""".toRegex()
+
+        /**
+         * Escape a command argument by wrapping it in double quotes and escaping
+         * any slashes and double quotes in the argument.  For example, echo "te\st"
+         *  becomes "echo \"te\\st\"".
+         *
+         * Throws if the argument is invalid.
+         */
+        @JvmStatic
+        fun escape(s: String): String {
+            if (s.contains("\n")) {
+                throw Exception("argument cannot contain newlines")
+            }
+            return "\"" + s.replace(escapeRegex, """\\$1""") + "\""
         }
     }
 }
