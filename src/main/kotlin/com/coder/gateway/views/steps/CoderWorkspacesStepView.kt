@@ -18,6 +18,7 @@ import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
@@ -423,12 +424,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         tableOfWorkspaces.listTableModel.items = emptyList()
 
         // Authenticate and load in a background process with progress.
-        // TODO: Make this cancelable.
-        return LifetimeDefinition().launchUnderBackgroundProgress(
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"),
-            canBeCancelled = false,
-            isIndeterminate = true
-        ) {
+        return LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title")) {
             try {
                 this.indicator.text = "Authenticating client..."
                 authenticate(deploymentURL, token.first)
@@ -456,51 +452,61 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
                 tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
             } catch (e: Exception) {
-                val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
-                val msg = when (e) {
-                    is java.nio.file.AccessDeniedException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.access-denied", e.file)
-                    is UnknownHostException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unknown-host", e.message ?: deploymentURL.host)
-                    is InvalidExitValueException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unexpected-exit", e.exitValue)
-                    is AuthenticationResponseException -> {
-                        CoderGatewayBundle.message(
-                            "gateway.connector.view.workspaces.connect.unauthorized",
-                            deploymentURL,
-                        )
+                if (isCancellation(e)) {
+                    tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.comment",
+                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"))
+                    tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
+                        "gateway.connector.view.workspaces.connect.canceled",
+                        deploymentURL.host,
+                    ))
+                    logger.info("Connection canceled due to ${e.javaClass.simpleName}")
+                } else {
+                    val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
+                    val msg = when (e) {
+                        is java.nio.file.AccessDeniedException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.access-denied", e.file)
+                        is UnknownHostException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unknown-host", e.message ?: deploymentURL.host)
+                        is InvalidExitValueException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unexpected-exit", e.exitValue)
+                        is AuthenticationResponseException -> {
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.workspaces.connect.unauthorized",
+                                deploymentURL,
+                            )
+                        }
+                        is SocketTimeoutException -> {
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.workspaces.connect.timeout",
+                                deploymentURL,
+                            )
+                        }
+                        is ResponseException, is ConnectException -> {
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.workspaces.connect.download-failed",
+                                reason,
+                            )
+                        }
+                        is SSLHandshakeException -> {
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.workspaces.connect.ssl-error",
+                                deploymentURL.host,
+                                reason,
+                            )
+                        }
+                        else -> reason
                     }
-                    is SocketTimeoutException -> {
-                        CoderGatewayBundle.message(
-                            "gateway.connector.view.workspaces.connect.timeout",
-                            deploymentURL,
-                        )
-                    }
-                    is ResponseException, is ConnectException -> {
-                        CoderGatewayBundle.message(
-                            "gateway.connector.view.workspaces.connect.download-failed",
-                            reason,
-                        )
-                    }
-                    is SSLHandshakeException -> {
-                        CoderGatewayBundle.message(
-                            "gateway.connector.view.workspaces.connect.ssl-error",
-                            deploymentURL.host,
-                            reason,
-                        )
-                    }
-                    else -> reason
-                }
-                // It would be nice to place messages directly into the table
-                // but it does not support wrapping or markup so place it in the
-                // comment field of the URL input instead.
-                tfUrlComment?.foreground = UIUtil.getErrorForeground()
-                tfUrlComment?.text = msg
-                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
-                    "gateway.connector.view.workspaces.connect.failed",
-                    deploymentURL.host,
-                ))
-                logger.error(msg, e)
+                    // It would be nice to place messages directly into the table
+                    // but it does not support wrapping or markup so place it in the
+                    // comment field of the URL input instead.
+                    tfUrlComment?.foreground = UIUtil.getErrorForeground()
+                    tfUrlComment?.text = msg
+                    tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
+                        "gateway.connector.view.workspaces.connect.failed",
+                        deploymentURL.host,
+                    ))
+                    logger.error(msg, e)
 
-                if (e is AuthenticationResponseException) {
-                    cs.launch { onAuthFailure?.invoke() }
+                    if (e is AuthenticationResponseException) {
+                        cs.launch { onAuthFailure?.invoke() }
+                    }
                 }
             }
         }

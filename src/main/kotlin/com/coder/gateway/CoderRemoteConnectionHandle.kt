@@ -50,7 +50,7 @@ class CoderRemoteConnectionHandle {
 
     suspend fun connect(getParameters: (indicator: ProgressIndicator) -> Map<String, String>) {
         val clientLifetime = LifetimeDefinition()
-        clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title"), canBeCancelled = true, isIndeterminate = true, project = null) {
+        clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {
                 val parameters = getParameters(indicator)
                 logger.debug("Creating connection handle", parameters)
