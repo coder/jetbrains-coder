@@ -179,13 +179,16 @@ class CoderRemoteConnectionHandle {
         }
 
         /**
-         * Open a dialog for providing the token.  Show any existing token so the
-         * user can validate it if a previous connection failed.  If we are not
-         * retrying and the user has not checked the existing token box then open a
-         * browser to the auth page.  If the user has checked the existing token box
-         * then populate the dialog with the token on disk (this will overwrite any
+         * Open a dialog for providing the token.  Show any existing token so
+         * the user can validate it if a previous connection failed.
+         *
+         * If we are not retrying and the user has not checked the existing
+         * token box then also open a browser to the auth page.
+         *
+         * If the user has checked the existing token box then return the token
+         * on disk immediately and skip the dialog (this will overwrite any
          * other existing token) unless this is a retry to avoid clobbering the
-         * token that just failed.  Return the token submitted by the user.
+         * token that just failed.
          */
         @JvmStatic
         fun askToken(
