@@ -31,6 +31,7 @@ import com.jetbrains.gateway.ssh.SshDeployFlowUtil
 import com.jetbrains.gateway.ssh.SshMultistagePanelContext
 import com.jetbrains.gateway.ssh.deploy.DeployException
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
@@ -78,7 +79,7 @@ class CoderRemoteConnectionHandle {
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.failed.retry", humanizeDuration(remainingMs))
                     },
                 )
-                launch {
+                GlobalScope.launch {
                     logger.info("Deploying and starting IDE with $context")
                     // At this point JetBrains takes over with their own UI.
                     @Suppress("UnstableApiUsage") SshDeployFlowUtil.fullDeployCycle(
