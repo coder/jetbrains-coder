@@ -7,6 +7,7 @@
 ### Added
 - Add a setting for a command to run to get headers that will be set on all
   requests to the Coder deployment.
+- Support for Gateway 2023.3.
 
 ## 2.6.0 - 2023-09-06
 
