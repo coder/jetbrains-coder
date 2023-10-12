@@ -1,5 +1,6 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -12,6 +13,7 @@ import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
+import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.plugins.PluginManagerCore
@@ -103,6 +105,23 @@ class CoderRestClient(var url: URL, var token: String, var headerCommand: String
         }
 
         return workspacesResponse.body()!!.workspaces
+    }
+
+    /**
+     * Retrieves agents for the specified workspaces.  Since the workspaces
+     * response does not include agents when the workspace is off, this fires
+     * off separate queries to get the agents for each workspace, just like
+     * `coder config-ssh` does (otherwise we risk removing hosts from the SSH
+     * config when they are off).
+     */
+    fun agents(workspaces: List<Workspace>): List<WorkspaceAgentModel> {
+        return workspaces.flatMap {
+            val resourcesResponse = retroRestClient.templateVersionResources(it.latestBuild.templateVersionID).execute()
+            if (!resourcesResponse.isSuccessful) {
+                throw WorkspaceResponseException("Unable to retrieve template resources for ${it.name} from $url: code ${resourcesResponse.code()}, reason: ${resourcesResponse.message().ifBlank { "no reason provided" }}")
+            }
+            it.toAgentModels(resourcesResponse.body()!!)
+        }
     }
 
     fun buildInfo(): BuildInfo {
