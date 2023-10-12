@@ -31,8 +31,8 @@ data class Workspace(
     @SerializedName("last_used_at") val lastUsedAt: Instant,
 )
 
-fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
-    val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuild.resources): Set<WorkspaceAgentModel> {
+    val wam = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
         val workspaceWithAgentName = "${this.name}.${agent.name}"
         val wm = WorkspaceAgentModel(
             this.id,
