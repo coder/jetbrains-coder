@@ -8,6 +8,7 @@ class DataGen {
     static WorkspaceAgentModel workspace(String name, String workspaceName = name) {
         return new WorkspaceAgentModel(
                 UUID.randomUUID(),
+                UUID.randomUUID(),
                 workspaceName,
                 name,
                 UUID.randomUUID(),
