@@ -35,6 +35,7 @@ fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuil
     val wam = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
         val workspaceWithAgentName = "${this.name}.${agent.name}"
         val wm = WorkspaceAgentModel(
+            agent.id,
             this.id,
             this.name,
             workspaceWithAgentName,
@@ -55,6 +56,7 @@ fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuil
     }.toSet()
     if (wam.isNullOrEmpty()) {
         val wm = WorkspaceAgentModel(
+            null,
             this.id,
             this.name,
             this.name,
