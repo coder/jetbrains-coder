@@ -23,7 +23,8 @@ import java.net.URL
 private const val URL = "url"
 private const val TOKEN = "token"
 private const val WORKSPACE = "workspace"
-private const val AGENT = "agent"
+private const val AGENT_NAME = "agent"
+private const val AGENT_ID = "agent_id"
 private const val FOLDER = "folder"
 private const val IDE_DOWNLOAD_LINK = "ide_download_link"
 private const val IDE_PRODUCT_CODE = "ide_product_code"
@@ -72,14 +73,23 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             }
 
             // If the agent is missing and the workspace has only one, use that.
-            val agent = if (!parameters[AGENT].isNullOrBlank())
-                agents.firstOrNull { it.name == "$workspaceName.${parameters[AGENT]}"}
+            // Prefer the ID over the name if both are set.
+            val agent = if (!parameters[AGENT_ID].isNullOrBlank())
+                agents.firstOrNull {it.agentID.toString() == parameters[AGENT_ID]}
+            else if (!parameters[AGENT_NAME].isNullOrBlank())
+                agents.firstOrNull { it.name == "$workspaceName.${parameters[AGENT_NAME]}"}
             else if (agents.size == 1) agents.first()
             else null
 
             if (agent == null) {
-                // TODO: Show a dropdown and ask for an agent.
-                throw IllegalArgumentException("Query parameter \"$AGENT\" is missing")
+                if (parameters[AGENT_ID].isNullOrBlank() && parameters[AGENT_NAME].isNullOrBlank()) {
+                    // TODO: Show a dropdown and ask for an agent.
+                    throw IllegalArgumentException("Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because \"$workspaceName\" has more than one agent")
+                } else if (parameters[AGENT_ID].isNullOrBlank()) {
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" does not have an agent with ID \"${parameters[AGENT_ID]}\"")
+                } else {
+                    throw IllegalArgumentException("The workspace \"$workspaceName\" does not have an agent named \"${parameters[AGENT_NAME]}\"")
+                }
             }
 
             if (agent.agentStatus.pending()) {

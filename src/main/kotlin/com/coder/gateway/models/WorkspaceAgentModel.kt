@@ -14,6 +14,7 @@ import javax.swing.Icon
 // iterate over the list we can add the workspace row if it has no agents
 // otherwise iterate over the agents and then flatten the result.
 data class WorkspaceAgentModel(
+    val agentID: UUID?,
     val workspaceID: UUID,
     val workspaceName: String,
     val name: String, // Name of the workspace OR the agent if this is for an agent.
