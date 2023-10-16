@@ -12,7 +12,7 @@ class DataGen {
     //       toAgentModels() on it.  Also the way an "agent" model can have no
     //       agent in it seems weird; can we refactor to remove
     //       WorkspaceAgentModel and use the original structs from the API?
-    static WorkspaceAgentModel workspace(String name, String workspaceName = "", UUID agentId = UUID.randomUUID()) {
+    static WorkspaceAgentModel workspaceAgentModel(String name, String workspaceName = "", UUID agentId = UUID.randomUUID()) {
         return new WorkspaceAgentModel(
                 workspaceName == "" ? null : agentId,
                 UUID.randomUUID(),
