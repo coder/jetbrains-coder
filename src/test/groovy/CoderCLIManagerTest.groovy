@@ -413,7 +413,7 @@ class CoderCLIManagerTest extends Specification {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", CoderCLIManager.escape(ccm.localBinaryPath.toString()))
 
         when:
-        ccm.configSsh(workspaces.collect { DataGen.workspace(it) }, headerCommand)
+        ccm.configSsh(workspaces.collect { DataGen.workspaceAgentModel(it) }, headerCommand)
 
         then:
         sshConfigPath.toFile().text == expectedConf
@@ -473,7 +473,7 @@ class CoderCLIManagerTest extends Specification {
         def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
 
         when:
-        ccm.configSsh(["foo", "bar"].collect { DataGen.workspace(it) }, headerCommand)
+        ccm.configSsh(["foo", "bar"].collect { DataGen.workspaceAgentModel(it) }, headerCommand)
 
         then:
         thrown(Exception)
