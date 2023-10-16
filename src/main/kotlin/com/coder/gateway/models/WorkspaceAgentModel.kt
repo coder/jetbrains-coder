@@ -17,7 +17,7 @@ data class WorkspaceAgentModel(
     val agentID: UUID?,
     val workspaceID: UUID,
     val workspaceName: String,
-    val name: String, // Name of the workspace OR the agent if this is for an agent.
+    val name: String, // Name of the workspace OR workspace.agent if this is for an agent.
     val templateID: UUID,
     val templateName: String,
     val templateIconPath: String,
