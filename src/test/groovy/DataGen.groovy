@@ -31,10 +31,8 @@ class DataGen {
         )
     }
 
-    static Workspace workspace(String name, Map<String, String> agents = [:]) {
-        UUID wsId = UUID.randomUUID()
-        UUID ownerId = UUID.randomUUID()
-        List<WorkspaceResource> resources = agents.collect{ agentName, agentId -> new WorkspaceResource(
+    static WorkspaceResource resource(String agentName, String agentId){
+        return new WorkspaceResource(
                 UUID.randomUUID(),      // id
                 new Date().toInstant(), // created_at
                 UUID.randomUUID(),      // job_id
@@ -70,7 +68,13 @@ class DataGen {
                 )),
                 null,                   // metadata
                 0,                      // daily_cost
-        )}
+        )
+    }
+
+    static Workspace workspace(String name, Map<String, String> agents = [:]) {
+        UUID wsId = UUID.randomUUID()
+        UUID ownerId = UUID.randomUUID()
+        List<WorkspaceResource> resources = agents.collect{ resource(it.key, it.value)}
         return new Workspace(
                 wsId,
                 new Date().toInstant(), // created_at
