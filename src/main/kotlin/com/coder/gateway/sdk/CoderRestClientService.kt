@@ -45,7 +45,7 @@ class CoderRestClientService {
      * @throws [AuthenticationResponseException] if authentication failed.
      */
     fun initClientSession(url: URL, token: String, headerCommand: String?): User {
-        client = CoderRestClient(url, token, headerCommand)
+        client = CoderRestClient(url, token, headerCommand, null)
         me = client.me()
         buildVersion = client.buildInfo().version
         isReady = true
@@ -53,17 +53,22 @@ class CoderRestClientService {
     }
 }
 
-class CoderRestClient(var url: URL, var token: String, var headerCommand: String?) {
+class CoderRestClient(var url: URL, var token: String,
+    private var headerCommand: String?,
+    private var pluginVersion: String?,
+) {
     private var httpClient: OkHttpClient
     private var retroRestClient: CoderV2RestFacade
 
     init {
         val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
-        val pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!! // this is the id from the plugin.xml
+        if (pluginVersion.isNullOrBlank()) {
+            pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version // this is the id from the plugin.xml
+        }
 
         httpClient = OkHttpClient.Builder()
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
-            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion.version} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
+            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
             .addInterceptor {
                 var request = it.request()
                 val headers = getHeaders(url, headerCommand)
