@@ -9,7 +9,7 @@ class CoderWorkspacesStepViewTest extends Specification {
         def table = new WorkspacesTable()
         table.listTableModel.items = List.of(
                 // An off workspace.
-                DataGen.workspaceAgentModel("ws1", "ws1"),
+                DataGen.workspaceAgentModel("ws1"),
 
                 // On workspaces.
                 DataGen.workspaceAgentModel("agent1", "ws2"),
@@ -17,14 +17,14 @@ class CoderWorkspacesStepViewTest extends Specification {
                 DataGen.workspaceAgentModel("agent3", "ws3"),
 
                 // Another off workspace.
-                DataGen.workspaceAgentModel("ws4", "ws4"),
+                DataGen.workspaceAgentModel("ws4"),
 
                 // In practice we do not list both agents and workspaces
                 // together but here test that anyway with an agent first and
                 // then with a workspace first.
                 DataGen.workspaceAgentModel("agent2", "ws5"),
-                DataGen.workspaceAgentModel("ws5", "ws5"),
-                DataGen.workspaceAgentModel("ws6", "ws6"),
+                DataGen.workspaceAgentModel("ws5"),
+                DataGen.workspaceAgentModel("ws6"),
                 DataGen.workspaceAgentModel("agent3", "ws6"),
         )
 
@@ -35,19 +35,19 @@ class CoderWorkspacesStepViewTest extends Specification {
         selected                                     | expected
         null                                         | -1 // No selection.
         DataGen.workspaceAgentModel("gone", "gone")  | -1 // No workspace that matches.
-        DataGen.workspaceAgentModel("ws1", "ws1")    | 0  // Workspace exact match.
+        DataGen.workspaceAgentModel("ws1")           | 0  // Workspace exact match.
         DataGen.workspaceAgentModel("gone", "ws1")   | 0  // Agent gone, select workspace.
-        DataGen.workspaceAgentModel("ws2", "ws2")    | 1  // Workspace gone, select first agent.
+        DataGen.workspaceAgentModel("ws2")           | 1  // Workspace gone, select first agent.
         DataGen.workspaceAgentModel("agent1", "ws2") | 1  // Agent exact match.
         DataGen.workspaceAgentModel("agent2", "ws2") | 2  // Agent exact match.
-        DataGen.workspaceAgentModel("ws3", "ws3")    | 3  // Workspace gone, select first agent.
+        DataGen.workspaceAgentModel("ws3")           | 3  // Workspace gone, select first agent.
         DataGen.workspaceAgentModel("agent3", "ws3") | 3  // Agent exact match.
         DataGen.workspaceAgentModel("gone", "ws4")   | 4  // Agent gone, select workspace.
-        DataGen.workspaceAgentModel("ws4", "ws4")    | 4  // Workspace exact match.
+        DataGen.workspaceAgentModel("ws4")           | 4  // Workspace exact match.
         DataGen.workspaceAgentModel("agent2", "ws5") | 5  // Agent exact match.
         DataGen.workspaceAgentModel("gone", "ws5")   | 5  // Agent gone, another agent comes first.
-        DataGen.workspaceAgentModel("ws5", "ws5")    | 6  // Workspace exact match.
-        DataGen.workspaceAgentModel("ws6", "ws6")    | 7  // Workspace exact match.
+        DataGen.workspaceAgentModel("ws5")           | 6  // Workspace exact match.
+        DataGen.workspaceAgentModel("ws6")           | 7  // Workspace exact match.
         DataGen.workspaceAgentModel("gone", "ws6")   | 7  // Agent gone, workspace comes first.
         DataGen.workspaceAgentModel("agent3", "ws6") | 8  // Agent exact match.
     }
