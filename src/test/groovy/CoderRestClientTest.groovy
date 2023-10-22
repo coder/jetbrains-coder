@@ -4,6 +4,7 @@ import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
+import com.coder.gateway.services.CoderSettingsState
 import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -18,6 +19,7 @@ import java.time.Instant
 
 @Unroll
 class CoderRestClientTest extends Specification {
+    private CoderSettingsState settings = new CoderSettingsState()
     /**
      * Create, start, and return a server that mocks the Coder API.
      *
@@ -63,7 +65,7 @@ class CoderRestClientTest extends Specification {
     def "gets workspaces"() {
         given:
         def (srv, url) = mockServer(workspaces)
-        def client = new CoderRestClient(new URL(url), "token", null, "test")
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
 
         expect:
         client.workspaces()*.name == expected
@@ -81,7 +83,7 @@ class CoderRestClientTest extends Specification {
     def "gets resources"() {
         given:
         def (srv, url) = mockServer(workspaces, resources)
-        def client = new CoderRestClient(new URL(url), "token", null, "test")
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
 
         expect:
         client.agents(workspaces).collect { it.agentID.toString() } == expected
