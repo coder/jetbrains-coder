@@ -4,6 +4,18 @@
 
 ## Unreleased
 
+### Added
+
+- Configuration options for mTLS.
+- Configuration options for adding a CA cert to the trust store and an alternate
+  hostname.
+- Agent ID can be used in place of the name when using the Gateway link. If
+  both are present the name will be ignored.
+
+### Fixed
+
+- Configuring SSH will include all agents even on workspaces that are off.
+
 ## 2.8.0 - 2023-10-03
 
 ### Added
