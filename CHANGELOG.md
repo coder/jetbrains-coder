@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.9.0-eap.0 - 2023-10-27
+
 ### Added
 
 - Configuration options for mTLS.
