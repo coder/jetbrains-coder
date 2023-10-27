@@ -19,6 +19,7 @@ import java.security.MessageDigest
 class CoderCLIManagerTest extends Specification {
     @Shared
     private Path tmpdir = Path.of(System.getProperty("java.io.tmpdir")).resolve("coder-gateway-test/cli-manager")
+    private CoderSettingsState settings = new CoderSettingsState()
 
     /**
      * Create, start, and return a server that mocks Coder.
@@ -82,7 +83,7 @@ class CoderCLIManagerTest extends Specification {
 
     def "uses a sub-directory"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid"), tmpdir)
 
         expect:
         ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid")
@@ -90,7 +91,7 @@ class CoderCLIManagerTest extends Specification {
 
     def "includes port in sub-directory if included"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid:3000"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid:3000"), tmpdir)
 
         expect:
         ccm.localBinaryPath.getParent() == tmpdir.resolve("test.coder.invalid-3000")
@@ -98,7 +99,7 @@ class CoderCLIManagerTest extends Specification {
 
     def "encodes IDN with punycode"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.😉.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.😉.invalid"), tmpdir)
 
         expect:
         ccm.localBinaryPath.getParent() == tmpdir.resolve("test.xn--n28h.invalid")
@@ -107,7 +108,7 @@ class CoderCLIManagerTest extends Specification {
     def "fails to download"() {
         given:
         def (srv, url) = mockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
-        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir)
 
         when:
         ccm.downloadCLI()
@@ -125,7 +126,7 @@ class CoderCLIManagerTest extends Specification {
         given:
         def (srv, url) = mockServer()
         def dir = tmpdir.resolve("cli-dir-fallver")
-        def ccm = new CoderCLIManager(new URL(url), tmpdir, dir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir, dir)
         Files.createDirectories(ccm.localBinaryPath.getParent())
         ccm.localBinaryPath.parent.toFile().setWritable(false)
 
@@ -148,7 +149,7 @@ class CoderCLIManagerTest extends Specification {
         if (url == null) {
             url = "https://dev.coder.com"
         }
-        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir)
         ccm.localBinaryPath.getParent().toFile().deleteDir()
 
         when:
@@ -170,7 +171,7 @@ class CoderCLIManagerTest extends Specification {
     def "downloads a mocked cli"() {
         given:
         def (srv, url) = mockServer()
-        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir)
         ccm.localBinaryPath.getParent().toFile().deleteDir()
 
         when:
@@ -189,7 +190,7 @@ class CoderCLIManagerTest extends Specification {
 
     def "fails to run non-existent binary"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://foo"), tmpdir.resolve("does-not-exist"))
+        def ccm = new CoderCLIManager(settings, new URL("https://foo"), tmpdir.resolve("does-not-exist"))
 
         when:
         ccm.login("token")
@@ -201,7 +202,7 @@ class CoderCLIManagerTest extends Specification {
     def "overwrites cli if incorrect version"() {
         given:
         def (srv, url) = mockServer()
-        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir)
         Files.createDirectories(ccm.localBinaryPath.getParent())
         ccm.localBinaryPath.toFile().write("cli")
         ccm.localBinaryPath.toFile().setLastModified(0)
@@ -222,7 +223,7 @@ class CoderCLIManagerTest extends Specification {
     def "skips cli download if it already exists"() {
         given:
         def (srv, url) = mockServer()
-        def ccm = new CoderCLIManager(new URL(url), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir)
 
         when:
         def downloaded1 = ccm.downloadCLI()
@@ -243,8 +244,8 @@ class CoderCLIManagerTest extends Specification {
         setup:
         def (srv1, url1) = mockServer()
         def (srv2, url2) = mockServer()
-        def ccm1 = new CoderCLIManager(new URL(url1), tmpdir)
-        def ccm2 = new CoderCLIManager(new URL(url2), tmpdir)
+        def ccm1 = new CoderCLIManager(settings, new URL(url1), tmpdir)
+        def ccm2 = new CoderCLIManager(settings, new URL(url2), tmpdir)
 
         when:
         ccm1.downloadCLI()
@@ -263,7 +264,7 @@ class CoderCLIManagerTest extends Specification {
     def "overrides binary URL"() {
         given:
         def (srv, url) = mockServer()
-        def ccm = new CoderCLIManager(new URL(url), tmpdir, null, override.replace("{{url}}", url))
+        def ccm = new CoderCLIManager(settings, new URL(url), tmpdir, null, override.replace("{{url}}", url))
 
         when:
         def downloaded = ccm.downloadCLI()
@@ -398,7 +399,7 @@ class CoderCLIManagerTest extends Specification {
     def "configures an SSH file"() {
         given:
         def sshConfigPath = tmpdir.resolve(input + "_to_" + output + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
         if (input != null) {
             Files.createDirectories(sshConfigPath.getParent())
             def originalConf = Path.of("src/test/fixtures/inputs").resolve(input + ".conf").toFile().text
@@ -413,7 +414,7 @@ class CoderCLIManagerTest extends Specification {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", CoderCLIManager.escape(ccm.localBinaryPath.toString()))
 
         when:
-        ccm.configSsh(workspaces.collect { DataGen.workspace(it) }, headerCommand)
+        ccm.configSsh(workspaces.collect { DataGen.workspaceAgentModel(it) }, headerCommand)
 
         then:
         sshConfigPath.toFile().text == expectedConf
@@ -445,7 +446,7 @@ class CoderCLIManagerTest extends Specification {
     def "fails if config is malformed"() {
         given:
         def sshConfigPath = tmpdir.resolve("configured" + input + ".conf")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid"), tmpdir, null, null, sshConfigPath)
         Files.createDirectories(sshConfigPath.getParent())
         Files.copy(
                 Path.of("src/test/fixtures/inputs").resolve(input + ".conf"),
@@ -470,10 +471,10 @@ class CoderCLIManagerTest extends Specification {
 
     def "fails if header command is malformed"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid"), tmpdir)
 
         when:
-        ccm.configSsh(["foo", "bar"].collect { DataGen.workspace(it) }, headerCommand)
+        ccm.configSsh(["foo", "bar"].collect { DataGen.workspaceAgentModel(it) }, headerCommand)
 
         then:
         thrown(Exception)
@@ -487,7 +488,7 @@ class CoderCLIManagerTest extends Specification {
     @IgnoreIf({ os.windows })
     def "parses version"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings,new URL("https://test.coder.invalid"), tmpdir)
         Files.createDirectories(ccm.localBinaryPath.parent)
 
         when:
@@ -506,7 +507,7 @@ class CoderCLIManagerTest extends Specification {
     @IgnoreIf({ os.windows })
     def "fails to parse version"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.parse-fail.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.parse-fail.invalid"), tmpdir)
         Files.createDirectories(ccm.localBinaryPath.parent)
 
         when:
@@ -532,7 +533,7 @@ class CoderCLIManagerTest extends Specification {
     @IgnoreIf({ os.windows })
     def "checks if version matches"() {
         given:
-        def ccm = new CoderCLIManager(new URL("https://test.coder.version-matches.invalid"), tmpdir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.version-matches.invalid"), tmpdir)
         Files.createDirectories(ccm.localBinaryPath.parent)
 
         when:
@@ -567,7 +568,7 @@ class CoderCLIManagerTest extends Specification {
     def "separately configures cli path from data dir"() {
         given:
         def dir = tmpdir.resolve("cli-dir")
-        def ccm = new CoderCLIManager(new URL("https://test.coder.invalid"), tmpdir, dir)
+        def ccm = new CoderCLIManager(settings, new URL("https://test.coder.invalid"), tmpdir, dir)
 
         expect:
         ccm.localBinaryPath.getParent() == dir.resolve("test.coder.invalid")
@@ -585,11 +586,10 @@ class CoderCLIManagerTest extends Specification {
         def (srv, url) = mockServer()
         def dataDir = tmpdir.resolve("data-dir")
         def binDir = tmpdir.resolve("bin-dir")
-        def mainCCM = new CoderCLIManager(new URL(url), dataDir, binDir)
-        def fallbackCCM = new CoderCLIManager(new URL(url), dataDir)
+        def mainCCM = new CoderCLIManager(settings, new URL(url), dataDir, binDir)
+        def fallbackCCM = new CoderCLIManager(settings, new URL(url), dataDir)
 
         when:
-        def settings = new CoderSettingsState()
         settings.binaryDirectory = binDir.toAbsolutePath()
         settings.dataDirectory = dataDir.toAbsolutePath()
         settings.enableDownloads = download

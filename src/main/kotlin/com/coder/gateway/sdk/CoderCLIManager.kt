@@ -22,6 +22,7 @@ import java.nio.file.StandardCopyOption
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
+import javax.net.ssl.HttpsURLConnection
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
  * Manage the CLI for a single deployment.
  */
 class CoderCLIManager @JvmOverloads constructor(
+    private val settings: CoderSettingsState,
     private val deploymentURL: URL,
     dataDir: Path,
     cliDir: Path? = null,
@@ -104,6 +106,10 @@ class CoderCLIManager @JvmOverloads constructor(
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
+        if (conn is HttpsURLConnection) {
+            conn.sslSocketFactory = coderSocketFactory(settings)
+            conn.hostnameVerifier = CoderHostnameVerifier(settings.tlsAlternateHostname)
+        }
 
         try {
             conn.connect()
@@ -463,7 +469,7 @@ class CoderCLIManager @JvmOverloads constructor(
                 if (settings.binaryDirectory.isBlank()) null
                 else Path.of(settings.binaryDirectory).toAbsolutePath()
 
-            val cli = CoderCLIManager(deploymentURL, dataDir, binDir, settings.binarySource)
+            val cli = CoderCLIManager(settings, deploymentURL, dataDir, binDir, settings.binarySource)
 
             // Short-circuit if we already have the expected version.  This
             // lets us bypass the 304 which is slower and may not be
@@ -490,7 +496,7 @@ class CoderCLIManager @JvmOverloads constructor(
             }
 
             // Try falling back to the data directory.
-            val dataCLI = CoderCLIManager(deploymentURL, dataDir, null, settings.binarySource)
+            val dataCLI = CoderCLIManager(settings, deploymentURL, dataDir, null, settings.binarySource)
             val dataCLIMatches = dataCLI.matchesVersion(buildVersion)
             if (dataCLIMatches == true) {
                 return dataCLI

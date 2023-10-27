@@ -256,7 +256,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 deployments[dir] ?: try {
                     val url = Path.of(dir).resolve("url").readText()
                     val token = Path.of(dir).resolve("session").readText()
-                    DeploymentInfo(CoderRestClient(url.toURL(), token, settings.headerCommand))
+                    DeploymentInfo(CoderRestClient(url.toURL(), token,null, settings))
                 } catch (e: Exception) {
                     logger.error("Unable to create client from $dir", e)
                     DeploymentInfo(error = "Error trying to read $dir: ${e.message}")

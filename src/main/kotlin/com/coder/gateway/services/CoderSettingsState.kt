@@ -19,6 +19,10 @@ class CoderSettingsState : PersistentStateComponent<CoderSettingsState> {
     var enableDownloads: Boolean = true
     var enableBinaryDirectoryFallback: Boolean = false
     var headerCommand: String = ""
+    var tlsCertPath: String = ""
+    var tlsKeyPath: String = ""
+    var tlsCAPath: String = ""
+    var tlsAlternateHostname: String = ""
     override fun getState(): CoderSettingsState {
         return this
     }

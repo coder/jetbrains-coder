@@ -31,10 +31,11 @@ data class Workspace(
     @SerializedName("last_used_at") val lastUsedAt: Instant,
 )
 
-fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
-    val wam = this.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuild.resources): Set<WorkspaceAgentModel> {
+    val wam = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
         val workspaceWithAgentName = "${this.name}.${agent.name}"
         val wm = WorkspaceAgentModel(
+            agent.id,
             this.id,
             this.name,
             workspaceWithAgentName,
@@ -55,6 +56,7 @@ fun Workspace.toAgentModels(): Set<WorkspaceAgentModel> {
     }.toSet()
     if (wam.isNullOrEmpty()) {
         val wm = WorkspaceAgentModel(
+            null,
             this.id,
             this.name,
             this.name,

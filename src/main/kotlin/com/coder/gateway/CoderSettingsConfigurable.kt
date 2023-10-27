@@ -39,7 +39,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .comment(
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.binary-source.comment",
-                            CoderCLIManager(URL("http://localhost"), CoderCLIManager.getDataDir()).remoteBinaryURL.path,
+                            CoderCLIManager(state, URL("http://localhost"), CoderCLIManager.getDataDir()).remoteBinaryURL.path,
                         )
                     )
             }.layout(RowLayout.PARENT_GRID)
@@ -71,6 +71,34 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::headerCommand)
                     .comment(
                         CoderGatewayBundle.message("gateway.connector.settings.header-command.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::tlsCertPath)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.tls-key-path.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::tlsKeyPath)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-key-path.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.tls-ca-path.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::tlsCAPath)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-ca-path.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::tlsAlternateHostname)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.comment")
                     )
             }.layout(RowLayout.PARENT_GRID)
         }
