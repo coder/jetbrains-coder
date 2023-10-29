@@ -1,0 +1,108 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 4096 (0x1000)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=TEST-intermediate
+        Validity
+            Not Before: Oct 30 02:36:43 2023 GMT
+            Not After : Oct  6 02:36:43 2123 GMT
+        Subject: CN=localhost
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+                Modulus:
+                    00:ca:ff:7b:41:45:d2:46:14:9c:d7:9d:62:79:04:
+                    05:5c:36:c1:43:7d:da:2b:25:26:d1:64:15:42:fa:
+                    10:cc:fd:cf:48:17:87:2f:16:a3:84:11:bd:8a:57:
+                    73:28:24:af:5e:30:a0:57:bb:b9:9d:90:88:41:d3:
+                    c5:6d:20:25:b3:78:6d:1c:96:69:be:ab:52:64:31:
+                    27:4c:d2:d2:02:e5:2e:c2:b0:2c:2e:6f:38:bc:a7:
+                    29:9f:e1:8d:a0:e1:3c:00:9f:37:23:7c:d2:a2:64:
+                    28:fe:97:c1:34:83:1c:29:59:d9:a8:72:c7:bf:22:
+                    02:d0:b5:99:7e:42:7b:56:19:12:21:a9:a4:d8:f0:
+                    70:ef:a1:da:1d:cc:9c:37:7c:45:28:ea:42:f9:20:
+                    1e:6e:87:04:fc:db:0a:80:99:77:0a:38:de:a5:ba:
+                    b0:75:59:3a:cf:76:27:a1:9d:11:08:db:df:05:d1:
+                    0e:22:62:de:61:df:15:b2:77:39:3a:c8:dc:77:e4:
+                    20:c4:20:d7:1a:c0:4b:01:6b:06:4f:4c:b4:23:e9:
+                    dc:18:72:b1:9d:42:14:81:4e:7d:f3:c7:15:72:d5:
+                    b7:81:e7:f8:59:b4:b2:f3:f8:32:c3:aa:8d:d5:d4:
+                    b0:90:bd:da:43:2c:ce:dd:b8:18:83:a2:63:be:66:
+                    99:df
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication, TLS Web Client Authentication
+            X509v3 Subject Alternative Name: 
+                DNS:localhost
+    Signature Algorithm: sha256WithRSAEncryption
+         52:1f:1f:e7:4a:e7:37:be:49:a4:54:ed:f2:c7:da:87:f0:b3:
+         3a:01:21:16:2f:c7:05:2b:c7:dc:2e:98:b1:7e:40:06:32:ca:
+         cc:d3:95:16:bd:d0:76:a9:9f:d5:cb:64:e0:38:3f:fc:12:62:
+         08:4b:b1:b0:b9:ce:e0:b5:75:25:d9:83:44:81:db:9c:4d:2f:
+         39:3b:1c:da:18:fb:99:5b:59:fc:12:de:88:5c:0f:47:58:b3:
+         5b:70:2f:63:6c:57:19:5b:11:47:2a:98:ba:fe:dd:39:93:34:
+         9b:c0:7a:3e:4e:6c:ed:e6:ed:e9:9e:92:ab:35:4d:59:57:f8:
+         44:4f:c4:33:a3:20:ec:09:21:cf:2f:e8:35:61:9b:bf:11:9c:
+         13:90:81:d4:1c:ec:41:83:86:e3:03:c6:65:c0:db:c8:60:ed:
+         b1:72:61:66:8f:a9:5e:0f:2d:3d:5c:b6:8a:1f:4e:86:e6:e6:
+         3d:08:54:c8:41:79:45:3a:92:73:5b:92:34:ba:99:38:f2:9f:
+         4d:71:37:a1:b7:8d:1b:02:f1:77:d4:3e:6d:23:81:a3:fc:f4:
+         8b:f2:a6:14:bc:3e:94:2a:7f:bd:d8:fe:41:42:85:31:dd:ed:
+         b9:03:ad:73:7d:2d:9d:f7:a1:c8:9c:d7:1d:67:83:23:14:da:
+         61:3c:82:f7
+-----BEGIN CERTIFICATE-----
+MIIC8jCCAdqgAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwHDEaMBgGA1UEAwwRVEVT
+VC1pbnRlcm1lZGlhdGUwIBcNMjMxMDMwMDIzNjQzWhgPMjEyMzEwMDYwMjM2NDNa
+MBQxEjAQBgNVBAMMCWxvY2FsaG9zdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBAMr/e0FF0kYUnNedYnkEBVw2wUN92islJtFkFUL6EMz9z0gXhy8Wo4QR
+vYpXcygkr14woFe7uZ2QiEHTxW0gJbN4bRyWab6rUmQxJ0zS0gLlLsKwLC5vOLyn
+KZ/hjaDhPACfNyN80qJkKP6XwTSDHClZ2ahyx78iAtC1mX5Ce1YZEiGppNjwcO+h
+2h3MnDd8RSjqQvkgHm6HBPzbCoCZdwo43qW6sHVZOs92J6GdEQjb3wXRDiJi3mHf
+FbJ3OTrI3HfkIMQg1xrASwFrBk9MtCPp3BhysZ1CFIFOffPHFXLVt4Hn+Fm0svP4
+MsOqjdXUsJC92kMszt24GIOiY75mmd8CAwEAAaNEMEIwCwYDVR0PBAQDAgWgMB0G
+A1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAUBgNVHREEDTALgglsb2NhbGhv
+c3QwDQYJKoZIhvcNAQELBQADggEBAFIfH+dK5ze+SaRU7fLH2ofwszoBIRYvxwUr
+x9wumLF+QAYyyszTlRa90Hapn9XLZOA4P/wSYghLsbC5zuC1dSXZg0SB25xNLzk7
+HNoY+5lbWfwS3ohcD0dYs1twL2NsVxlbEUcqmLr+3TmTNJvAej5ObO3m7emekqs1
+TVlX+ERPxDOjIOwJIc8v6DVhm78RnBOQgdQc7EGDhuMDxmXA28hg7bFyYWaPqV4P
+LT1ctoofTobm5j0IVMhBeUU6knNbkjS6mTjyn01xN6G3jRsC8XfUPm0jgaP89Ivy
+phS8PpQqf73Y/kFChTHd7bkDrXN9LZ33ocic1x1ngyMU2mE8gvc=
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIICvjCCAaagAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJVEVT
+VC1yb290MCAXDTIzMTAzMDAyMzY0M1oYDzIxMjMxMDA2MDIzNjQzWjAcMRowGAYD
+VQQDDBFURVNULWludGVybWVkaWF0ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+AQoCggEBAMGD9oILmMRcplGkcNdSZMsBR7C2yoPtL9iRp3V2BKpiRZvQuXHSQsdc
+S0Tpk6vnIWQTLkCjVRawL9BoOzwK3FZQti9iXRMnHuzl0gQGZGiHJZ2P/efWaVvn
+cmH3Cu2oNCVePhgYAMOiipYGQPcjnQ2kUvMLldZ9+WC+EcaD+FA/kaccPX+kOxQg
+qQ0MnPQFfno0F8gylOac+ouKOsXya+jlctgK3dxC73/I+Cdq8xrOJ8lXOYxggleB
+ZRXNWWUhrzomn4rUP9wNBrQzFCGcqIS+QjlACjlyn0gPU//ZGVRZ8gZXoI8pDYuB
+lRyWpt970/ZPFuiyfiasAAAc8gJ3C7cCAwEAAaMQMA4wDAYDVR0TBAUwAwEB/zAN
+BgkqhkiG9w0BAQsFAAOCAQEAdHRiLqlYAyGNMPj6wzJt3XmwDbU5yEWor4q+GmA9
+fupirWXeSqKiqngDfvHlQNKgDlm10Kuk7LDVUcAP27Xnv/uFmHIUF+4g/eIjxvog
+RorUD2I9hi0Wyww7E8th/JfnuDX4YbIQrv1r5P4JaCoc0C2NBd1hO1Er2GdNEoXm
+UYoZg6/P5YQkWSLYtLPswb/Hf63DvzG94H6HnFBYlumt/5xYLrfD1Lx8099wZVdR
+qWXSi/tYi0HJGGUynZCvjdUu5En7eDoyWclGHz3stOUkBlz0efz01bxpiGsE/rRG
+Xr6qJt45N0Zktytk5TphoeDAeFB5ZHRRatZsg9CyZGoaIA==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIICvTCCAaWgAwIBAgIJALEhrLJNS0biMA0GCSqGSIb3DQEBCwUAMBQxEjAQBgNV
+BAMMCVRFU1Qtcm9vdDAgFw0yMzEwMzAwMjM2NDNaGA8yMTIzMTAwNjAyMzY0M1ow
+FDESMBAGA1UEAwwJVEVTVC1yb290MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEAqLTlMD7rNiC/Hyqz/sh1JBydgNv8CVa/cgCVYQQcGtRl7bs5CfdWti7J
+5l7ZEGn+cb+ZyVVyDeF+Tap7zGamQuEkM3C8tettcr7INfKLjNFN94GKtB5LemfK
+FFgVA5KWECoovYZPRprgnZuV2QEPdolqwzc3XvaVnmYkxyIhzWD1OFq/vZTFv6eq
+fr9JjzWYyv9rCOUmHj/EmVxVVoMYS6Ti3XwOb94Y2CdpuSn3GT4ELN7Tz1B9I0xc
+DGKrsjdUIVO5+Bd/5pzQyFMD1UAqsvB9MpHwQswTr/KbrtVC0AQ7fW2q3zOiEg1d
+jbNukucc0OwUOIM+UBTtLDBgRzWh5wIDAQABoxAwDjAMBgNVHRMEBTADAQH/MA0G
+CSqGSIb3DQEBCwUAA4IBAQAQ+7CNlnwdXEx8Q+JAQYw+DOHQEW8BNhi+iurDzgG3
+RBdHUO7WZi83ijbWuQkUvsfUsRqTkzg3N9fgY28SAhyhn0UmpGKUN6Eqf2d3nYWl
+c5X/vGJrajKZUJdBfCegqCgP2zWJycuG6qAs6dnQOj3GfOlUOakGI3czBlIfOXQv
+cU23PbQw0zlXFW6FZIqsuGG4aPeaWhuAJNo2XEDEe8Mdvk9w7pO2hqfBcDe03WyJ
+ucxx6vsMUGXBqHiOm8Q5TRjv/Zrd/Bhg8aGQlGDsru/dsjIlcxhrjiZzRQv3KjAj
++lNZcvU6Dsb/4QPJthVfb3ZT6r7QLcOk4TIAVyTVFdYR
+-----END CERTIFICATE-----

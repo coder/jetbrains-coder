@@ -1,6 +1,9 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
+import com.coder.gateway.sdk.v2.models.Role
+import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.UserStatus
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
@@ -9,12 +12,15 @@ import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import com.sun.net.httpserver.HttpsConfigurator
+import com.sun.net.httpserver.HttpsServer
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import javax.net.ssl.HttpsURLConnection
+import java.nio.file.Path
 import java.time.Instant
 
 @Unroll
@@ -28,6 +34,12 @@ class CoderRestClientTest extends Specification {
      */
     def mockServer(List<Workspace> workspaces, List<List<WorkspaceResource>> resources = []) {
         HttpServer srv = HttpServer.create(new InetSocketAddress(0), 0)
+        addServerContext(srv, workspaces, resources)
+        srv.start()
+        return [srv, "http://localhost:" + srv.address.port]
+    }
+
+    def addServerContext(HttpServer srv, List<Workspace> workspaces, List<List<WorkspaceResource>> resources = []) {
         srv.createContext("/", new HttpHandler() {
             void handle(HttpExchange exchange) {
                 int code = HttpURLConnection.HTTP_NOT_FOUND
@@ -44,6 +56,21 @@ class CoderRestClientTest extends Specification {
                         code = HttpsURLConnection.HTTP_OK
                         response = new GsonBuilder().registerTypeAdapter(Instant.class, new InstantConverter())
                                 .create().toJson(new WorkspacesResponse(workspaces, workspaces.size()))
+                    } else if (exchange.requestURI.path == "/api/v2/users/me") {
+                        code = HttpsURLConnection.HTTP_OK
+                        def user = new User(
+                                UUID.randomUUID(),
+                                "tester",
+                                "tester@example.com",
+                                Instant.now(),
+                                Instant.now(),
+                                UserStatus.ACTIVE,
+                                List<UUID>.of(),
+                                List<Role>.of(),
+                                ""
+                        )
+                        response = new GsonBuilder().registerTypeAdapter(Instant.class, new InstantConverter())
+                                .create().toJson(user)
                     }
                 } catch (error) {
                     // This will be a developer error.
@@ -58,8 +85,18 @@ class CoderRestClientTest extends Specification {
                 exchange.close()
             }
         })
+    }
+
+    def mockTLSServer(String certName, List<Workspace> workspaces, List<List<WorkspaceResource>> resources = []) {
+        HttpsServer srv = HttpsServer.create(new InetSocketAddress(0), 0)
+        def sslContext = CoderRestClientServiceKt.SSLContextFromPEMs(
+                Path.of("src/test/fixtures/tls", certName + ".crt").toString(),
+                Path.of("src/test/fixtures/tls", certName + ".key").toString(),
+                "")
+        srv.setHttpsConfigurator(new HttpsConfigurator(sslContext))
+        addServerContext(srv, workspaces, resources)
         srv.start()
-        return [srv, "http://localhost:" + srv.address.port]
+        return [srv, "https://localhost:" + srv.address.port]
     }
 
     def "gets workspaces"() {
@@ -176,5 +213,69 @@ class CoderRestClientTest extends Specification {
             "url": "http://localhost",
         ]
 
+    }
+
+    def "valid self-signed cert"() {
+        given:
+        def settings = new CoderSettingsState()
+        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        settings.tlsAlternateHostname = "localhost"
+        def (srv, url) = mockTLSServer("self-signed", null)
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
+
+        expect:
+        client.me().username == "tester"
+
+        cleanup:
+        srv.stop(0)
+    }
+
+    def "wrong hostname for cert"() {
+        given:
+        def settings = new CoderSettingsState()
+        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        settings.tlsAlternateHostname = "fake.example.com"
+        def (srv, url) = mockTLSServer("self-signed", null)
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
+
+        when:
+        client.me()
+
+        then:
+        thrown(javax.net.ssl.SSLPeerUnverifiedException)
+
+        cleanup:
+        srv.stop(0)
+    }
+
+    def "server cert not trusted"() {
+        given:
+        def settings = new CoderSettingsState()
+        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        def (srv, url) = mockTLSServer("no-signing", null)
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
+
+        when:
+        client.me()
+
+        then:
+        thrown(javax.net.ssl.SSLHandshakeException)
+
+        cleanup:
+        srv.stop(0)
+    }
+
+    def "server using valid chain cert"() {
+        given:
+        def settings = new CoderSettingsState()
+        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString()
+        def (srv, url) = mockTLSServer("chain", null)
+        def client = new CoderRestClient(new URL(url), "token", "test", settings)
+
+        expect:
+        client.me().username == "tester"
+
+        cleanup:
+        srv.stop(0)
     }
 }

@@ -19,6 +19,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import okhttp3.OkHttpClient
@@ -36,7 +37,6 @@ import java.net.URL
 import java.nio.file.Path
 import java.security.KeyFactory
 import java.security.KeyStore
-import java.security.PrivateKey
 import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -47,6 +47,7 @@ import java.util.Base64
 import java.util.Locale
 import java.util.UUID
 import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
@@ -251,53 +252,56 @@ class CoderRestClient(
     }
 }
 
-fun coderSocketFactory(settings: CoderSettingsState) : SSLSocketFactory {
-    if (settings.tlsCertPath.isBlank() || settings.tlsKeyPath.isBlank()) {
-        return SSLSocketFactory.getDefault() as SSLSocketFactory
+fun SSLContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLContext {
+    var km: Array<KeyManager>? = null
+    if (certPath.isNotBlank() && keyPath.isNotBlank()) {
+        val certificateFactory = CertificateFactory.getInstance("X.509")
+        val certInputStream = FileInputStream(expandPath(certPath))
+        val certChain = certificateFactory.generateCertificates(certInputStream)
+        certInputStream.close()
+
+        // ideally we would use something like PemReader from BouncyCastle, but
+        // BC is used by the IDE.  This makes using BC very impractical since
+        // type casting will mismatch due to the different class loaders.
+        val privateKeyPem = File(expandPath(keyPath)).readText()
+        val start: Int = privateKeyPem.indexOf("-----BEGIN PRIVATE KEY-----")
+        val end: Int = privateKeyPem.indexOf("-----END PRIVATE KEY-----", start)
+        val pemBytes: ByteArray = Base64.getDecoder().decode(
+            privateKeyPem.substring(start + "-----BEGIN PRIVATE KEY-----".length, end)
+                .replace("\\s+".toRegex(), "")
+        )
+
+        val privateKey = try {
+            val kf = KeyFactory.getInstance("RSA")
+            val keySpec = PKCS8EncodedKeySpec(pemBytes)
+            kf.generatePrivate(keySpec)
+        } catch (e: InvalidKeySpecException) {
+            val kf = KeyFactory.getInstance("EC")
+            val keySpec = PKCS8EncodedKeySpec(pemBytes)
+            kf.generatePrivate(keySpec)
+        }
+
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        keyStore.load(null)
+        certChain.withIndex().forEach {
+            keyStore.setCertificateEntry("cert${it.index}", it.value as X509Certificate)
+        }
+        keyStore.setKeyEntry("key", privateKey, null, certChain.toTypedArray())
+
+        val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        keyManagerFactory.init(keyStore, null)
+        km = keyManagerFactory.keyManagers
     }
-
-    val certificateFactory = CertificateFactory.getInstance("X.509")
-    val certInputStream = FileInputStream(expandPath(settings.tlsCertPath))
-    val certChain = certificateFactory.generateCertificates(certInputStream)
-    certInputStream.close()
-
-    // ideally we would use something like PemReader from BouncyCastle, but
-    // BC is used by the IDE.  This makes using BC very impractical since
-    // type casting will mismatch due to the different class loaders.
-    val privateKeyPem = File(expandPath(settings.tlsKeyPath)).readText()
-    val start: Int = privateKeyPem.indexOf("-----BEGIN PRIVATE KEY-----")
-    val end: Int = privateKeyPem.indexOf("-----END PRIVATE KEY-----", start)
-    val pemBytes: ByteArray = Base64.getDecoder().decode(
-        privateKeyPem.substring(start + "-----BEGIN PRIVATE KEY-----".length, end)
-            .replace("\\s+".toRegex(), "")
-    )
-
-    var privateKey : PrivateKey
-    try {
-        val kf = KeyFactory.getInstance("RSA")
-        val keySpec = PKCS8EncodedKeySpec(pemBytes)
-        privateKey = kf.generatePrivate(keySpec)
-    } catch (e: InvalidKeySpecException) {
-        val kf = KeyFactory.getInstance("EC")
-        val keySpec = PKCS8EncodedKeySpec(pemBytes)
-        privateKey = kf.generatePrivate(keySpec)
-    }
-
-    val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-    keyStore.load(null)
-    certChain.withIndex().forEach {
-        keyStore.setCertificateEntry("cert${it.index}", it.value as X509Certificate)
-    }
-    keyStore.setKeyEntry("key", privateKey, null, certChain.toTypedArray())
-
-    val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-    keyManagerFactory.init(keyStore, null)
 
     val sslContext = SSLContext.getInstance("TLS")
 
-    val trustManagers = coderTrustManagers(settings.tlsCAPath)
-    sslContext.init(keyManagerFactory.keyManagers, trustManagers, null)
+    val trustManagers = coderTrustManagers(caPath)
+    sslContext.init(km, trustManagers, null)
+    return sslContext
+}
 
+fun coderSocketFactory(settings: CoderSettingsState) : SSLSocketFactory {
+    val sslContext = SSLContextFromPEMs(settings.tlsCertPath, settings.tlsKeyPath, settings.tlsCAPath)
     if (settings.tlsAlternateHostname.isBlank()) {
         return sslContext.socketFactory
     }
@@ -393,12 +397,11 @@ class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, priv
 }
 
 class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifier {
+    val logger = Logger.getInstance(CoderRestClientService::class.java.simpleName)
     override fun verify(host: String, session: SSLSession): Boolean {
         if (alternateName.isEmpty()) {
-            println("using default hostname verifier, alternateName is  empty")
             return OkHostnameVerifier.verify(host, session)
         }
-        println("Looking for alternate hostname: $alternateName")
         val certs = session.peerCertificates ?: return false
         for (cert in certs) {
             if (cert !is X509Certificate) {
@@ -411,13 +414,12 @@ class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifie
                     continue
                 }
                 val hostname = entry[1] as String
-                println("Found cert hostname: $hostname")
+                logger.debug("Found cert hostname: $hostname")
                 if (hostname.lowercase(Locale.getDefault()) == alternateName) {
                     return true
                 }
             }
         }
-        println("No matching hostname found")
         return false
     }
 }
