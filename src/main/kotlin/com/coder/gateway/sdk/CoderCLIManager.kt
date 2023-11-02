@@ -180,8 +180,6 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     fun login(token: String): String {
         logger.info("Storing CLI credentials in $coderConfigPath")
-        logger.info("Storing CLI credentials in $coderConfigPath")
-
         return exec(
             "login",
             deploymentURL.toString(),
