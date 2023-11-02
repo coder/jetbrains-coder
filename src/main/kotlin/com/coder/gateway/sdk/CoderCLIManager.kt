@@ -102,7 +102,7 @@ class CoderCLIManager @JvmOverloads constructor(
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (settings.headerCommand.isNotBlank()){
-            val headersFromHeaderCommand =CoderRestClient.getHeaders(deploymentURL,settings.headerCommand)
+            val headersFromHeaderCommand =CoderRestClient.getHeaders(deploymentURL, settings.headerCommand)
             for ((key, value) in headersFromHeaderCommand) {
                 conn.setRequestProperty(key, value)
             }
@@ -370,7 +370,7 @@ class CoderCLIManager @JvmOverloads constructor(
     private fun exec(vararg args: String): String {
         val stdout = ProcessExecutor()
             .command(localBinaryPath.toString(), *args)
-            .environment("CODER_HEADER_COMMAND",settings.headerCommand)
+            .environment("CODER_HEADER_COMMAND", settings.headerCommand)
             .exitValues(0)
             .readOutput(true)
             .execute()
