@@ -101,11 +101,19 @@ class CoderCLIManager @JvmOverloads constructor(
     fun downloadCLI(): Boolean {
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
+        if (settings.headerCommand.isNotBlank()){
+//            get headers
+            val headersFromHeaderCommand =CoderRestClient.getHeaders(deploymentURL,settings.headerCommand)
+            for ((key, value) in headersFromHeaderCommand) {
+                conn.setRequestProperty(key, value)
+            }
+        }
         if (etag != null) {
             logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
+
         if (conn is HttpsURLConnection) {
             conn.sslSocketFactory = coderSocketFactory(settings)
             conn.hostnameVerifier = CoderHostnameVerifier(settings.tlsAlternateHostname)
@@ -172,6 +180,8 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     fun login(token: String): String {
         logger.info("Storing CLI credentials in $coderConfigPath")
+        logger.info("Storing CLI credentials in $coderConfigPath")
+
         return exec(
             "login",
             deploymentURL.toString(),
@@ -179,6 +189,8 @@ class CoderCLIManager @JvmOverloads constructor(
             token,
             "--global-config",
             coderConfigPath.toString(),
+            "--header-command",
+            settings.headerCommand
         )
     }
 
@@ -364,6 +376,7 @@ class CoderCLIManager @JvmOverloads constructor(
     private fun exec(vararg args: String): String {
         val stdout = ProcessExecutor()
             .command(localBinaryPath.toString(), *args)
+            .environment("CODER_HEADER_COMMAND",settings.headerCommand)
             .exitValues(0)
             .readOutput(true)
             .execute()
