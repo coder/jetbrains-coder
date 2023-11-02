@@ -102,7 +102,6 @@ class CoderCLIManager @JvmOverloads constructor(
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (settings.headerCommand.isNotBlank()){
-//            get headers
             val headersFromHeaderCommand =CoderRestClient.getHeaders(deploymentURL,settings.headerCommand)
             for ((key, value) in headersFromHeaderCommand) {
                 conn.setRequestProperty(key, value)
@@ -113,7 +112,6 @@ class CoderCLIManager @JvmOverloads constructor(
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
-
         if (conn is HttpsURLConnection) {
             conn.sslSocketFactory = coderSocketFactory(settings)
             conn.hostnameVerifier = CoderHostnameVerifier(settings.tlsAlternateHostname)
