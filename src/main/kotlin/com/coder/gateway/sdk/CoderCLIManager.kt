@@ -101,8 +101,8 @@ class CoderCLIManager @JvmOverloads constructor(
     fun downloadCLI(): Boolean {
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
-        if (settings.headerCommand.isNotBlank()){
-            val headersFromHeaderCommand =CoderRestClient.getHeaders(deploymentURL, settings.headerCommand)
+        if (settings.headerCommand.isNotBlank()) {
+            val headersFromHeaderCommand = CoderRestClient.getHeaders(deploymentURL, settings.headerCommand)
             for ((key, value) in headersFromHeaderCommand) {
                 conn.setRequestProperty(key, value)
             }
@@ -184,7 +184,7 @@ class CoderCLIManager @JvmOverloads constructor(
             "--token",
             token,
             "--global-config",
-            coderConfigPath.toString()
+            coderConfigPath.toString(),
         )
     }
 
