@@ -184,9 +184,7 @@ class CoderCLIManager @JvmOverloads constructor(
             "--token",
             token,
             "--global-config",
-            coderConfigPath.toString(),
-            "--header-command",
-            settings.headerCommand
+            coderConfigPath.toString()
         )
     }
 
