@@ -101,6 +101,12 @@ class CoderCLIManager @JvmOverloads constructor(
     fun downloadCLI(): Boolean {
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
+        if (settings.headerCommand.isNotBlank()) {
+            val headersFromHeaderCommand = CoderRestClient.getHeaders(deploymentURL, settings.headerCommand)
+            for ((key, value) in headersFromHeaderCommand) {
+                conn.setRequestProperty(key, value)
+            }
+        }
         if (etag != null) {
             logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
@@ -364,6 +370,7 @@ class CoderCLIManager @JvmOverloads constructor(
     private fun exec(vararg args: String): String {
         val stdout = ProcessExecutor()
             .command(localBinaryPath.toString(), *args)
+            .environment("CODER_HEADER_COMMAND", settings.headerCommand)
             .exitValues(0)
             .readOutput(true)
             .execute()
