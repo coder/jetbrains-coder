@@ -234,7 +234,6 @@ class CoderCLIManager @JvmOverloads constructor(
             transform = {
                 """
                 Host ${getHostName(deploymentURL, it)}
-                  HostName coder.${it.name}
                   ProxyCommand ${proxyArgs.joinToString(" ")} ${it.name}
                   ConnectTimeout 0
                   StrictHostKeyChecking no
