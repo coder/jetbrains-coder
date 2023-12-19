@@ -25,6 +25,8 @@ import com.coder.gateway.withWorkspaceHostname
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
@@ -65,7 +67,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -181,7 +182,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
         terminalLink.url = clientService.client.url.withPath("/@${clientService.me.username}/${selectedWorkspace.name}/terminal").toString()
 
-        ideResolvingJob = cs.launch {
+        ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
             try {
                 val ides = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
@@ -338,27 +339,23 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             logger.warn("No workspace was selected. Please go back to the previous step and select a workspace")
             return false
         }
-        cs.launch {
-            CoderRemoteConnectionHandle().connect{
-                selectedIDE
-                    .toWorkspaceParams()
-                    .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
-                    .withProjectPath(tfProject.text)
-                    .withWebTerminalLink("${terminalLink.url}")
-                    .withConfigDirectory(wizardModel.configDirectory)
-                    .withName(selectedWorkspace.name)
-            }
-            GatewayUI.getInstance().reset()
+        CoderRemoteConnectionHandle().connect{
+            selectedIDE
+                .toWorkspaceParams()
+                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                .withProjectPath(tfProject.text)
+                .withWebTerminalLink("${terminalLink.url}")
+                .withConfigDirectory(wizardModel.configDirectory)
+                .withName(selectedWorkspace.name)
         }
+        GatewayUI.getInstance().reset()
         return true
     }
 
     override fun onPrevious() {
         super.onPrevious()
         logger.info("Going back to Workspace view")
-        cs.launch {
-            ideResolvingJob.cancelAndJoin()
-        }
+        ideResolvingJob?.cancel()
     }
 
     override fun dispose() {

@@ -4,27 +4,51 @@ import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
 class RecentWorkspaceConnection(
-    @get:Attribute
-    var coderWorkspaceHostname: String? = null,
-    @get:Attribute
-    var projectPath: String? = null,
-    @get:Attribute
-    var lastOpened: String? = null,
-    @get:Attribute
-    var ideProductCode: String? = null,
-    @get:Attribute
-    var ideBuildNumber: String? = null,
-    @get:Attribute
-    var downloadSource: String? = null,
-    @get:Attribute
-    var idePathOnHost: String? = null,
-    @get:Attribute
-    var webTerminalLink: String? = null,
-    @get:Attribute
-    var configDirectory: String? = null,
-    @get:Attribute
-    var name: String? = null,
+    coderWorkspaceHostname: String? = null,
+    projectPath: String? = null,
+    lastOpened: String? = null,
+    ideProductCode: String? = null,
+    ideBuildNumber: String? = null,
+    downloadSource: String? = null,
+    idePathOnHost: String? = null,
+    webTerminalLink: String? = null,
+    configDirectory: String? = null,
+    name: String? = null,
 ) : BaseState(), Comparable<RecentWorkspaceConnection> {
+    @get:Attribute
+    var coderWorkspaceHostname by string()
+    @get:Attribute
+    var projectPath by string()
+    @get:Attribute
+    var lastOpened by string()
+    @get:Attribute
+    var ideProductCode by string()
+    @get:Attribute
+    var ideBuildNumber by string()
+    @get:Attribute
+    var downloadSource by string()
+    @get:Attribute
+    var idePathOnHost by string()
+    @get:Attribute
+    var webTerminalLink by string()
+    @get:Attribute
+    var configDirectory by string()
+    @get:Attribute
+    var name by string()
+
+    init {
+        this.coderWorkspaceHostname = coderWorkspaceHostname
+        this.projectPath = projectPath
+        this.lastOpened = lastOpened
+        this.ideProductCode = ideProductCode
+        this.ideBuildNumber = ideBuildNumber
+        this.downloadSource = downloadSource
+        this.idePathOnHost = idePathOnHost
+        this.webTerminalLink = webTerminalLink
+        this.configDirectory = configDirectory
+        this.name = name
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
