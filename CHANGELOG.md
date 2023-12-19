@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.9.2 - 2023-12-19
+
 ### Fixed
 
 - Listing IDEs when using the plugin from the File > Remote Development option
