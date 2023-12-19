@@ -31,8 +31,6 @@ import com.jetbrains.gateway.ssh.SshDeployFlowUtil
 import com.jetbrains.gateway.ssh.SshMultistagePanelContext
 import com.jetbrains.gateway.ssh.deploy.DeployException
 import com.jetbrains.rd.util.lifetime.LifetimeDefinition
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Dimension
@@ -48,7 +46,7 @@ import javax.net.ssl.SSLHandshakeException
 class CoderRemoteConnectionHandle {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
 
-    suspend fun connect(getParameters: (indicator: ProgressIndicator) -> Map<String, String>) {
+    fun connect(getParameters: (indicator: ProgressIndicator) -> Map<String, String>) {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {
@@ -79,13 +77,11 @@ class CoderRemoteConnectionHandle {
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.failed.retry", humanizeDuration(remainingMs))
                     },
                 )
-                GlobalScope.launch {
-                    logger.info("Deploying and starting IDE with $context")
-                    // At this point JetBrains takes over with their own UI.
-                    @Suppress("UnstableApiUsage") SshDeployFlowUtil.fullDeployCycle(
-                        clientLifetime, context, Duration.ofMinutes(10)
-                    )
-                }
+                logger.info("Deploying and starting IDE with $context")
+                // At this point JetBrains takes over with their own UI.
+                @Suppress("UnstableApiUsage") SshDeployFlowUtil.fullDeployCycle(
+                    clientLifetime, context, Duration.ofMinutes(10)
+                )
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
             } catch (e: Exception) {
                 if (isCancellation(e)) {

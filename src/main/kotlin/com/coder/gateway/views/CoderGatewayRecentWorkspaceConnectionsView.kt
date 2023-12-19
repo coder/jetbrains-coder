@@ -212,10 +212,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     row {
                         icon(product.icon)
                         cell(ActionLink(connectionDetails.projectPath!!) {
-                            cs.launch {
-                                CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceParams() }
-                                GatewayUI.getInstance().reset()
-                            }
+                            CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceParams() }
+                            GatewayUI.getInstance().reset()
                         })
                         label("").resizableColumn().align(AlignX.FILL)
                         label("Last opened: ${connectionDetails.lastOpened}").applyToComponent {

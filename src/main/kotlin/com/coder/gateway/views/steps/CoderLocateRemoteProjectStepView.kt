@@ -67,7 +67,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -340,18 +339,16 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             logger.warn("No workspace was selected. Please go back to the previous step and select a workspace")
             return false
         }
-        cs.launch {
-            CoderRemoteConnectionHandle().connect{
-                selectedIDE
-                    .toWorkspaceParams()
-                    .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
-                    .withProjectPath(tfProject.text)
-                    .withWebTerminalLink("${terminalLink.url}")
-                    .withConfigDirectory(wizardModel.configDirectory)
-                    .withName(selectedWorkspace.name)
-            }
-            GatewayUI.getInstance().reset()
+        CoderRemoteConnectionHandle().connect{
+            selectedIDE
+                .toWorkspaceParams()
+                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                .withProjectPath(tfProject.text)
+                .withWebTerminalLink("${terminalLink.url}")
+                .withConfigDirectory(wizardModel.configDirectory)
+                .withName(selectedWorkspace.name)
         }
+        GatewayUI.getInstance().reset()
         return true
     }
 
