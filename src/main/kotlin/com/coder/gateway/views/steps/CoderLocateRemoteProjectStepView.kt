@@ -25,6 +25,8 @@ import com.coder.gateway.withWorkspaceHostname
 import com.intellij.ide.IdeBundle
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
@@ -181,7 +183,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
         terminalLink.url = clientService.client.url.withPath("/@${clientService.me.username}/${selectedWorkspace.name}/terminal").toString()
 
-        ideResolvingJob = cs.launch {
+        ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
             try {
                 val ides = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
