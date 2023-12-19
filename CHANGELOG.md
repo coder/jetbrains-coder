@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Fixed
+
+- Listing IDEs when using the plugin from the File > Remote Development option
+  within a local IDE should now work.
+- Recent connections are now preserved.
+
 ## 2.9.1 - 2023-11-06
 
 ### Fixed
