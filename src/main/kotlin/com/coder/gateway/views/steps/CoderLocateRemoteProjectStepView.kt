@@ -356,9 +356,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     override fun onPrevious() {
         super.onPrevious()
         logger.info("Going back to Workspace view")
-        cs.launch {
-            ideResolvingJob.cancelAndJoin()
-        }
+        ideResolvingJob?.cancel()
     }
 
     override fun dispose() {
