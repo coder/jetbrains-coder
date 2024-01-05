@@ -302,7 +302,7 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     private fun writeSSHConfig(contents: String?) {
         if (contents != null) {
-            Files.createDirectories(sshConfigPath.parent)
+            sshConfigPath.parent.toFile().mkdirs()
             sshConfigPath.toFile().writeText(contents)
         }
     }
