@@ -51,6 +51,7 @@ class CoderCLIManager @JvmOverloads constructor(
         )
         if (!remoteBinaryURLOverride.isNullOrBlank()) {
             logger.info("Using remote binary override $remoteBinaryURLOverride")
+            println("Using remote binary override $remoteBinaryURLOverride")
             remoteBinaryURL = try {
                 remoteBinaryURLOverride.toURL()
             } catch (e: Exception) {
@@ -69,6 +70,7 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
         logger.info("Resolving binary for $os $arch")
+        println("Resolving binary for $os $arch")
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
             return "coder-windows-amd64.exe"
@@ -109,6 +111,7 @@ class CoderCLIManager @JvmOverloads constructor(
         }
         if (etag != null) {
             logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
+            println("Found existing binary at $localBinaryPath; calculated hash as $etag")
             conn.setRequestProperty("If-None-Match", "\"$etag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
@@ -120,9 +123,11 @@ class CoderCLIManager @JvmOverloads constructor(
         try {
             conn.connect()
             logger.info("GET ${conn.responseCode} $remoteBinaryURL")
+            println("GET ${conn.responseCode} $remoteBinaryURL")
             when (conn.responseCode) {
                 HttpURLConnection.HTTP_OK -> {
                     logger.info("Downloading binary to $localBinaryPath")
+                    println("Downloading binary to $localBinaryPath")
                     Files.createDirectories(localBinaryPath.parent)
                     conn.inputStream.use {
                         Files.copy(
@@ -139,6 +144,7 @@ class CoderCLIManager @JvmOverloads constructor(
 
                 HttpURLConnection.HTTP_NOT_MODIFIED -> {
                     logger.info("Using cached binary at $localBinaryPath")
+                    println("Using cached binary at $localBinaryPath")
                     return false
                 }
             }
