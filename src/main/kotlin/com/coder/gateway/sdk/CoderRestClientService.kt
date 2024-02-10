@@ -22,6 +22,8 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.util.net.HttpConfigurable
+import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.internal.tls.OkHostnameVerifier
 import okhttp3.logging.HttpLoggingInterceptor
@@ -95,9 +97,22 @@ class CoderRestClient(
             pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version // this is the id from the plugin.xml
         }
 
+        val proxy = HttpConfigurable.getInstance()
+
         val socketFactory = coderSocketFactory(settings)
         val trustManagers = coderTrustManagers(settings.tlsCAPath)
         httpClient = OkHttpClient.Builder()
+            .proxySelector(proxy.onlyBySettingsSelector)
+            .proxyAuthenticator { _, response ->
+                val login = proxy.proxyLogin
+                val pass = proxy.plainProxyPassword
+                if (proxy.PROXY_AUTHENTICATION && login != null && pass != null) {
+                    val credentials = Credentials.basic(login, pass)
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", credentials)
+                        .build()
+                } else null
+            }
             .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
             .hostnameVerifier(CoderHostnameVerifier(settings.tlsAlternateHostname))
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
