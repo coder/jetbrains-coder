@@ -6,6 +6,8 @@ import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
+import com.coder.gateway.sdk.defaultProxy
+import com.coder.gateway.sdk.defaultVersion
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -140,7 +142,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         if (token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
         }
-        val client = CoderRestClient(deploymentURL, token.first, null, settings)
+        val client = CoderRestClient(deploymentURL, token.first, defaultVersion(), settings, defaultProxy())
         return try {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {

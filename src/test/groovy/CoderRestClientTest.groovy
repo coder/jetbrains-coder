@@ -26,6 +26,7 @@ import java.time.Instant
 @Unroll
 class CoderRestClientTest extends Specification {
     private CoderSettingsState settings = new CoderSettingsState()
+
     /**
      * Create, start, and return a server that mocks the Coder API.
      *
@@ -97,6 +98,48 @@ class CoderRestClientTest extends Specification {
         addServerContext(srv, workspaces, resources)
         srv.start()
         return [srv, "https://localhost:" + srv.address.port]
+    }
+
+    def mockProxy() {
+        HttpServer srv = HttpServer.create(new InetSocketAddress(0), 0)
+        srv.createContext("/", new HttpHandler() {
+            void handle(HttpExchange exchange) {
+                int code
+                String response
+
+                if (exchange.requestHeaders.getFirst("Proxy-Authorization") != "Basic Zm9vOmJhcg==") {
+                    code = HttpURLConnection.HTTP_PROXY_AUTH
+                    response = "authentication required"
+                } else {
+                    try {
+                        HttpURLConnection conn = new URL(exchange.getRequestURI().toString()).openConnection()
+                        exchange.requestHeaders.each{
+                            conn.setRequestProperty(it.key, it.value.join(","))
+                        }
+                        BufferedReader br = new BufferedReader(new InputStreamReader(conn.inputStream))
+                        StringBuilder responseBuilder = new StringBuilder();
+                        String line
+                        while ((line = br.readLine()) != null) {
+                            responseBuilder.append(line)
+                        }
+                        br.close()
+                        response = responseBuilder.toString()
+                        code = conn.responseCode
+                    } catch (Exception error) {
+                        code = HttpURLConnection.HTTP_INTERNAL_ERROR
+                        response = error.message
+                        println(error) // Print since it will not show up in the error.
+                    }
+                }
+
+                byte[] body = response.getBytes()
+                exchange.sendResponseHeaders(code, body.length)
+                exchange.responseBody.write(body)
+                exchange.close()
+            }
+        })
+        srv.start()
+        return srv
     }
 
     def "gets workspaces"() {
@@ -277,5 +320,34 @@ class CoderRestClientTest extends Specification {
 
         cleanup:
         srv.stop(0)
+    }
+
+    def "uses proxy"() {
+        given:
+        def (srv1, url1) = mockServer([DataGen.workspace("ws1")])
+        def srv2 = mockProxy()
+        def client = new CoderRestClient(new URL(url1), "token", "test", settings, new ProxyValues(
+                "foo",
+                "bar",
+                true,
+                new ProxySelector() {
+                    @Override
+                    List<Proxy> select(URI uri) {
+                        return [new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", srv2.address.port))]
+                    }
+
+                    @Override
+                    void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+                        getDefault().connectFailed(uri, sa, ioe);
+                    }
+                }
+        ))
+
+        expect:
+        client.workspaces()*.name == ["ws1"]
+
+        cleanup:
+        srv1.stop(0)
+        srv2.stop(0)
     }
 }

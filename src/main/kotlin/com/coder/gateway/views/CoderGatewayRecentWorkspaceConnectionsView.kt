@@ -9,6 +9,8 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderRestClient
+import com.coder.gateway.sdk.defaultProxy
+import com.coder.gateway.sdk.defaultVersion
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
@@ -254,7 +256,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 deployments[dir] ?: try {
                     val url = Path.of(dir).resolve("url").toFile().readText()
                     val token = Path.of(dir).resolve("session").toFile().readText()
-                    DeploymentInfo(CoderRestClient(url.toURL(), token, null, settings))
+                    DeploymentInfo(CoderRestClient(url.toURL(), token, defaultVersion(), settings, defaultProxy()))
                 } catch (e: Exception) {
                     logger.error("Unable to create client from $dir", e)
                     DeploymentInfo(error = "Error trying to read $dir: ${e.message}")

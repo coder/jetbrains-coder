@@ -34,6 +34,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.net.HttpURLConnection.HTTP_CREATED
 import java.net.InetAddress
+import java.net.ProxySelector
 import java.net.Socket
 import java.net.URL
 import java.nio.file.Path
@@ -75,7 +76,7 @@ class CoderRestClientService {
      * @throws [AuthenticationResponseException] if authentication failed.
      */
     fun initClientSession(url: URL, token: String, settings: CoderSettingsState): User {
-        client = CoderRestClient(url, token, null, settings)
+        client = CoderRestClient(url, token, defaultVersion(), settings, defaultProxy())
         me = client.me()
         buildVersion = client.buildInfo().version
         isReady = true
@@ -83,36 +84,62 @@ class CoderRestClientService {
     }
 }
 
-class CoderRestClient(
+/**
+ * Holds proxy information.  Exists only to interface with tests since they
+ * cannot create an HttpConfigurable instance.
+ */
+data class ProxyValues (
+    val username: String?,
+    val password: String?,
+    val useAuth: Boolean,
+    val selector: ProxySelector,
+)
+
+fun defaultProxy(): ProxyValues {
+    val inst = HttpConfigurable.getInstance()
+    return ProxyValues(
+        inst.proxyLogin,
+        inst.plainProxyPassword,
+        inst.PROXY_AUTHENTICATION,
+        inst.onlyBySettingsSelector
+    )
+}
+
+fun defaultVersion(): String {
+    // This is the id from the plugin.xml.
+    return PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version
+}
+
+class CoderRestClient @JvmOverloads constructor(
     var url: URL, var token: String,
-    private var pluginVersion: String?,
-    private var settings: CoderSettingsState,
+    private val pluginVersion: String,
+    private val settings: CoderSettingsState,
+    private val proxyValues: ProxyValues? = null,
 ) {
-    private var httpClient: OkHttpClient
-    private var retroRestClient: CoderV2RestFacade
+    private val httpClient: OkHttpClient
+    private val retroRestClient: CoderV2RestFacade
 
     init {
         val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
-        if (pluginVersion.isNullOrBlank()) {
-            pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version // this is the id from the plugin.xml
-        }
-
-        val proxy = HttpConfigurable.getInstance()
 
         val socketFactory = coderSocketFactory(settings)
         val trustManagers = coderTrustManagers(settings.tlsCAPath)
-        httpClient = OkHttpClient.Builder()
-            .proxySelector(proxy.onlyBySettingsSelector)
-            .proxyAuthenticator { _, response ->
-                val login = proxy.proxyLogin
-                val pass = proxy.plainProxyPassword
-                if (proxy.PROXY_AUTHENTICATION && login != null && pass != null) {
-                    val credentials = Credentials.basic(login, pass)
-                    response.request.newBuilder()
-                        .header("Proxy-Authorization", credentials)
-                        .build()
-                } else null
-            }
+        var builder = OkHttpClient.Builder()
+
+        if (proxyValues != null) {
+            builder = builder
+                .proxySelector(proxyValues.selector)
+                .proxyAuthenticator { _, response ->
+                    if (proxyValues.useAuth && proxyValues.username != null && proxyValues.password != null) {
+                        val credentials = Credentials.basic(proxyValues.username, proxyValues.password)
+                        response.request.newBuilder()
+                            .header("Proxy-Authorization", credentials)
+                            .build()
+                    } else null
+                }
+        }
+
+        httpClient = builder
             .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
             .hostnameVerifier(CoderHostnameVerifier(settings.tlsAlternateHostname))
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
@@ -120,18 +147,20 @@ class CoderRestClient(
             .addInterceptor {
                 var request = it.request()
                 val headers = getHeaders(url, settings.headerCommand)
-                if (headers.size > 0) {
-                    val builder = request.newBuilder()
-                    headers.forEach { h -> builder.addHeader(h.key, h.value) }
-                    request = builder.build()
+                if (headers.isNotEmpty()) {
+                    val reqBuilder = request.newBuilder()
+                    headers.forEach { h -> reqBuilder.addHeader(h.key, h.value) }
+                    request = reqBuilder.build()
                 }
                 it.proceed(request)
             }
-            // this should always be last if we want to see previous interceptors logged
+            // This should always be last if we want to see previous interceptors logged.
             .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
             .build()
 
-        retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient).addConverterFactory(GsonConverterFactory.create(gson)).build().create(CoderV2RestFacade::class.java)
+        retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build().create(CoderV2RestFacade::class.java)
     }
 
     /**
