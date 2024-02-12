@@ -3,8 +3,8 @@ package com.coder.gateway.sdk.v2.models
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.sdk.Arch
-import com.coder.gateway.sdk.OS
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
 import com.google.gson.annotations.SerializedName
 import java.time.Instant
 import java.util.UUID

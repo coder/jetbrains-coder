@@ -15,6 +15,8 @@ import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.getOS
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.plugins.PluginManagerCore

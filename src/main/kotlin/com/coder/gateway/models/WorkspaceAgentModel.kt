@@ -1,7 +1,7 @@
 package com.coder.gateway.models
 
-import com.coder.gateway.sdk.Arch
-import com.coder.gateway.sdk.OS
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import java.util.UUID

@@ -2,6 +2,10 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.getArch
+import com.coder.gateway.util.getOS
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException

@@ -12,7 +12,7 @@ import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.sdk.CoderSemVer
 import com.coder.gateway.sdk.IncompatibleVersionException
 import com.coder.gateway.sdk.InvalidVersionException
-import com.coder.gateway.sdk.OS
+import com.coder.gateway.util.OS
 import com.coder.gateway.sdk.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.sdk.ex.AuthenticationResponseException

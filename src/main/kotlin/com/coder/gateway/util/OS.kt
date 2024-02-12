@@ -1,4 +1,4 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.util
 
 import java.util.Locale
 

@@ -5,10 +5,10 @@ import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.sdk.Arch
+import com.coder.gateway.util.Arch
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
-import com.coder.gateway.sdk.OS
+import com.coder.gateway.util.OS
 import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.isWorkerTimeout
