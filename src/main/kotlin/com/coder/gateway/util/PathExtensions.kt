@@ -1,5 +1,6 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.util
 
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -21,4 +22,23 @@ fun Path.canCreateDirectory(): Boolean {
     // files, not directories; on Windows you are allowed to create files inside
     // read-only directories.
     return current != null && Files.isWritable(current) && Files.isDirectory(current)
+}
+
+/**
+ * Expand ~, $HOME, and ${user_home} at the beginning of a path.
+ */
+fun expand(path: String): String {
+    if (path == "~" || path == "\$HOME" || path == "\${user.home}") {
+        return System.getProperty("user.home")
+    }
+    if (path.startsWith("~" + File.separator)) {
+        return Path.of(System.getProperty("user.home"), path.substring(1)).toString()
+    }
+    if (path.startsWith("\$HOME" + File.separator)) {
+        return Path.of(System.getProperty("user.home"), path.substring(5)).toString()
+    }
+    if (path.startsWith("\${user.home}" + File.separator)) {
+        return Path.of(System.getProperty("user.home"), path.substring(12)).toString()
+    }
+    return path
 }

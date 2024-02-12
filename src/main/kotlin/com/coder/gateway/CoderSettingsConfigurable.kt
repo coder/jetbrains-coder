@@ -1,7 +1,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.sdk.CoderCLIManager
-import com.coder.gateway.sdk.canCreateDirectory
+import com.coder.gateway.util.canCreateDirectory
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable

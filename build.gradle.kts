@@ -37,6 +37,7 @@ dependencies {
     testImplementation("org.apache.groovy:groovy")
     testImplementation(platform("org.spockframework:spock-bom:2.3-groovy-4.0"))
     testImplementation("org.spockframework:spock-core")
+    testImplementation(kotlin("test"))
 }
 
 // Configure project's dependencies

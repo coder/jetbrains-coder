@@ -16,6 +16,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.OS
+import com.coder.gateway.util.expand
 import com.coder.gateway.util.getOS
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -300,14 +301,14 @@ fun SSLContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLC
     var km: Array<KeyManager>? = null
     if (certPath.isNotBlank() && keyPath.isNotBlank()) {
         val certificateFactory = CertificateFactory.getInstance("X.509")
-        val certInputStream = FileInputStream(expandPath(certPath))
+        val certInputStream = FileInputStream(expand(certPath))
         val certChain = certificateFactory.generateCertificates(certInputStream)
         certInputStream.close()
 
         // ideally we would use something like PemReader from BouncyCastle, but
         // BC is used by the IDE.  This makes using BC very impractical since
         // type casting will mismatch due to the different class loaders.
-        val privateKeyPem = File(expandPath(keyPath)).readText()
+        val privateKeyPem = File(expand(keyPath)).readText()
         val start: Int = privateKeyPem.indexOf("-----BEGIN PRIVATE KEY-----")
         val end: Int = privateKeyPem.indexOf("-----END PRIVATE KEY-----", start)
         val pemBytes: ByteArray = Base64.getDecoder().decode(
@@ -363,7 +364,7 @@ fun coderTrustManagers(tlsCAPath: String) : Array<TrustManager> {
 
 
     val certificateFactory = CertificateFactory.getInstance("X.509")
-    val caInputStream = FileInputStream(expandPath(tlsCAPath))
+    val caInputStream = FileInputStream(expand(tlsCAPath))
     val certChain = certificateFactory.generateCertificates(caInputStream)
 
     val truststore = KeyStore.getInstance(KeyStore.getDefaultType())
@@ -373,19 +374,6 @@ fun coderTrustManagers(tlsCAPath: String) : Array<TrustManager> {
     }
     trustManagerFactory.init(truststore)
     return trustManagerFactory.trustManagers.map { MergedSystemTrustManger(it as X509TrustManager) }.toTypedArray()
-}
-
-fun expandPath(path: String): String {
-    if (path.startsWith("~/")) {
-        return Path.of(System.getProperty("user.home"), path.substring(1)).toString()
-    }
-    if (path.startsWith("\$HOME/")) {
-        return Path.of(System.getProperty("user.home"), path.substring(5)).toString()
-    }
-    if (path.startsWith("\${user.home}/")) {
-        return Path.of(System.getProperty("user.home"), path.substring(12)).toString()
-    }
-    return path
 }
 
 class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, private val alternateName: String) : SSLSocketFactory() {
