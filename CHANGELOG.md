@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+## 2.9.3 - 2024-02-10
+
+### Fixed
+
+- Plugin will now use proxy authorization settings.
+
 ## 2.9.2 - 2023-12-19
 
 ### Fixed
