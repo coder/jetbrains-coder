@@ -6,6 +6,9 @@ import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
+import com.coder.gateway.util.safeHost
+import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withPath
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -17,7 +20,6 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.net.ConnectException
 import java.net.HttpURLConnection
-import java.net.IDN
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -61,7 +63,7 @@ class CoderCLIManager @JvmOverloads constructor(
                 remoteBinaryURL.withPath(remoteBinaryURLOverride)
             }
         }
-        val host = getSafeHost(deploymentURL)
+        val host = deploymentURL.safeHost()
         val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
         localBinaryPath = (cliDir ?: dataDir).resolve(subdir).resolve(binaryName).toAbsolutePath()
         coderConfigPath = dataDir.resolve(subdir).resolve("config").toAbsolutePath()
@@ -221,7 +223,7 @@ class CoderCLIManager @JvmOverloads constructor(
         workspaces: List<WorkspaceAgentModel>,
         headerCommand: String?,
     ): String? {
-        val host = getSafeHost(deploymentURL)
+        val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
         val isRemoving = workspaces.isEmpty()
@@ -448,17 +450,9 @@ class CoderCLIManager @JvmOverloads constructor(
             }
         }
 
-        /**
-         * Convert IDN to ASCII in case the file system cannot support the
-         * necessary character set.
-         */
-        private fun getSafeHost(url: URL): String {
-            return IDN.toASCII(url.host, IDN.ALLOW_UNASSIGNED)
-        }
-
         @JvmStatic
         fun getHostName(url: URL, ws: WorkspaceAgentModel): String {
-            return "coder-jetbrains--${ws.name}--${getSafeHost(url)}"
+            return "coder-jetbrains--${ws.name}--${url.safeHost()}"
         }
 
         /**

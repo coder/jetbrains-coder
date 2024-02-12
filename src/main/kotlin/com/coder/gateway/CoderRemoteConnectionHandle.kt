@@ -8,8 +8,8 @@ import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.isWorkerTimeout
 import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.sdk.toURL
-import com.coder.gateway.sdk.withPath
+import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withPath
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager

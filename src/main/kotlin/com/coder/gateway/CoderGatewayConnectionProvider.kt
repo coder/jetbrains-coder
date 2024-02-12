@@ -8,11 +8,11 @@ import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.DefaultCoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
-import com.coder.gateway.sdk.toURL
+import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
-import com.coder.gateway.sdk.withPath
+import com.coder.gateway.util.withPath
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger

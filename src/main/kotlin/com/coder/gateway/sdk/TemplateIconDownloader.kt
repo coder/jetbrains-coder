@@ -1,6 +1,8 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.icons.CoderIcons
+import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withPath
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.ui.JreHiDpiUtil

@@ -19,7 +19,7 @@ import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.isCancellation
-import com.coder.gateway.sdk.toURL
+import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsState

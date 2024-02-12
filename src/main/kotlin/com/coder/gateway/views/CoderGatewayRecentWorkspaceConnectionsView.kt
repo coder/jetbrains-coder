@@ -10,7 +10,7 @@ import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.DefaultCoderRestClient
-import com.coder.gateway.sdk.toURL
+import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
