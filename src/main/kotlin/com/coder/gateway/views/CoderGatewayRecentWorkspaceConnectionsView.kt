@@ -9,13 +9,11 @@ import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.defaultProxy
-import com.coder.gateway.sdk.defaultVersion
+import com.coder.gateway.sdk.DefaultCoderRestClient
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
-import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.toWorkspaceParams
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
@@ -32,7 +30,6 @@ import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.*
-import com.intellij.util.io.readText
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -70,7 +67,6 @@ data class DeploymentInfo(
 )
 
 class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
-    private val settings: CoderSettingsState = service()
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
@@ -256,7 +252,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 deployments[dir] ?: try {
                     val url = Path.of(dir).resolve("url").toFile().readText()
                     val token = Path.of(dir).resolve("session").toFile().readText()
-                    DeploymentInfo(CoderRestClient(url.toURL(), token, defaultVersion(), settings, defaultProxy()))
+                    DeploymentInfo(DefaultCoderRestClient(url.toURL(), token))
                 } catch (e: Exception) {
                     logger.error("Unable to create client from $dir", e)
                     DeploymentInfo(error = "Error trying to read $dir: ${e.message}")

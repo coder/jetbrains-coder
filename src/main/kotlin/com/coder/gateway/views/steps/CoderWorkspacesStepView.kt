@@ -533,7 +533,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      */
     private fun authenticate(url: URL, token: String) {
         logger.info("Authenticating to $url...")
-        clientService.initClientSession(url, token, settings)
+        clientService.initClientSession(url, token)
 
         try {
             logger.info("Checking compatibility with Coder version ${clientService.buildVersion}...")

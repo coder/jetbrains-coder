@@ -6,8 +6,7 @@ import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.defaultProxy
-import com.coder.gateway.sdk.defaultVersion
+import com.coder.gateway.sdk.DefaultCoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -66,7 +65,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED ->
                     // TODO: Turn on the workspace.
                     throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please start the workspace and try again")
-                WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED, ->
+                WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED ->
                     throw IllegalArgumentException("The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect")
                 WorkspaceStatus.RUNNING -> Unit // All is well
             }
@@ -142,7 +141,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         if (token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
         }
-        val client = CoderRestClient(deploymentURL, token.first, defaultVersion(), settings, defaultProxy())
+        val client = DefaultCoderRestClient(deploymentURL, token.first)
         return try {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {

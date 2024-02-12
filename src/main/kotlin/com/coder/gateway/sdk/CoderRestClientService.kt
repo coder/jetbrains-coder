@@ -19,6 +19,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
@@ -75,8 +76,8 @@ class CoderRestClientService {
      *
      * @throws [AuthenticationResponseException] if authentication failed.
      */
-    fun initClientSession(url: URL, token: String, settings: CoderSettingsState): User {
-        client = CoderRestClient(url, token, defaultVersion(), settings, defaultProxy())
+    fun initClientSession(url: URL, token: String): User {
+        client = DefaultCoderRestClient(url, token)
         me = client.me()
         buildVersion = client.buildInfo().version
         isReady = true
@@ -95,22 +96,19 @@ data class ProxyValues (
     val selector: ProxySelector,
 )
 
-fun defaultProxy(): ProxyValues {
-    val inst = HttpConfigurable.getInstance()
-    return ProxyValues(
-        inst.proxyLogin,
-        inst.plainProxyPassword,
-        inst.PROXY_AUTHENTICATION,
-        inst.onlyBySettingsSelector
-    )
-}
+/**
+ * A client instance that hooks into global JetBrains services for default
+ * settings.  Exists only so we can use the base client in tests.
+ */
+class DefaultCoderRestClient(url: URL, token: String) : CoderRestClient(url, token,
+    PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version,
+    service(),
+    ProxyValues(HttpConfigurable.getInstance().proxyLogin,
+        HttpConfigurable.getInstance().plainProxyPassword,
+        HttpConfigurable.getInstance().PROXY_AUTHENTICATION,
+        HttpConfigurable.getInstance().onlyBySettingsSelector))
 
-fun defaultVersion(): String {
-    // This is the id from the plugin.xml.
-    return PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version
-}
-
-class CoderRestClient @JvmOverloads constructor(
+open class CoderRestClient @JvmOverloads constructor(
     var url: URL, var token: String,
     private val pluginVersion: String,
     private val settings: CoderSettingsState,
