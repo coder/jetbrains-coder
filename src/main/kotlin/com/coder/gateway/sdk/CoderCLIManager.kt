@@ -8,6 +8,7 @@ import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.escape
+import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
@@ -114,7 +115,7 @@ class CoderCLIManager @JvmOverloads constructor(
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (settings.headerCommand.isNotBlank()) {
-            val headersFromHeaderCommand = CoderRestClient.getHeaders(deploymentURL, settings.headerCommand)
+            val headersFromHeaderCommand = getHeaders(deploymentURL, settings.headerCommand)
             for ((key, value) in headersFromHeaderCommand) {
                 conn.setRequestProperty(key, value)
             }

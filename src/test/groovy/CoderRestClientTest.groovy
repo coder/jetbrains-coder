@@ -16,8 +16,6 @@ import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
-import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -203,61 +201,6 @@ class CoderRestClientTest extends Specification {
                 // Multiple workspaces but only one has resources from the resources endpoint.
                 ["null", "968eea5e-8787-439d-88cd-5bc440216a34", "72fbc97b-952c-40c8-b1e5-7535f4407728", "null"],
         ]
-    }
-
-    def "gets headers"() {
-        expect:
-        CoderRestClient.getHeaders(new URL("http://localhost"), command) == expected
-
-        where:
-        command                         | expected
-        null                            | [:]
-        ""                              | [:]
-        "printf 'foo=bar\\nbaz=qux'"    | ["foo": "bar", "baz": "qux"]
-        "printf 'foo=bar\\r\\nbaz=qux'" | ["foo": "bar", "baz": "qux"]
-        "printf 'foo=bar\\r\\n'"        | ["foo": "bar"]
-        "printf 'foo=bar'"              | ["foo": "bar"]
-        "printf 'foo=bar='"             | ["foo": "bar="]
-        "printf 'foo=bar=baz'"          | ["foo": "bar=baz"]
-        "printf 'foo='"                 | ["foo": ""]
-    }
-
-    def "fails to get headers"() {
-        when:
-        CoderRestClient.getHeaders(new URL("http://localhost"), command)
-
-        then:
-        thrown(Exception)
-
-        where:
-        command << [
-            "printf 'foo=bar\\r\\n\\r\\n'",
-            "printf '\\r\\nfoo=bar'",
-            "printf '=foo'",
-            "printf 'foo'",
-            "printf '  =foo'",
-            "printf 'foo  =bar'",
-            "printf 'foo  foo=bar'",
-            "printf ''",
-            "exit 1",
-        ]
-    }
-
-    @IgnoreIf({ os.windows })
-    def "has access to environment variables"() {
-        expect:
-        CoderRestClient.getHeaders(new URL("http://localhost"), "printf url=\$CODER_URL") == [
-            "url": "http://localhost",
-        ]
-    }
-
-    @Requires({ os.windows })
-    def "has access to environment variables"() {
-        expect:
-        CoderRestClient.getHeaders(new URL("http://localhost"), "printf url=%CODER_URL%") == [
-            "url": "http://localhost",
-        ]
-
     }
 
     def "valid self-signed cert"() {

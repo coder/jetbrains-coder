@@ -19,6 +19,7 @@ import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
+import com.coder.gateway.util.getHeaders
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.plugins.PluginManagerCore
@@ -227,46 +228,5 @@ open class CoderRestClient @JvmOverloads constructor(
         }
 
         return buildResponse.body()!!
-    }
-
-    companion object {
-        private val newlineRegex = "\r?\n".toRegex()
-        private val endingNewlineRegex = "\r?\n$".toRegex()
-
-        // TODO: This really only needs to be a private function, but
-        // unfortunately it is not possible to test the client because it fails
-        // on the plugin manager core call and I do not know how to fix it.  So,
-        // for now make this static and test it directly instead.
-        @JvmStatic
-        fun getHeaders(url: URL, headerCommand: String?): Map<String, String> {
-            if (headerCommand.isNullOrBlank()) {
-                return emptyMap()
-            }
-            val (shell, caller) = when (getOS()) {
-                OS.WINDOWS -> Pair("cmd.exe", "/c")
-                else -> Pair("sh", "-c")
-            }
-            return ProcessExecutor()
-                .command(shell, caller, headerCommand)
-                .environment("CODER_URL", url.toString())
-                .exitValues(0)
-                .readOutput(true)
-                .execute()
-                .outputUTF8()
-                .replaceFirst(endingNewlineRegex, "")
-                .split(newlineRegex)
-                .associate {
-                    // Header names cannot be blank or contain whitespace and
-                    // the Coder CLI requires that there be an equals sign (the
-                    // value can be blank though).  The second case is taken
-                    // care of by the destructure here, as it will throw if
-                    // there are not enough parts.
-                    val (name, value) = it.split("=", limit=2)
-                    if (name.contains(" ") || name == "") {
-                        throw Exception("\"$name\" is not a valid header name")
-                    }
-                    name to value
-                }
-        }
     }
 }
