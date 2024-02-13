@@ -3,10 +3,10 @@
 package com.coder.gateway
 
 import com.coder.gateway.models.TokenSource
-import com.coder.gateway.sdk.humanizeDuration
-import com.coder.gateway.sdk.isCancellation
-import com.coder.gateway.sdk.isWorkerTimeout
-import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
+import com.coder.gateway.util.humanizeDuration
+import com.coder.gateway.util.isCancellation
+import com.coder.gateway.util.isWorkerTimeout
+import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService

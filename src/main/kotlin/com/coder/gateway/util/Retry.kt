@@ -1,4 +1,4 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.util
 
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.ssh.SshException
