@@ -204,7 +204,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
          * @throws [MissingArgumentException, IllegalArgumentException]
          */
         @JvmStatic
-        fun getMatchingAgent(parameters: Map<String, String>, workspace: Workspace): WorkspaceAgentModel {
+        fun getMatchingAgent(parameters: Map<String, String?>, workspace: Workspace): WorkspaceAgentModel {
             // A WorkspaceAgentModel will still be returned if there are no
             // agents; in this case it represents the workspace instead.
             // TODO: Seems confusing for something with "agent" in the name to

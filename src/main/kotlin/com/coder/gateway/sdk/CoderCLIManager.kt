@@ -95,7 +95,7 @@ fun ensureCLI(
 /**
  * Manage the CLI for a single deployment.
  */
-class CoderCLIManager @JvmOverloads constructor(
+class CoderCLIManager(
     // The URL of the deployment this CLI is for.
     private val deploymentURL: URL,
     // Plugin configuration.

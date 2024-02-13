@@ -116,7 +116,7 @@ class Environment(private val env: Map<String, String> = emptyMap()) {
  * some extra convenience wrappers while letting the settings page still read
  * and mutate the underlying state.
  */
-open class CoderSettings @JvmOverloads constructor(
+open class CoderSettings(
     private val state: CoderSettingsState,
     // The location of the SSH config.  Defaults to ~/.ssh/config.
     val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),

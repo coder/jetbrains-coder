@@ -797,7 +797,7 @@ class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
         }
     }
 
-    private fun getNewSelection(oldSelection: WorkspaceAgentModel?): Int {
+    fun getNewSelection(oldSelection: WorkspaceAgentModel?): Int {
         if (oldSelection == null) {
             return -1
         }

@@ -12,10 +12,12 @@ import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
+import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
@@ -79,18 +81,18 @@ data class ProxyValues (
  * settings.  Exists only so we can use the base client in tests.
  */
 class DefaultCoderRestClient(url: URL, token: String) : CoderRestClient(url, token,
-    PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version,
     service<CoderSettingsService>(),
     ProxyValues(HttpConfigurable.getInstance().proxyLogin,
         HttpConfigurable.getInstance().plainProxyPassword,
         HttpConfigurable.getInstance().PROXY_AUTHENTICATION,
-        HttpConfigurable.getInstance().onlyBySettingsSelector))
+        HttpConfigurable.getInstance().onlyBySettingsSelector),
+    PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version)
 
-open class CoderRestClient @JvmOverloads constructor(
+open class CoderRestClient(
     var url: URL, var token: String,
-    private val pluginVersion: String,
-    private val settings: CoderSettings,
+    private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
     private val proxyValues: ProxyValues? = null,
+    private val pluginVersion: String = "development",
 ) {
     private val httpClient: OkHttpClient
     private val retroRestClient: CoderV2RestFacade
@@ -166,20 +168,28 @@ open class CoderRestClient @JvmOverloads constructor(
     }
 
     /**
-     * Retrieves agents for the specified workspaces.  Since the workspaces
-     * response does not include agents when the workspace is off, this fires
-     * off separate queries to get the agents for each workspace, just like
-     * `coder config-ssh` does (otherwise we risk removing hosts from the SSH
-     * config when they are off).
+     * Retrieves agents for the specified workspaces, including those that are
+     * off.
      */
     fun agents(workspaces: List<Workspace>): List<WorkspaceAgentModel> {
         return workspaces.flatMap {
-            val resourcesResponse = retroRestClient.templateVersionResources(it.latestBuild.templateVersionID).execute()
-            if (!resourcesResponse.isSuccessful) {
-                throw WorkspaceResponseException("Unable to retrieve template resources for ${it.name} from $url: code ${resourcesResponse.code()}, reason: ${resourcesResponse.message().ifBlank { "no reason provided" }}")
-            }
-            it.toAgentModels(resourcesResponse.body()!!)
+            val resources = resources(it)
+            it.toAgentModels(resources)
         }
+    }
+
+    /**
+     * Retrieves resources for the specified workspace.  The workspaces response
+     * does not include agents when the workspace is off so this can be used to
+     * get them instead, just like `coder config-ssh` does (otherwise we risk
+     * removing hosts from the SSH config when they are off).
+     */
+    fun resources(workspace: Workspace): List<WorkspaceResource> {
+        val resourcesResponse = retroRestClient.templateVersionResources(workspace.latestBuild.templateVersionID).execute()
+        if (!resourcesResponse.isSuccessful) {
+            throw WorkspaceResponseException("Unable to retrieve template resources for ${workspace.name} from $url: code ${resourcesResponse.code()}, reason: ${resourcesResponse.message().ifBlank { "no reason provided" }}")
+        }
+        return resourcesResponse.body()!!
     }
 
     fun buildInfo(): BuildInfo {
