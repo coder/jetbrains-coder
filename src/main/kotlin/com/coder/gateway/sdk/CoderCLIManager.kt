@@ -2,9 +2,11 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
+import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.escape
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost

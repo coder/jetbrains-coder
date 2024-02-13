@@ -9,6 +9,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
 import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.sslContextFromPEMs
 import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -91,7 +92,7 @@ class CoderRestClientTest extends Specification {
 
     def mockTLSServer(String certName, List<Workspace> workspaces, List<List<WorkspaceResource>> resources = []) {
         HttpsServer srv = HttpsServer.create(new InetSocketAddress(0), 0)
-        def sslContext = CoderRestClientServiceKt.SSLContextFromPEMs(
+        def sslContext = sslContextFromPEMs(
                 Path.of("src/test/fixtures/tls", certName + ".crt").toString(),
                 Path.of("src/test/fixtures/tls", certName + ".key").toString(),
                 "")
