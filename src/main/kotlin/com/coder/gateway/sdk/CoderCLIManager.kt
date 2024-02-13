@@ -7,6 +7,7 @@ import com.coder.gateway.util.OS
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
+import com.coder.gateway.util.sha1
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.views.steps.CoderWorkspacesStepView
@@ -15,7 +16,6 @@ import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import org.zeroturnaround.exec.ProcessExecutor
-import java.io.BufferedInputStream
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.net.ConnectException
@@ -25,11 +25,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
 import javax.net.ssl.HttpsURLConnection
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 
 /**
@@ -160,17 +157,9 @@ class CoderCLIManager @JvmOverloads constructor(
     /**
      * Return the entity tag for the binary on disk, if any.
      */
-    @Suppress("ControlFlowWithEmptyBody")
     private fun getBinaryETag(): String? {
         return try {
-            val md = MessageDigest.getInstance("SHA-1")
-            val fis = FileInputStream(localBinaryPath.toFile())
-            val dis = DigestInputStream(BufferedInputStream(fis), md)
-            fis.use {
-                while (dis.read() != -1) {
-                }
-            }
-            HexBinaryAdapter().marshal(md.digest()).lowercase()
+            sha1(FileInputStream(localBinaryPath.toFile()))
         } catch (e: FileNotFoundException) {
             null
         } catch (e: Exception) {
