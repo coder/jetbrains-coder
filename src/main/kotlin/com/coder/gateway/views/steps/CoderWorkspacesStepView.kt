@@ -2,6 +2,7 @@ package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderRemoteConnectionHandle
+import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
@@ -9,9 +10,8 @@ import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
-import com.coder.gateway.sdk.CoderSemVer
-import com.coder.gateway.sdk.IncompatibleVersionException
-import com.coder.gateway.sdk.InvalidVersionException
+import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.sdk.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
@@ -537,8 +537,16 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         try {
             logger.info("Checking compatibility with Coder version ${clientService.buildVersion}...")
-            CoderSemVer.checkVersionCompatibility(clientService.buildVersion)
-            logger.info("${clientService.buildVersion} is compatible")
+            val ver = SemVer.parse(clientService.buildVersion)
+            if (ver in CoderSupportedVersions.minCompatibleCoderVersion..CoderSupportedVersions.maxCompatibleCoderVersion) {
+                logger.info("${clientService.buildVersion} is compatible")
+            } else {
+                logger.warn("${clientService.buildVersion} is not compatible")
+                notificationBanner.apply {
+                    component.isVisible = true
+                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", clientService.buildVersion))
+                }
+            }
         } catch (e: InvalidVersionException) {
             logger.warn(e)
             notificationBanner.apply {
@@ -549,12 +557,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                         clientService.buildVersion
                     )
                 )
-            }
-        } catch (e: IncompatibleVersionException) {
-            logger.warn(e)
-            notificationBanner.apply {
-                component.isVisible = true
-                showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", clientService.buildVersion))
             }
         }
 

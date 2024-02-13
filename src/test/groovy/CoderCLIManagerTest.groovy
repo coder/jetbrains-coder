@@ -1,6 +1,8 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.InvalidVersionException
+import com.coder.gateway.util.SemVer
 import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -500,8 +502,8 @@ class CoderCLIManagerTest extends Specification {
 
         where:
         contents                                                 | expected
-        """echo '{"version": "1.0.0"}'"""                        | CoderSemVer.parse("1.0.0")
-        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | CoderSemVer.parse("1.0.0")
+        """echo '{"version": "1.0.0"}'"""                        | SemVer.parse("1.0.0")
+        """echo '{"version": "1.0.0", "foo": true, "baz": 1}'""" | SemVer.parse("1.0.0")
     }
 
     @IgnoreIf({ os.windows })
@@ -525,7 +527,7 @@ class CoderCLIManagerTest extends Specification {
         null                                                     | ProcessInitException
         """echo '{"foo": true, "baz": 1}'"""                     | MissingVersionException
         """echo '{"version: '"""                                 | JsonSyntaxException
-        """echo '{"version": "invalid"}'"""                      | IllegalArgumentException
+        """echo '{"version": "invalid"}'"""                      | InvalidVersionException
         "exit 0"                                                 | MissingVersionException
         "exit 1"                                                 | InvalidExitValueException
     }

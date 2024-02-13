@@ -1,6 +1,6 @@
 package com.coder.gateway
 
-import com.coder.gateway.sdk.CoderSemVer
+import com.coder.gateway.util.SemVer
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.annotations.PropertyKey
@@ -9,8 +9,8 @@ import org.jetbrains.annotations.PropertyKey
 private const val BUNDLE = "version.CoderSupportedVersions"
 
 object CoderSupportedVersions : DynamicBundle(BUNDLE) {
-    val minCompatibleCoderVersion = CoderSemVer.parse(message("minCompatibleCoderVersion"))
-    val maxCompatibleCoderVersion = CoderSemVer.parse(message("maxCompatibleCoderVersion"))
+    val minCompatibleCoderVersion = SemVer.parse(message("minCompatibleCoderVersion"))
+    val maxCompatibleCoderVersion = SemVer.parse(message("maxCompatibleCoderVersion"))
 
     @JvmStatic
     @Suppress("SpreadOperator")

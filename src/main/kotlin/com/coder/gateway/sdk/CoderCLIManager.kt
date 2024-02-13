@@ -3,6 +3,8 @@ package com.coder.gateway.sdk
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.Arch
+import com.coder.gateway.util.InvalidVersionException
+import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
@@ -314,13 +316,13 @@ class CoderCLIManager @JvmOverloads constructor(
      *
      * Throws if it could not be determined.
      */
-    fun version(): CoderSemVer {
+    fun version(): SemVer {
         val raw = exec("version", "--output", "json")
         val json = Gson().fromJson(raw, Version::class.java)
         if (json?.version == null) {
             throw MissingVersionException("No version found in output")
         }
-        return CoderSemVer.parse(json.version)
+        return SemVer.parse(json.version)
     }
 
     /**
@@ -335,7 +337,7 @@ class CoderCLIManager @JvmOverloads constructor(
         } catch (e: Exception) {
             when (e) {
                  is JsonSyntaxException,
-                 is IllegalArgumentException -> {
+                 is InvalidVersionException -> {
                      logger.info("Got invalid version from $localBinaryPath: ${e.message}")
                      return false
                  }
@@ -350,7 +352,7 @@ class CoderCLIManager @JvmOverloads constructor(
         }
 
         val buildVersion = try {
-            CoderSemVer.parse(rawBuildVersion)
+            SemVer.parse(rawBuildVersion)
         } catch (e: IllegalArgumentException) {
             logger.info("Got invalid build version: $rawBuildVersion")
             return false
