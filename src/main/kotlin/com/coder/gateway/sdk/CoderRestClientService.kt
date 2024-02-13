@@ -14,7 +14,9 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.toAgentModels
-import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.services.CoderSettings
+import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.services.CoderTLSSettings
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.expand
 import com.coder.gateway.util.getOS
@@ -41,7 +43,6 @@ import java.net.InetAddress
 import java.net.ProxySelector
 import java.net.Socket
 import java.net.URL
-import java.nio.file.Path
 import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.cert.CertificateException
@@ -105,7 +106,7 @@ data class ProxyValues (
  */
 class DefaultCoderRestClient(url: URL, token: String) : CoderRestClient(url, token,
     PluginManagerCore.getPlugin(PluginId.getId("com.coder.gateway"))!!.version,
-    service(),
+    service<CoderSettingsService>(),
     ProxyValues(HttpConfigurable.getInstance().proxyLogin,
         HttpConfigurable.getInstance().plainProxyPassword,
         HttpConfigurable.getInstance().PROXY_AUTHENTICATION,
@@ -114,7 +115,7 @@ class DefaultCoderRestClient(url: URL, token: String) : CoderRestClient(url, tok
 open class CoderRestClient @JvmOverloads constructor(
     var url: URL, var token: String,
     private val pluginVersion: String,
-    private val settings: CoderSettingsState,
+    private val settings: CoderSettings,
     private val proxyValues: ProxyValues? = null,
 ) {
     private val httpClient: OkHttpClient
@@ -123,8 +124,8 @@ open class CoderRestClient @JvmOverloads constructor(
     init {
         val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
 
-        val socketFactory = coderSocketFactory(settings)
-        val trustManagers = coderTrustManagers(settings.tlsCAPath)
+        val socketFactory = coderSocketFactory(settings.tls)
+        val trustManagers = coderTrustManagers(settings.tls.caPath)
         var builder = OkHttpClient.Builder()
 
         if (proxyValues != null) {
@@ -142,7 +143,7 @@ open class CoderRestClient @JvmOverloads constructor(
 
         httpClient = builder
             .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
-            .hostnameVerifier(CoderHostnameVerifier(settings.tlsAlternateHostname))
+            .hostnameVerifier(CoderHostnameVerifier(settings.tls.altHostname))
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
             .addInterceptor {
@@ -345,13 +346,13 @@ fun SSLContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLC
     return sslContext
 }
 
-fun coderSocketFactory(settings: CoderSettingsState) : SSLSocketFactory {
-    val sslContext = SSLContextFromPEMs(settings.tlsCertPath, settings.tlsKeyPath, settings.tlsCAPath)
-    if (settings.tlsAlternateHostname.isBlank()) {
+fun coderSocketFactory(settings: CoderTLSSettings) : SSLSocketFactory {
+    val sslContext = SSLContextFromPEMs(settings.certPath, settings.keyPath, settings.caPath)
+    if (settings.altHostname.isBlank()) {
         return sslContext.socketFactory
     }
 
-    return AlternateNameSSLSocketFactory(sslContext.socketFactory, settings.tlsAlternateHostname)
+    return AlternateNameSSLSocketFactory(sslContext.socketFactory, settings.altHostname)
 }
 
 fun coderTrustManagers(tlsCAPath: String) : Array<TrustManager> {

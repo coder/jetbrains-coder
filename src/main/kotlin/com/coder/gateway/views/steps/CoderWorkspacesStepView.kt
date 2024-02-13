@@ -15,6 +15,7 @@ import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.sdk.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
+import com.coder.gateway.sdk.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -22,7 +23,7 @@ import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
-import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.services.CoderSettingsService
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
@@ -82,7 +83,6 @@ import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
-
 private const val CODER_URL_KEY = "coder-url"
 
 private const val SESSION_TOKEN = "session-token"
@@ -93,7 +93,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private val clientService: CoderRestClientService = service()
     private var cliManager: CoderCLIManager? = null
     private val iconDownloader: TemplateIconDownloader = service()
-    private val settings: CoderSettingsState = service()
+    private val settings: CoderSettingsService = service()
 
     private val appPropertiesService: PropertiesComponent = service()
 
@@ -339,7 +339,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
             return url to token
         }
-        return CoderCLIManager.readConfig()
+        return settings.readConfig(settings.coderConfigDir)
     }
 
     private fun updateWorkspaceActions() {
@@ -393,6 +393,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             if (oldURL == newURL) localWizardModel.token else null,
             isRetry,
             localWizardModel.useExistingToken,
+            settings,
         ) ?: return // User aborted.
         localWizardModel.token = pastedToken
         connect(newURL, pastedToken) {
@@ -432,7 +433,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN, token.first)
 
-                val cli = CoderCLIManager.ensureCLI(
+                val cli = ensureCLI(
                     deploymentURL,
                     clientService.buildVersion,
                     settings,
@@ -623,7 +624,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
         logger.info("Configuring Coder CLI...")
         val workspaces = clientService.client.workspaces()
-        cli.configSsh(clientService.client.agents(workspaces), settings.headerCommand)
+        cli.configSsh(clientService.client.agents(workspaces).map { it.name })
 
         // The config directory can be used to pull the URL and token in
         // order to query this workspace's status in other flows, for

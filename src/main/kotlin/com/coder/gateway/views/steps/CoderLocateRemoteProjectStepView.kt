@@ -191,7 +191,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                             if (attempt > 1)
                                 IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt))
                             else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
-                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace.name))
 
                         if (ComponentValidator.getInstance(tfProject).isEmpty) {
                             logger.info("Installing remote path validator...")
@@ -342,7 +342,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         CoderRemoteConnectionHandle().connect{
             selectedIDE
                 .toWorkspaceParams()
-                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace))
+                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selectedWorkspace.name))
                 .withProjectPath(tfProject.text)
                 .withWebTerminalLink("${terminalLink.url}")
                 .withConfigDirectory(wizardModel.configDirectory)

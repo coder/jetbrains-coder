@@ -7,6 +7,7 @@ import com.coder.gateway.sdk.v2.models.UserStatus
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
+import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
 import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpExchange
@@ -25,7 +26,7 @@ import java.time.Instant
 
 @Unroll
 class CoderRestClientTest extends Specification {
-    private CoderSettingsState settings = new CoderSettingsState()
+    private CoderSettings settings = new CoderSettings(new CoderSettingsState())
 
     /**
      * Create, start, and return a server that mocks the Coder API.
@@ -260,9 +261,10 @@ class CoderRestClientTest extends Specification {
 
     def "valid self-signed cert"() {
         given:
-        def settings = new CoderSettingsState()
-        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
-        settings.tlsAlternateHostname = "localhost"
+        def state = new CoderSettingsState()
+        def settings = new CoderSettings(state)
+        state.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        state.tlsAlternateHostname = "localhost"
         def (srv, url) = mockTLSServer("self-signed", null)
         def client = new CoderRestClient(new URL(url), "token", "test", settings)
 
@@ -275,9 +277,10 @@ class CoderRestClientTest extends Specification {
 
     def "wrong hostname for cert"() {
         given:
-        def settings = new CoderSettingsState()
-        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
-        settings.tlsAlternateHostname = "fake.example.com"
+        def state = new CoderSettingsState()
+        def settings = new CoderSettings(state)
+        state.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        state.tlsAlternateHostname = "fake.example.com"
         def (srv, url) = mockTLSServer("self-signed", null)
         def client = new CoderRestClient(new URL(url), "token", "test", settings)
 
@@ -293,8 +296,9 @@ class CoderRestClientTest extends Specification {
 
     def "server cert not trusted"() {
         given:
-        def settings = new CoderSettingsState()
-        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+        def state = new CoderSettingsState()
+        def settings = new CoderSettings(state)
+        state.tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
         def (srv, url) = mockTLSServer("no-signing", null)
         def client = new CoderRestClient(new URL(url), "token", "test", settings)
 
@@ -310,8 +314,9 @@ class CoderRestClientTest extends Specification {
 
     def "server using valid chain cert"() {
         given:
-        def settings = new CoderSettingsState()
-        settings.tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString()
+        def state = new CoderSettingsState()
+        def settings = new CoderSettings(state)
+        state.tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString()
         def (srv, url) = mockTLSServer("chain", null)
         def client = new CoderRestClient(new URL(url), "token", "test", settings)
 

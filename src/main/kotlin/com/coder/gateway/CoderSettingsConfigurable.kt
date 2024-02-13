@@ -1,6 +1,6 @@
 package com.coder.gateway
 
-import com.coder.gateway.sdk.CoderCLIManager
+import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.canCreateDirectory
 import com.coder.gateway.services.CoderSettingsState
 import com.intellij.openapi.components.service
@@ -20,6 +20,7 @@ import java.nio.file.Path
 class CoderSettingsConfigurable : BoundConfigurable("Coder") {
     override fun createPanel(): DialogPanel {
         val state: CoderSettingsState = service()
+        val settings: CoderSettingsService = service()
         return panel {
             row(CoderGatewayBundle.message("gateway.connector.settings.data-directory.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
@@ -29,7 +30,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .comment(
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.data-directory.comment",
-                            CoderCLIManager.getDataDir(),
+                            settings.dataDir.toString(),
                         )
                     )
             }.layout(RowLayout.PARENT_GRID)
@@ -39,7 +40,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .comment(
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.binary-source.comment",
-                            CoderCLIManager(state, URL("http://localhost"), CoderCLIManager.getDataDir()).remoteBinaryURL.path,
+                            settings.binSource(URL("http://localhost")).path,
                         )
                     )
             }.layout(RowLayout.PARENT_GRID)

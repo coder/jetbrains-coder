@@ -3,7 +3,6 @@
 package com.coder.gateway
 
 import com.coder.gateway.models.TokenSource
-import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.humanizeDuration
 import com.coder.gateway.sdk.isCancellation
 import com.coder.gateway.sdk.isWorkerTimeout
@@ -11,6 +10,7 @@ import com.coder.gateway.sdk.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.coder.gateway.services.CoderSettings
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -192,6 +192,7 @@ class CoderRemoteConnectionHandle {
             token: Pair<String, TokenSource>?,
             isRetry: Boolean,
             useExisting: Boolean,
+            settings: CoderSettings,
         ): Pair<String, TokenSource>? {
             var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
             val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
@@ -204,7 +205,7 @@ class CoderRemoteConnectionHandle {
                 if (!useExisting) {
                     BrowserUtil.browse(getTokenUrl)
                 } else {
-                    val (u, t) = CoderCLIManager.readConfig()
+                    val (u, t) = settings.readConfig(settings.coderConfigDir)
                     if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
                         logger.info("Injecting token for $url from CLI config")
                         return Pair(t, TokenSource.CONFIG)

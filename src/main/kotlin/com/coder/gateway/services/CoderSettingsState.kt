@@ -1,33 +1,271 @@
 package com.coder.gateway.services
 
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.getArch
+import com.coder.gateway.util.getOS
+import com.coder.gateway.util.safeHost
+import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withPath
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.xmlb.XmlSerializerUtil
+import java.net.URL
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
+/**
+ * Controls serializing and deserializing settings to and from disk.  Use only
+ * when you need to directly mutate the settings (such as from the settings
+ * page).
+ */
 @Service(Service.Level.APP)
 @State(
     name = "CoderSettingsState",
     storages = [Storage("coder-settings.xml", roamingType = RoamingType.DISABLED, exportable = true)]
 )
-class CoderSettingsState : PersistentStateComponent<CoderSettingsState> {
-    var binarySource: String = ""
-    var binaryDirectory: String = ""
-    var dataDirectory: String = ""
-    var enableDownloads: Boolean = true
-    var enableBinaryDirectoryFallback: Boolean = false
-    var headerCommand: String = ""
-    var tlsCertPath: String = ""
-    var tlsKeyPath: String = ""
-    var tlsCAPath: String = ""
-    var tlsAlternateHostname: String = ""
+class CoderSettingsState(
+    // Used to download the Coder CLI which is necessary to proxy SSH
+    // connections.  The If-None-Match header will be set to the SHA1 of the CLI
+    // and can be used for caching.  Absolute URLs will be used as-is; otherwise
+    // this value will be resolved against the deployment domain.  Defaults to
+    // the plugin's data directory.
+    var binarySource: String = "",
+    // Directories are created here that store the CLI for each domain to which
+    // the plugin connects.   Defaults to the data directory.
+    var binaryDirectory: String = "",
+    // Where to save plugin data like the Coder binary (if not configured with
+    // binaryDirectory) and the deployment URL and session token.
+    var dataDirectory: String = "",
+    // Whether to allow the plugin to download the CLI if the current one is out
+    // of date or does not exist.
+    var enableDownloads: Boolean = true,
+    // Whether to allow the plugin to fall back to the data directory when the
+    // CLI directory is not writable.
+    var enableBinaryDirectoryFallback: Boolean = false,
+    // An external command that outputs additional HTTP headers added to all
+    // requests. The command must output each header as `key=value` on its own
+    // line. The following environment variables will be available to the
+    // process: CODER_URL.
+    var headerCommand: String = "",
+    // Optionally set this to the path of a certificate to use for TLS
+    // connections. The certificate should be in X.509 PEM format.
+    var tlsCertPath: String = "",
+    // Optionally set this to the path of the private key that corresponds to
+    // the above cert path to use for TLS connections. The key should be in
+    // X.509 PEM format.
+    var tlsKeyPath: String = "",
+    // Optionally set this to the path of a file containing certificates for an
+    // alternate certificate authority used to verify TLS certs returned by the
+    // Coder service. The file should be in X.509 PEM format.
+    var tlsCAPath: String = "",
+    // Optionally set this to an alternate hostname used for verifying TLS
+    // connections. This is useful when the hostname used to connect to the
+    // Coder service does not match the hostname in the TLS certificate.
+    var tlsAlternateHostname: String = "",
+) : PersistentStateComponent<CoderSettingsState> {
     override fun getState(): CoderSettingsState {
         return this
     }
 
     override fun loadState(state: CoderSettingsState) {
         XmlSerializerUtil.copyBean(state, this)
+    }
+}
+
+/**
+ * Coder settings tied into the JetBrains API.  Prefer this over directly using
+ * the state.
+ */
+@Service(Service.Level.APP)
+class CoderSettingsService() : CoderSettings(service<CoderSettingsState>())
+
+/**
+ * Consolidated TLS settings.
+ */
+data class CoderTLSSettings (private val state: CoderSettingsState) {
+    val certPath: String
+        get() = state.tlsCertPath
+    val keyPath: String
+        get() = state.tlsKeyPath
+    val caPath: String
+        get() = state.tlsCAPath
+    val altHostname: String
+        get() = state.tlsAlternateHostname
+}
+
+/**
+ * Environment provides a way to override values in the actual environment.
+ * Exists only so we can override the environment in tests.
+ */
+class Environment(private val env: Map<String, String> = emptyMap()) {
+    fun get(name: String): String {
+        return env[name] ?: System.getenv(name) ?: ""
+    }
+}
+
+/**
+ * Resolves the provided settings with fallbacks and the deployment URL.  Exists
+ * so we can avoid presenting mutable values to most of the code and to provide
+ * some extra convenience wrappers while letting the settings page still read
+ * and mutate the underlying state.
+ */
+open class CoderSettings @JvmOverloads constructor(
+    private val state: CoderSettingsState,
+    // The location of the SSH config.  Defaults to ~/.ssh/config.
+    val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
+    // Env allows overriding the default environment.
+    private val env: Environment = Environment(),
+) {
+    val tls = CoderTLSSettings(state)
+    val enableDownloads: Boolean
+        get() = state.enableDownloads
+
+    val enableBinaryDirectoryFallback: Boolean
+        get() = state.enableBinaryDirectoryFallback
+
+    val headerCommand: String
+        get() = state.headerCommand
+
+    /**
+     * Where the specified deployment should put its data.
+     */
+    fun dataDir(url: URL): Path {
+        val dir = if (state.dataDirectory.isBlank()) dataDir
+        else Path.of(state.dataDirectory).toAbsolutePath()
+        return withHost(dir, url)
+    }
+
+    /**
+     * From where the specified deployment should download the binary.
+     */
+    fun binSource(url: URL): URL {
+        val binaryName = getCoderCLIForOS(getOS(), getArch())
+        return if (state.binarySource.isBlank()) {
+            url.withPath("/bin/$binaryName")
+        } else {
+            logger.info("Using binary source override ${state.binarySource}")
+            try {
+                state.binarySource.toURL()
+            } catch (e: Exception) {
+                url.withPath(state.binarySource) // Assume a relative path.
+            }
+        }
+    }
+
+    /**
+     * To where the specified deployment should download the binary.
+     */
+    fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
+        val binaryName = getCoderCLIForOS(getOS(), getArch())
+        val dir = if (forceDownloadToData || state.binaryDirectory.isBlank()) dataDir(url)
+        else withHost(Path.of(state.binaryDirectory).toAbsolutePath(), url)
+        return dir.resolve(binaryName)
+    }
+
+    /**
+     * Return the URL and token from the config, if it exists.
+     */
+    fun readConfig(dir: Path): Pair<String?, String?> {
+        logger.info("Reading config from $dir")
+        return try {
+            Files.readString(dir.resolve("url")) to Files.readString(dir.resolve("session"))
+        } catch (e: Exception) {
+            // SSH has not been configured yet.
+            null to null
+        }
+    }
+
+    /**
+     * Append the host to the path.  For example, foo/bar could become
+     * foo/bar/dev.coder.com-8080.
+     */
+    private fun withHost(path: Path, url: URL): Path {
+        val host = if (url.port > 0) "${url.safeHost()}-${url.port}" else url.safeHost()
+        return path.resolve(host)
+    }
+
+    /**
+     * Return the global config directory used by the Coder CLI.
+     */
+    val coderConfigDir: Path
+        get() {
+            var dir = env.get("CODER_CONFIG_DIR")
+            if (dir.isNotBlank()) {
+                return Path.of(dir)
+            }
+            // The Coder CLI uses https://github.com/kirsle/configdir so this should
+            // match how it behaves.
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(env.get("APPDATA"), "coderv2")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coderv2")
+                else -> {
+                    dir = env.get("XDG_CONFIG_HOME")
+                    if (dir.isNotBlank()) {
+                        return Paths.get(dir, "coderv2")
+                    }
+                    return Paths.get(env.get("HOME"), ".config/coderv2")
+                }
+            }
+        }
+
+    /**
+     * Return the Coder plugin's global data directory.
+     */
+    val dataDir: Path
+        get() {
+            return when (getOS()) {
+                OS.WINDOWS -> Paths.get(env.get("LOCALAPPDATA"), "coder-gateway")
+                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coder-gateway")
+                else -> {
+                    val dir = env.get("XDG_DATA_HOME")
+                    if (dir.isNotBlank()) {
+                        return Paths.get(dir, "coder-gateway")
+                    }
+                    return Paths.get(env.get("HOME"), ".local/share/coder-gateway")
+                }
+            }
+        }
+
+    /**
+     * Return the name of the binary (with extension) for the provided OS and
+     * architecture.
+     */
+    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
+        logger.info("Resolving binary for $os $arch")
+        if (os == null) {
+            logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
+            return "coder-windows-amd64.exe"
+        }
+        return when (os) {
+            OS.WINDOWS -> when (arch) {
+                Arch.AMD64 -> "coder-windows-amd64.exe"
+                Arch.ARM64 -> "coder-windows-arm64.exe"
+                else -> "coder-windows-amd64.exe"
+            }
+
+            OS.LINUX -> when (arch) {
+                Arch.AMD64 -> "coder-linux-amd64"
+                Arch.ARM64 -> "coder-linux-arm64"
+                Arch.ARMV7 -> "coder-linux-armv7"
+                else -> "coder-linux-amd64"
+            }
+
+            OS.MAC -> when (arch) {
+                Arch.AMD64 -> "coder-darwin-amd64"
+                Arch.ARM64 -> "coder-darwin-arm64"
+                else -> "coder-darwin-amd64"
+            }
+        }
+    }
+
+    companion object {
+        val logger = Logger.getInstance(CoderSettings::class.java.simpleName)
     }
 }

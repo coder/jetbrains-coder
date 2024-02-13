@@ -1,19 +1,14 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
-import com.coder.gateway.util.Arch
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.escape
-import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
-import com.coder.gateway.util.toURL
-import com.coder.gateway.util.withPath
-import com.coder.gateway.views.steps.CoderWorkspacesStepView
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.diagnostic.Logger
@@ -26,85 +21,94 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.util.zip.GZIPInputStream
 import javax.net.ssl.HttpsURLConnection
 
+/**
+ * Do as much as possible to get a valid, up-to-date CLI.
+ *
+ * 1. Read the binary directory for the provided URL.
+ * 2. Abort if we already have an up-to-date version.
+ * 3. Download the binary using an ETag.
+ * 4. Abort if we get a 304 (covers cases where the binary is older and does not
+ *    have a version command).
+ * 5. Download on top of the existing binary.
+ * 6. Since the binary directory can be read-only, if downloading fails, start
+ *    from step 2 with the data directory.
+ */
+fun ensureCLI(
+    deploymentURL: URL,
+    buildVersion: String,
+    settings: CoderSettings,
+    indicator: ProgressIndicator? = null,
+): CoderCLIManager {
+    val cli = CoderCLIManager(deploymentURL, settings)
+
+    // Short-circuit if we already have the expected version.  This
+    // lets us bypass the 304 which is slower and may not be
+    // supported if the binary is downloaded from alternate sources.
+    // For CLIs without the JSON output flag we will fall back to
+    // the 304 method.
+    val cliMatches = cli.matchesVersion(buildVersion)
+    if (cliMatches == true) {
+        return cli
+    }
+
+    // If downloads are enabled download the new version.
+    if (settings.enableDownloads) {
+        indicator?.text = "Downloading Coder CLI..."
+        try {
+            cli.download()
+            return cli
+        } catch (e: java.nio.file.AccessDeniedException) {
+            // Might be able to fall back to the data directory.
+            val binPath = settings.binPath(deploymentURL)
+            val dataDir = settings.dataDir(deploymentURL)
+            if (binPath.parent == dataDir || !settings.enableBinaryDirectoryFallback) {
+                throw e
+            }
+        }
+    }
+
+    // Try falling back to the data directory.
+    val dataCLI = CoderCLIManager(deploymentURL, settings, true)
+    val dataCLIMatches = dataCLI.matchesVersion(buildVersion)
+    if (dataCLIMatches == true) {
+        return dataCLI
+    }
+
+    if (settings.enableDownloads) {
+        indicator?.text = "Downloading Coder CLI..."
+        dataCLI.download()
+        return dataCLI
+    }
+
+    // Prefer the binary directory unless the data directory has a
+    // working binary and the binary directory does not.
+    return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
+}
 
 /**
  * Manage the CLI for a single deployment.
  */
 class CoderCLIManager @JvmOverloads constructor(
-    private val settings: CoderSettingsState,
+    // The URL of the deployment this CLI is for.
     private val deploymentURL: URL,
-    dataDir: Path,
-    cliDir: Path? = null,
-    remoteBinaryURLOverride: String? = null,
-    private val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
+    // Plugin configuration.
+    private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
+    // If the binary directory is not writable, this can be used to force the
+    // manager to download to the data directory instead.
+    forceDownloadToData: Boolean = false,
 ) {
-    var remoteBinaryURL: URL
-    var localBinaryPath: Path
-    var coderConfigPath: Path
-
-    init {
-        val binaryName = getCoderCLIForOS(getOS(), getArch())
-        remoteBinaryURL = URL(
-            deploymentURL.protocol,
-            deploymentURL.host,
-            deploymentURL.port,
-            "/bin/$binaryName"
-        )
-        if (!remoteBinaryURLOverride.isNullOrBlank()) {
-            logger.info("Using remote binary override $remoteBinaryURLOverride")
-            remoteBinaryURL = try {
-                remoteBinaryURLOverride.toURL()
-            } catch (e: Exception) {
-                remoteBinaryURL.withPath(remoteBinaryURLOverride)
-            }
-        }
-        val host = deploymentURL.safeHost()
-        val subdir = if (deploymentURL.port > 0) "${host}-${deploymentURL.port}" else host
-        localBinaryPath = (cliDir ?: dataDir).resolve(subdir).resolve(binaryName).toAbsolutePath()
-        coderConfigPath = dataDir.resolve(subdir).resolve("config").toAbsolutePath()
-    }
-
-    /**
-     * Return the name of the binary (with extension) for the provided OS and
-     * architecture.
-     */
-    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
-        logger.info("Resolving binary for $os $arch")
-        if (os == null) {
-            logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return "coder-windows-amd64.exe"
-        }
-        return when (os) {
-            OS.WINDOWS -> when (arch) {
-                Arch.AMD64 -> "coder-windows-amd64.exe"
-                Arch.ARM64 -> "coder-windows-arm64.exe"
-                else -> "coder-windows-amd64.exe"
-            }
-
-            OS.LINUX -> when (arch) {
-                Arch.AMD64 -> "coder-linux-amd64"
-                Arch.ARM64 -> "coder-linux-arm64"
-                Arch.ARMV7 -> "coder-linux-armv7"
-                else -> "coder-linux-amd64"
-            }
-
-            OS.MAC -> when (arch) {
-                Arch.AMD64 -> "coder-darwin-amd64"
-                Arch.ARM64 -> "coder-darwin-arm64"
-                else -> "coder-darwin-amd64"
-            }
-        }
-    }
+    val remoteBinaryURL: URL = settings.binSource(deploymentURL)
+    val localBinaryPath: Path = settings.binPath(deploymentURL, forceDownloadToData)
+    val coderConfigPath: Path = settings.dataDir(deploymentURL).resolve("config")
 
     /**
      * Download the CLI from the deployment if necessary.
      */
-    fun downloadCLI(): Boolean {
+    fun download(): Boolean {
         val etag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (settings.headerCommand.isNotBlank()) {
@@ -119,8 +123,8 @@ class CoderCLIManager @JvmOverloads constructor(
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
         if (conn is HttpsURLConnection) {
-            conn.sslSocketFactory = coderSocketFactory(settings)
-            conn.hostnameVerifier = CoderHostnameVerifier(settings.tlsAlternateHostname)
+            conn.sslSocketFactory = coderSocketFactory(settings.tls)
+            conn.hostnameVerifier = CoderHostnameVerifier(settings.tls.altHostname)
         }
 
         try {
@@ -189,9 +193,8 @@ class CoderCLIManager @JvmOverloads constructor(
     /**
      * Configure SSH to use this binary.
      */
-    @JvmOverloads
-    fun configSsh(workspaces: List<WorkspaceAgentModel>, headerCommand: String? = null) {
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaces, headerCommand))
+    fun configSsh(workspaceNames: List<String>) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames))
     }
 
     /**
@@ -199,7 +202,7 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     private fun readSSHConfig(): String? {
         return try {
-            sshConfigPath.toFile().readText()
+            settings.sshConfigPath.toFile().readText()
         } catch (e: FileNotFoundException) {
             null
         }
@@ -210,29 +213,25 @@ class CoderCLIManager @JvmOverloads constructor(
      * this deployment and return the modified config or null if it does not
      * need to be modified.
      */
-    private fun modifySSHConfig(
-        contents: String?,
-        workspaces: List<WorkspaceAgentModel>,
-        headerCommand: String?,
-    ): String? {
+    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
-        val isRemoving = workspaces.isEmpty()
+        val isRemoving = workspaceNames.isEmpty()
         val proxyArgs = listOfNotNull(
             escape(localBinaryPath.toString()),
             "--global-config", escape(coderConfigPath.toString()),
-            if (!headerCommand.isNullOrBlank()) "--header-command" else null,
-            if (!headerCommand.isNullOrBlank()) escape(headerCommand) else null,
+            if (settings.headerCommand.isNotBlank()) "--header-command" else null,
+            if (settings.headerCommand.isNotBlank()) escape(settings.headerCommand) else null,
            "ssh", "--stdio")
-        val blockContent = workspaces.joinToString(
+        val blockContent = workspaceNames.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
             System.lineSeparator() + endBlock,
             transform = {
                 """
                 Host ${getHostName(deploymentURL, it)}
-                  ProxyCommand ${proxyArgs.joinToString(" ")} ${it.name}
+                  ProxyCommand ${proxyArgs.joinToString(" ")} ${it}
                   ConnectTimeout 0
                   StrictHostKeyChecking no
                   UserKnownHostsFile /dev/null
@@ -300,8 +299,8 @@ class CoderCLIManager @JvmOverloads constructor(
      */
     private fun writeSSHConfig(contents: String?) {
         if (contents != null) {
-            sshConfigPath.parent.toFile().mkdirs()
-            sshConfigPath.toFile().writeText(contents)
+            settings.sshConfigPath.parent.toFile().mkdirs()
+            settings.sshConfigPath.toFile().writeText(contents)
         }
     }
 
@@ -328,20 +327,20 @@ class CoderCLIManager @JvmOverloads constructor(
 
     /**
      * Returns true if the CLI has the same major/minor/patch version as the
-     * provided version, false if it does not match or either version is
-     * invalid, or null if the CLI version could not be determined because the
-     * binary could not be executed.
+     * provided version, false if it does not match, or null if the CLI version
+     * could not be determined because the binary could not be executed or the
+     * version could not be parsed.
      */
     fun matchesVersion(rawBuildVersion: String): Boolean? {
         val cliVersion = try {
             version()
         } catch (e: Exception) {
             when (e) {
-                 is JsonSyntaxException,
-                 is InvalidVersionException -> {
-                     logger.info("Got invalid version from $localBinaryPath: ${e.message}")
-                     return false
-                 }
+                is JsonSyntaxException,
+                is InvalidVersionException -> {
+                    logger.info("Got invalid version from $localBinaryPath: ${e.message}")
+                    return null
+                }
                 else -> {
                     // An error here most likely means the CLI does not exist or
                     // it executed successfully but output no version which
@@ -354,9 +353,9 @@ class CoderCLIManager @JvmOverloads constructor(
 
         val buildVersion = try {
             SemVer.parse(rawBuildVersion)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: InvalidVersionException) {
             logger.info("Got invalid build version: $rawBuildVersion")
-            return false
+            return null
         }
 
         val matches = cliVersion == buildVersion
@@ -382,142 +381,10 @@ class CoderCLIManager @JvmOverloads constructor(
 
         private val tokenRegex = "--token [^ ]+".toRegex()
 
-        /**
-         * Return the URL and token from the CLI config.
-         */
         @JvmStatic
-        fun readConfig(env: Environment = Environment()): Pair<String?, String?> {
-            val configDir = getConfigDir(env)
-            CoderWorkspacesStepView.logger.info("Reading config from $configDir")
-            return try {
-                val url = Files.readString(configDir.resolve("url"))
-                val token = Files.readString(configDir.resolve("session"))
-                url to token
-            } catch (e: Exception) {
-                null to null // Probably has not configured the CLI yet.
-            }
+        fun getHostName(url: URL, workspaceName: String): String {
+            return "coder-jetbrains--${workspaceName}--${url.safeHost()}"
         }
-
-        /**
-         * Return the config directory used by the CLI.
-         */
-        @JvmStatic
-        @JvmOverloads
-        fun getConfigDir(env: Environment = Environment()): Path {
-            var dir = env.get("CODER_CONFIG_DIR")
-            if (!dir.isNullOrBlank()) {
-                return Path.of(dir)
-            }
-            // The Coder CLI uses https://github.com/kirsle/configdir so this should
-            // match how it behaves.
-            return when (getOS()) {
-                OS.WINDOWS -> Paths.get(env.get("APPDATA"), "coderv2")
-                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coderv2")
-                else -> {
-                    dir = env.get("XDG_CONFIG_HOME")
-                    if (!dir.isNullOrBlank()) {
-                        return Paths.get(dir, "coderv2")
-                    }
-                    return Paths.get(env.get("HOME"), ".config/coderv2")
-                }
-            }
-        }
-
-        /**
-         * Return the data directory.
-         */
-        @JvmStatic
-        @JvmOverloads
-        fun getDataDir(env: Environment = Environment()): Path {
-            return when (getOS()) {
-                OS.WINDOWS -> Paths.get(env.get("LOCALAPPDATA"), "coder-gateway")
-                OS.MAC -> Paths.get(env.get("HOME"), "Library/Application Support/coder-gateway")
-                else -> {
-                    val dir = env.get("XDG_DATA_HOME")
-                    if (!dir.isNullOrBlank()) {
-                        return Paths.get(dir, "coder-gateway")
-                    }
-                    return Paths.get(env.get("HOME"), ".local/share/coder-gateway")
-                }
-            }
-        }
-
-        @JvmStatic
-        fun getHostName(url: URL, ws: WorkspaceAgentModel): String {
-            return "coder-jetbrains--${ws.name}--${url.safeHost()}"
-        }
-
-        /**
-         * Do as much as possible to get a valid, up-to-date CLI.
-         */
-        @JvmStatic
-        @JvmOverloads
-        fun ensureCLI(
-            deploymentURL: URL,
-            buildVersion: String,
-            settings: CoderSettingsState,
-            indicator: ProgressIndicator? = null,
-        ): CoderCLIManager {
-            val dataDir =
-                if (settings.dataDirectory.isBlank()) getDataDir()
-                else Path.of(settings.dataDirectory).toAbsolutePath()
-            val binDir =
-                if (settings.binaryDirectory.isBlank()) null
-                else Path.of(settings.binaryDirectory).toAbsolutePath()
-
-            val cli = CoderCLIManager(settings, deploymentURL, dataDir, binDir, settings.binarySource)
-
-            // Short-circuit if we already have the expected version.  This
-            // lets us bypass the 304 which is slower and may not be
-            // supported if the binary is downloaded from alternate sources.
-            // For CLIs without the JSON output flag we will fall back to
-            // the 304 method.
-            val cliMatches = cli.matchesVersion(buildVersion)
-            if (cliMatches == true) {
-                return cli
-            }
-
-            // If downloads are enabled download the new version.
-            if (settings.enableDownloads) {
-                indicator?.text = "Downloading Coder CLI..."
-                try {
-                    cli.downloadCLI()
-                    return cli
-                } catch (e: java.nio.file.AccessDeniedException) {
-                    // Might be able to fall back.
-                    if (binDir == null || binDir == dataDir || !settings.enableBinaryDirectoryFallback) {
-                        throw e
-                    }
-                }
-            }
-
-            // Try falling back to the data directory.
-            val dataCLI = CoderCLIManager(settings, deploymentURL, dataDir, null, settings.binarySource)
-            val dataCLIMatches = dataCLI.matchesVersion(buildVersion)
-            if (dataCLIMatches == true) {
-                return dataCLI
-            }
-
-            if (settings.enableDownloads) {
-                indicator?.text = "Downloading Coder CLI..."
-                dataCLI.downloadCLI()
-                return dataCLI
-            }
-
-            // Prefer the binary directory unless the data directory has a
-            // working binary and the binary directory does not.
-            return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
-        }
-    }
-}
-
-class Environment(private val env: Map<String, String> = emptyMap()) {
-    fun get(name: String): String? {
-        val e = env[name]
-        if (e != null) {
-            return e
-        }
-        return System.getenv(name)
     }
 }
 

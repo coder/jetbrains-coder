@@ -7,13 +7,14 @@ import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.DefaultCoderRestClient
+import com.coder.gateway.sdk.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
+import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.withPath
-import com.coder.gateway.services.CoderSettingsState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.jetbrains.gateway.api.ConnectionRequestor
@@ -37,7 +38,7 @@ private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 // CoderGatewayConnectionProvider handles connecting via a Gateway link such as
 // jetbrains-gateway://connect#type=coder.
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
-    private val settings: CoderSettingsState = service()
+    private val settings: CoderSettingsService = service()
 
     override suspend fun connect(parameters: Map<String, String>, requestor: ConnectionRequestor): GatewayConnectionHandle? {
         CoderRemoteConnectionHandle().connect{ indicator ->
@@ -80,7 +81,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 throw IllegalArgumentException("The agent \"${agent.name}\" is ${agent.agentStatus.toString().lowercase()}; unable to connect")
             }
 
-            val cli = CoderCLIManager.ensureCLI(
+            val cli = ensureCLI(
                 deploymentURL.toURL(),
                 client.buildInfo().version,
                 settings,
@@ -91,7 +92,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(client.agents(workspaces), settings.headerCommand)
+            cli.configSsh(client.agents(workspaces).map { it.name })
 
             // TODO: Ask for these if missing.  Maybe we can reuse the second
             //  step of the wizard?  Could also be nice if we automatically used
@@ -114,7 +115,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             val folder = parameters[FOLDER] ?: throw IllegalArgumentException("Query parameter \"$FOLDER\" is missing")
 
             parameters
-                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), agent))
+                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), agent.name))
                 .withProjectPath(folder)
                 .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
                 .withConfigDirectory(cli.coderConfigPath.toString())
@@ -137,6 +138,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             lastToken,
             isRetry,
             useExisting = true,
+            settings,
         )
         if (token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
