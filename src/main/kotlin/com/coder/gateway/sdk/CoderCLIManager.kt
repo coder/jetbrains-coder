@@ -6,6 +6,7 @@ import com.coder.gateway.util.Arch
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
+import com.coder.gateway.util.escape
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
@@ -506,24 +507,6 @@ class CoderCLIManager @JvmOverloads constructor(
             // Prefer the binary directory unless the data directory has a
             // working binary and the binary directory does not.
             return if (cliMatches == null && dataCLIMatches != null) dataCLI else cli
-        }
-
-        /**
-         * Escape a command argument to be used in the ProxyCommand of an SSH
-         * config.  Surround with double quotes if the argument contains
-         * whitespace and escape any existing double quotes.
-         *
-         * Throws if the argument is invalid.
-         */
-        @JvmStatic
-        fun escape(s: String): String {
-            if (s.contains("\n")) {
-                throw Exception("argument cannot contain newlines")
-            }
-            if (s.contains(" ") || s.contains("\t")) {
-                return "\"" + s.replace("\"", "\\\"") + "\""
-            }
-            return s.replace("\"", "\\\"")
         }
     }
 }
