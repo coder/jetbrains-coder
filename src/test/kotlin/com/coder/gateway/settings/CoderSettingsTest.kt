@@ -1,11 +1,10 @@
-package com.coder.gateway.services
+package com.coder.gateway.settings
 
+import com.coder.gateway.services.CoderSettingsState
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
-import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.settings.Environment
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath
@@ -13,6 +12,22 @@ import java.net.URL
 import java.nio.file.Path
 
 internal class CoderSettingsTest {
+    @Test
+    fun testExpands() {
+        val state = CoderSettingsState()
+        val settings = CoderSettings(state)
+        val url = URL("http://localhost")
+        val home = Path.of(System.getProperty("user.home"))
+
+        state.binaryDirectory = "~/coder-gateway-test/expand-bin-dir"
+        var expected = home.resolve("coder-gateway-test/expand-bin-dir/localhost")
+        assertEquals(expected.toAbsolutePath(), settings.binPath(url).parent)
+
+        state.dataDirectory = "~/coder-gateway-test/expand-data-dir"
+        expected = home.resolve("coder-gateway-test/expand-data-dir/localhost")
+        assertEquals(expected.toAbsolutePath(), settings.dataDir(url))
+    }
+
     @Test
     fun testDataDir() {
         val state = CoderSettingsState()
@@ -162,7 +177,8 @@ internal class CoderSettingsTest {
     @Test
     fun testSettings() {
         // Make sure the remaining settings are being conveyed.
-        val settings = CoderSettings(CoderSettingsState(
+        val settings = CoderSettings(
+            CoderSettingsState(
             enableDownloads = false,
             enableBinaryDirectoryFallback = true,
             headerCommand = "test header",
@@ -170,7 +186,8 @@ internal class CoderSettingsTest {
             tlsKeyPath = "tls key path",
             tlsCAPath = "tls ca path",
             tlsAlternateHostname = "tls alt hostname",
-        ))
+        )
+        )
 
         assertEquals(false, settings.enableDownloads)
         assertEquals(true, settings.enableBinaryDirectoryFallback)

@@ -3,6 +3,7 @@ package com.coder.gateway.settings
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
+import com.coder.gateway.util.expand
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
@@ -39,7 +40,7 @@ open class CoderSettings(
      */
     fun dataDir(url: URL): Path {
         val dir = if (state.dataDirectory.isBlank()) dataDir
-        else Path.of(state.dataDirectory).toAbsolutePath()
+        else Path.of(expand(state.dataDirectory)).toAbsolutePath()
         return withHost(dir, url)
     }
 
@@ -66,7 +67,7 @@ open class CoderSettings(
     fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
         val binaryName = getCoderCLIForOS(getOS(), getArch())
         val dir = if (forceDownloadToData || state.binaryDirectory.isBlank()) dataDir(url)
-        else withHost(Path.of(state.binaryDirectory).toAbsolutePath(), url)
+        else withHost(Path.of(expand(state.binaryDirectory)).toAbsolutePath(), url)
         return dir.resolve(binaryName)
     }
 
