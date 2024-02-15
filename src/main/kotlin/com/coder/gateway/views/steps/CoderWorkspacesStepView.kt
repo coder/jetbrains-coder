@@ -14,7 +14,6 @@ import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.cli.ResponseException
-import com.coder.gateway.sdk.TemplateIconDownloader
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -92,7 +91,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val clientService: CoderRestClientService = service()
     private var cliManager: CoderCLIManager? = null
-    private val iconDownloader: TemplateIconDownloader = service()
     private val settings: CoderSettingsService = service<CoderSettingsService>()
 
     private val appPropertiesService: PropertiesComponent = service()
@@ -575,7 +573,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 val ams = ws.flatMap { it.toAgentModels() }
                 ams.forEach {
                     cs.launch(Dispatchers.IO) {
-                        it.templateIcon = iconDownloader.load(it.templateIconPath, it.name)
+                        it.templateIcon = clientService.client.loadIcon(it.templateIconPath, it.name)
                         withContext(Dispatchers.Main) {
                             tableOfWorkspaces.updateUI()
                         }

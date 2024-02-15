@@ -1,6 +1,14 @@
 package com.coder.gateway.icons
 
 import com.intellij.openapi.util.IconLoader
+import com.intellij.ui.JreHiDpiUtil
+import com.intellij.ui.paint.PaintUtil
+import com.intellij.ui.scale.JBUIScale
+import java.awt.Component
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.image.BufferedImage
+import javax.swing.Icon
 
 object CoderIcons {
     val LOGO = IconLoader.getIcon("coder_logo.svg", javaClass)
@@ -21,42 +29,123 @@ object CoderIcons {
 
     val UNKNOWN = IconLoader.getIcon("unknown.svg", javaClass)
 
-    val ZERO = IconLoader.getIcon("0.svg", javaClass)
-    val ONE = IconLoader.getIcon("1.svg", javaClass)
-    val TWO = IconLoader.getIcon("2.svg", javaClass)
-    val THREE = IconLoader.getIcon("3.svg", javaClass)
-    val FOUR = IconLoader.getIcon("4.svg", javaClass)
-    val FIVE = IconLoader.getIcon("5.svg", javaClass)
-    val SIX = IconLoader.getIcon("6.svg", javaClass)
-    val SEVEN = IconLoader.getIcon("7.svg", javaClass)
-    val EIGHT = IconLoader.getIcon("8.svg", javaClass)
-    val NINE = IconLoader.getIcon("9.svg", javaClass)
+    private val ZERO = IconLoader.getIcon("0.svg", javaClass)
+    private val ONE = IconLoader.getIcon("1.svg", javaClass)
+    private val TWO = IconLoader.getIcon("2.svg", javaClass)
+    private val THREE = IconLoader.getIcon("3.svg", javaClass)
+    private val FOUR = IconLoader.getIcon("4.svg", javaClass)
+    private val FIVE = IconLoader.getIcon("5.svg", javaClass)
+    private val SIX = IconLoader.getIcon("6.svg", javaClass)
+    private val SEVEN = IconLoader.getIcon("7.svg", javaClass)
+    private val EIGHT = IconLoader.getIcon("8.svg", javaClass)
+    private val NINE = IconLoader.getIcon("9.svg", javaClass)
 
-    val A = IconLoader.getIcon("a.svg", javaClass)
-    val B = IconLoader.getIcon("b.svg", javaClass)
-    val C = IconLoader.getIcon("c.svg", javaClass)
-    val D = IconLoader.getIcon("d.svg", javaClass)
-    val E = IconLoader.getIcon("e.svg", javaClass)
-    val F = IconLoader.getIcon("f.svg", javaClass)
-    val G = IconLoader.getIcon("g.svg", javaClass)
-    val H = IconLoader.getIcon("h.svg", javaClass)
-    val I = IconLoader.getIcon("i.svg", javaClass)
-    val J = IconLoader.getIcon("j.svg", javaClass)
-    val K = IconLoader.getIcon("k.svg", javaClass)
-    val L = IconLoader.getIcon("l.svg", javaClass)
-    val M = IconLoader.getIcon("m.svg", javaClass)
-    val N = IconLoader.getIcon("n.svg", javaClass)
-    val O = IconLoader.getIcon("o.svg", javaClass)
-    val P = IconLoader.getIcon("p.svg", javaClass)
-    val Q = IconLoader.getIcon("q.svg", javaClass)
-    val R = IconLoader.getIcon("r.svg", javaClass)
-    val S = IconLoader.getIcon("s.svg", javaClass)
-    val T = IconLoader.getIcon("t.svg", javaClass)
-    val U = IconLoader.getIcon("u.svg", javaClass)
-    val V = IconLoader.getIcon("v.svg", javaClass)
-    val W = IconLoader.getIcon("w.svg", javaClass)
-    val X = IconLoader.getIcon("x.svg", javaClass)
-    val Y = IconLoader.getIcon("y.svg", javaClass)
-    val Z = IconLoader.getIcon("z.svg", javaClass)
+    private val A = IconLoader.getIcon("a.svg", javaClass)
+    private val B = IconLoader.getIcon("b.svg", javaClass)
+    private val C = IconLoader.getIcon("c.svg", javaClass)
+    private val D = IconLoader.getIcon("d.svg", javaClass)
+    private val E = IconLoader.getIcon("e.svg", javaClass)
+    private val F = IconLoader.getIcon("f.svg", javaClass)
+    private val G = IconLoader.getIcon("g.svg", javaClass)
+    private val H = IconLoader.getIcon("h.svg", javaClass)
+    private val I = IconLoader.getIcon("i.svg", javaClass)
+    private val J = IconLoader.getIcon("j.svg", javaClass)
+    private val K = IconLoader.getIcon("k.svg", javaClass)
+    private val L = IconLoader.getIcon("l.svg", javaClass)
+    private val M = IconLoader.getIcon("m.svg", javaClass)
+    private val N = IconLoader.getIcon("n.svg", javaClass)
+    private val O = IconLoader.getIcon("o.svg", javaClass)
+    private val P = IconLoader.getIcon("p.svg", javaClass)
+    private val Q = IconLoader.getIcon("q.svg", javaClass)
+    private val R = IconLoader.getIcon("r.svg", javaClass)
+    private val S = IconLoader.getIcon("s.svg", javaClass)
+    private val T = IconLoader.getIcon("t.svg", javaClass)
+    private val U = IconLoader.getIcon("u.svg", javaClass)
+    private val V = IconLoader.getIcon("v.svg", javaClass)
+    private val W = IconLoader.getIcon("w.svg", javaClass)
+    private val X = IconLoader.getIcon("x.svg", javaClass)
+    private val Y = IconLoader.getIcon("y.svg", javaClass)
+    private val Z = IconLoader.getIcon("z.svg", javaClass)
 
+    fun fromChar(c: Char) = when (c) {
+        '0' -> ZERO
+        '1' -> ONE
+        '2' -> TWO
+        '3' -> THREE
+        '4' -> FOUR
+        '5' -> FIVE
+        '6' -> SIX
+        '7' -> SEVEN
+        '8' -> EIGHT
+        '9' -> NINE
+
+        'a' -> A
+        'b' -> B
+        'c' -> C
+        'd' -> D
+        'e' -> E
+        'f' -> F
+        'g' -> G
+        'h' -> H
+        'i' -> I
+        'j' -> J
+        'k' -> K
+        'l' -> L
+        'm' -> M
+        'n' -> N
+        'o' -> O
+        'p' -> P
+        'q' -> Q
+        'r' -> R
+        's' -> S
+        't' -> T
+        'u' -> U
+        'v' -> V
+        'w' -> W
+        'x' -> X
+        'y' -> Y
+        'z' -> Z
+
+        else -> UNKNOWN
+    }
+}
+
+fun alignToInt(g: Graphics) {
+    if (g !is Graphics2D) {
+        return
+    }
+
+    val rm = PaintUtil.RoundingMode.ROUND_FLOOR_BIAS
+    PaintUtil.alignTxToInt(g, null, true, true, rm)
+    PaintUtil.alignClipToInt(g, true, true, rm, rm)
+}
+
+// We could replace this with com.intellij.ui.icons.toRetinaAwareIcon at
+// some point if we want to break support for Gateway < 232.
+fun toRetinaAwareIcon(image: BufferedImage): Icon {
+    val sysScale = JBUIScale.sysScale()
+    return object : Icon {
+        override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
+            if (isJreHiDPI) {
+                val newG = g.create(x, y, image.width, image.height) as Graphics2D
+                alignToInt(newG)
+                newG.scale(1.0 / sysScale, 1.0 / sysScale)
+                newG.drawImage(image, 0, 0, null)
+                newG.dispose()
+            } else {
+                g.drawImage(image, x, y, null)
+            }
+        }
+
+        override fun getIconWidth(): Int = if (isJreHiDPI) (image.width / sysScale).toInt() else image.width
+
+        override fun getIconHeight(): Int = if (isJreHiDPI) (image.height / sysScale).toInt() else image.height
+
+        private val isJreHiDPI: Boolean
+            get() = JreHiDpiUtil.isJreHiDPI(sysScale)
+
+        override fun toString(): String {
+            return "TemplateIconDownloader.toRetinaAwareIcon for $image"
+        }
+    }
 }

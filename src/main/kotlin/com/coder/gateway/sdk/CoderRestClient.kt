@@ -1,5 +1,7 @@
 package com.coder.gateway.sdk
 
+import com.coder.gateway.icons.CoderIcons
+import com.coder.gateway.icons.toRetinaAwareIcon
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
@@ -21,12 +23,17 @@ import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
 import com.coder.gateway.util.getHeaders
+import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withPath
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.util.ImageLoader
+import com.intellij.util.ui.ImageUtil
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.imgscalr.Scalr
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.HttpURLConnection
@@ -34,6 +41,7 @@ import java.net.URL
 import java.time.Instant
 import java.util.*
 import javax.net.ssl.X509TrustManager
+import javax.swing.Icon
 
 /**
  * In non-test code use DefaultCoderRestClient instead.
@@ -217,5 +225,32 @@ open class CoderRestClient(
         }
 
         return buildResponse.body()!!
+    }
+
+
+    private val iconCache = mutableMapOf<Pair<String, String>, Icon>()
+
+    fun loadIcon(path: String, workspaceName: String): Icon {
+        var iconURL: URL? = null
+        if (path.startsWith("http")) {
+            iconURL = path.toURL()
+        } else if (!path.contains(":") && !path.contains("//")) {
+            iconURL = url.withPath(path)
+        }
+
+        if (iconURL != null) {
+            val cachedIcon = iconCache[Pair(workspaceName, path)]
+            if (cachedIcon != null) {
+                return cachedIcon
+            }
+            val img = ImageLoader.loadFromUrl(iconURL)
+            if (img != null) {
+                val icon = toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
+                iconCache[Pair(workspaceName, path)] = icon
+                return icon
+            }
+        }
+
+        return CoderIcons.fromChar(workspaceName.lowercase().first())
     }
 }

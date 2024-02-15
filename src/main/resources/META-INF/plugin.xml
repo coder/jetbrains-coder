@@ -16,7 +16,6 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.coder.gateway.sdk.CoderRestClientService"/>
-        <applicationService serviceImplementation="com.coder.gateway.sdk.TemplateIconDownloader"/>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"/>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsState"/>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsService"/>
