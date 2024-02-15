@@ -1,5 +1,8 @@
 package com.coder.gateway.cli
 
+import com.coder.gateway.cli.ex.MissingVersionException
+import com.coder.gateway.cli.ex.ResponseException
+import com.coder.gateway.cli.ex.SSHConfigFormatException
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

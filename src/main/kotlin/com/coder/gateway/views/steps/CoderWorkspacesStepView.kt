@@ -12,7 +12,7 @@ import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
-import com.coder.gateway.cli.ResponseException
+import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
