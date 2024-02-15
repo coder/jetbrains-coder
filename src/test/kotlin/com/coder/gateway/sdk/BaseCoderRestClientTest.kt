@@ -29,7 +29,7 @@ import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
 import kotlin.test.assertFailsWith
 
-class CoderRestClientTest {
+class BaseCoderRestClientTest {
     data class TestWorkspace(var workspace: Workspace, var resources: List<WorkspaceResource>? = emptyList())
 
     /**
@@ -148,7 +148,7 @@ class CoderRestClientTest {
         )
         tests.forEach {
             val (srv, url) = mockServer(it.map{ ws -> TestWorkspace(ws) })
-            val client = CoderRestClient(URL(url), "token")
+            val client = BaseCoderRestClient(URL(url), "token")
             assertEquals(it.map{ ws -> ws.name }, client.workspaces().map{ ws -> ws.name })
             srv.stop(0)
         }
@@ -181,7 +181,7 @@ class CoderRestClientTest {
 
         tests.forEach {
             val (srv, url) = mockServer(it)
-            val client = CoderRestClient(URL(url), "token")
+            val client = BaseCoderRestClient(URL(url), "token")
 
             it.forEach { ws->
                 assertEquals(ws.resources, client.resources(ws.workspace))
@@ -197,7 +197,7 @@ class CoderRestClientTest {
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
             tlsAlternateHostname = "localhost"))
         val (srv, url) = mockTLSServer("self-signed")
-        val client = CoderRestClient(URL(url), "token", settings)
+        val client = BaseCoderRestClient(URL(url), "token", settings)
 
         assertEquals("tester", client.me().username)
 
@@ -210,7 +210,7 @@ class CoderRestClientTest {
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
             tlsAlternateHostname = "fake.example.com"))
         val (srv, url) = mockTLSServer("self-signed")
-        val client = CoderRestClient(URL(url), "token", settings)
+        val client = BaseCoderRestClient(URL(url), "token", settings)
 
         assertFailsWith(
             exceptionClass = SSLPeerUnverifiedException::class,
@@ -224,7 +224,7 @@ class CoderRestClientTest {
         val settings = CoderSettings(CoderSettingsState(
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()))
         val (srv, url) = mockTLSServer("no-signing")
-        val client = CoderRestClient(URL(url), "token", settings)
+        val client = BaseCoderRestClient(URL(url), "token", settings)
 
         assertFailsWith(
             exceptionClass = SSLHandshakeException::class,
@@ -238,7 +238,7 @@ class CoderRestClientTest {
         val settings = CoderSettings(CoderSettingsState(
             tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString()))
         val (srv, url) = mockTLSServer("chain")
-        val client = CoderRestClient(URL(url), "token", settings)
+        val client = BaseCoderRestClient(URL(url), "token", settings)
 
         assertEquals("tester", client.me().username)
 
@@ -251,7 +251,7 @@ class CoderRestClientTest {
         val workspaces = listOf(TestWorkspace(DataGen.workspace("ws1")))
         val (srv1, url1) = mockServer(workspaces)
         val srv2 = mockProxy()
-        val client = CoderRestClient(URL(url1), "token", settings, ProxyValues(
+        val client = BaseCoderRestClient(URL(url1), "token", settings, ProxyValues(
             "foo",
             "bar",
             true,

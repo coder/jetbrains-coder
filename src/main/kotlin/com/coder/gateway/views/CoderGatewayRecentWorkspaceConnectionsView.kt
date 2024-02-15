@@ -8,8 +8,8 @@ import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.DefaultCoderRestClient
 import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentModels
@@ -59,7 +59,7 @@ import javax.swing.event.DocumentEvent
  */
 data class DeploymentInfo(
     // Null if unable to create the client (config directory did not exist).
-    var client: CoderRestClient? = null,
+    var client: BaseCoderRestClient? = null,
     // Null if we have not fetched workspaces yet.
     var workspaces: List<WorkspaceAgentModel>? = null,
     // Null if there have not been any errors yet.
@@ -252,7 +252,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 deployments[dir] ?: try {
                     val url = Path.of(dir).resolve("url").toFile().readText()
                     val token = Path.of(dir).resolve("session").toFile().readText()
-                    DeploymentInfo(DefaultCoderRestClient(url.toURL(), token))
+                    DeploymentInfo(CoderRestClient(url.toURL(), token))
                 } catch (e: Exception) {
                     logger.error("Unable to create client from $dir", e)
                     DeploymentInfo(error = "Error trying to read $dir: ${e.message}")

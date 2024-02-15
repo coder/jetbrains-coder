@@ -5,8 +5,8 @@ package com.coder.gateway
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.cli.CoderCLIManager
+import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.DefaultCoderRestClient
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.util.toURL
@@ -128,7 +128,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * Return an authenticated Coder CLI and the user's name, asking for the
      * token as long as it continues to result in an authentication failure.
      */
-    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
+    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<BaseCoderRestClient, String> {
         // Use the token from the query, unless we already tried that.
         val isRetry = lastToken != null
         val token = if (!queryToken.isNullOrBlank() && !isRetry)
@@ -143,7 +143,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         if (token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
         }
-        val client = DefaultCoderRestClient(deploymentURL, token.first)
+        val client = CoderRestClient(deploymentURL, token.first)
         return try {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {

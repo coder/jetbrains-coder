@@ -7,7 +7,6 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.util.Arch
 import com.coder.gateway.cli.CoderCLIManager
-import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
@@ -88,8 +87,6 @@ import javax.swing.event.DocumentEvent
 
 class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
-    private val clientService: CoderRestClientService = ApplicationManager.getApplication().getService(CoderRestClientService::class.java)
-
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
 
     private lateinit var titleLabel: JLabel
@@ -180,7 +177,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         tfProject.text = if (selectedWorkspace.homeDirectory.isNullOrBlank()) "/home" else selectedWorkspace.homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedWorkspace.name)
-        terminalLink.url = clientService.client.url.withPath("/@${clientService.me.username}/${selectedWorkspace.name}/terminal").toString()
+        terminalLink.url = deploymentURL.withPath("/me/${selectedWorkspace.name}/terminal").toString()
 
         ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
             try {

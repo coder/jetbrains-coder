@@ -9,12 +9,12 @@ import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.cli.CoderCLIManager
-import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.cli.ResponseException
 import com.coder.gateway.cli.ensureCLI
+import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -89,7 +89,7 @@ private const val SESSION_TOKEN = "session-token"
 class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
-    private val clientService: CoderRestClientService = service()
+    private var client: CoderRestClient? = null
     private var cliManager: CoderCLIManager? = null
     private val settings: CoderSettingsService = service<CoderSettingsService>()
 
@@ -228,16 +228,20 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class GoToDashboardAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
         override fun actionPerformed(p0: AnActionEvent) {
-            BrowserUtil.browse(clientService.client.url)
+            val c = client
+            if (c != null) {
+                BrowserUtil.browse(c.url)
+            }
         }
     }
 
     private inner class GoToTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
         override fun actionPerformed(p0: AnActionEvent) {
-            if (tableOfWorkspaces.selectedObject != null) {
+            val c = client
+            if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
-                BrowserUtil.browse(clientService.client.url.toURI().resolve("/templates/${workspace.templateName}"))
+                BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
             }
         }
     }
@@ -245,12 +249,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StartWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
-            if (tableOfWorkspaces.selectedObject != null) {
+            val c = client
+            if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            clientService.client.startWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            c.startWorkspace(workspace.workspaceID, workspace.workspaceName)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not build workspace ${workspace.name}, reason: $e")
@@ -264,12 +269,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class UpdateWorkspaceTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            if (tableOfWorkspaces.selectedObject != null) {
+            val c = client
+            if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            clientService.client.updateWorkspace(workspace.workspaceID, workspace.workspaceName, workspace.lastBuildTransition, workspace.templateID)
+                            c.updateWorkspace(workspace.workspaceID, workspace.workspaceName, workspace.lastBuildTransition, workspace.templateID)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not update workspace ${workspace.name}, reason: $e")
@@ -285,12 +291,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StopWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            if (tableOfWorkspaces.selectedObject != null) {
+            val c = client
+            if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            clientService.client.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            c.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
@@ -304,7 +311,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class CreateWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            BrowserUtil.browse(clientService.client.url.toURI().resolve("/templates"))
+            val c = client
+            if (c != null) {
+                BrowserUtil.browse(c.url.toURI().resolve("/templates"))
+            }
         }
     }
 
@@ -341,8 +351,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     private fun updateWorkspaceActions() {
-        goToDashboardAction.isEnabled = clientService.isReady
-        createWorkspaceAction.isEnabled = clientService.isReady
+        goToDashboardAction.isEnabled = client != null
+        createWorkspaceAction.isEnabled = client != null
         goToTemplateAction.isEnabled = tableOfWorkspaces.selectedObject != null
         when (tableOfWorkspaces.selectedObject?.workspaceStatus) {
             WorkspaceStatus.RUNNING -> {
@@ -416,6 +426,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     ): Job {
         // Clear out old deployment details.
         cliManager = null
+        client = null
         poller?.cancel()
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
         tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
@@ -426,14 +437,16 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         return LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title")) {
             try {
                 this.indicator.text = "Authenticating client..."
-                authenticate(deploymentURL, token.first)
+                val authedClient = authenticate(deploymentURL, token.first)
+                client = authedClient
+
                 // Remember these in order to default to them for future attempts.
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN, token.first)
 
                 val cli = ensureCLI(
                     deploymentURL,
-                    clientService.buildVersion,
+                    authedClient.buildVersion,
                     settings,
                     this.indicator,
                 )
@@ -528,22 +541,23 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     /**
      * Authenticate the Coder client with the provided token and URL.  On
      * failure throw an error.  On success display warning banners if versions
-     * do not match.
+     * do not match.  Return the authenticated client.
      */
-    private fun authenticate(url: URL, token: String) {
+    private fun authenticate(url: URL, token: String): CoderRestClient {
         logger.info("Authenticating to $url...")
-        clientService.initClientSession(url, token)
+        val tryClient = CoderRestClient(url, token)
+        tryClient.authenticate()
 
         try {
-            logger.info("Checking compatibility with Coder version ${clientService.buildVersion}...")
-            val ver = SemVer.parse(clientService.buildVersion)
+            logger.info("Checking compatibility with Coder version ${tryClient.buildVersion}...")
+            val ver = SemVer.parse(tryClient.buildVersion)
             if (ver in CoderSupportedVersions.minCompatibleCoderVersion..CoderSupportedVersions.maxCompatibleCoderVersion) {
-                logger.info("${clientService.buildVersion} is compatible")
+                logger.info("${tryClient.buildVersion} is compatible")
             } else {
-                logger.warn("${clientService.buildVersion} is not compatible")
+                logger.warn("${tryClient.buildVersion} is not compatible")
                 notificationBanner.apply {
                     component.isVisible = true
-                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", clientService.buildVersion))
+                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", tryClient.buildVersion))
                 }
             }
         } catch (e: InvalidVersionException) {
@@ -553,13 +567,14 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 showWarning(
                     CoderGatewayBundle.message(
                         "gateway.connector.view.coder.workspaces.invalid.coder.version",
-                        clientService.buildVersion
+                        tryClient.buildVersion
                     )
                 )
             }
         }
 
         logger.info("Authenticated successfully")
+        return tryClient
     }
 
     /**
@@ -568,12 +583,13 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private suspend fun loadWorkspaces() {
         val ws = withContext(Dispatchers.IO) {
             val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
+            val clientNow = client ?: return@withContext emptySet()
             try {
-                val ws = clientService.client.workspaces()
+                val ws = clientNow.workspaces()
                 val ams = ws.flatMap { it.toAgentModels() }
                 ams.forEach {
                     cs.launch(Dispatchers.IO) {
-                        it.templateIcon = clientService.client.loadIcon(it.templateIconPath, it.name)
+                        it.templateIcon = clientNow.loadIcon(it.templateIconPath, it.name)
                         withContext(Dispatchers.Main) {
                             tableOfWorkspaces.updateUI()
                         }
@@ -583,7 +599,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
                 return@withContext ams
             } catch (e: Exception) {
-                logger.error("Could not retrieve workspaces for ${clientService.me.username} on ${clientService.client.url}. Reason: $e")
+                logger.error("Could not retrieve workspaces for ${clientNow.me.username} on ${clientNow.url}. Reason: $e")
                 emptySet()
             }
         }
@@ -621,8 +637,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         poller?.cancel()
 
         logger.info("Configuring Coder CLI...")
-        val workspaces = clientService.client.workspaces()
-        cli.configSsh(clientService.client.agents(workspaces).map { it.name })
+        val workspaces = client?.workspaces() ?: emptyList()
+        cli.configSsh((client?.agents(workspaces) ?: emptyList()).map { it.name })
 
         // The config directory can be used to pull the URL and token in
         // order to query this workspace's status in other flows, for
