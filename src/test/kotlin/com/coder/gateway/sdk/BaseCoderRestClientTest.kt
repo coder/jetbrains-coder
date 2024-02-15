@@ -9,6 +9,7 @@ import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
 import com.google.gson.GsonBuilder
+import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
@@ -39,47 +40,58 @@ class BaseCoderRestClientTest {
      * hardcode IDs everywhere since you cannot use variables in the where
      * blocks).
      */
-    private fun mockServer(workspaces: List<TestWorkspace>): Pair<HttpServer, String> {
+    private fun mockServer(workspaces: List<TestWorkspace>, spy: ((exchange: HttpExchange) -> Unit)? = null): Pair<HttpServer, String> {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
-        addServerContext(srv, workspaces)
+        addServerContext(srv, workspaces, spy)
         srv.start()
         return Pair(srv, "http://localhost:" + srv.address.port)
     }
 
     private val resourceEndpoint = "/api/v2/templateversions/([^/]+)/resources".toRegex()
 
-    private fun addServerContext(srv: HttpServer, workspaces: List<TestWorkspace> = emptyList()) {
+    private fun toJson(src: Any?): String {
+        return GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).create().toJson(src)
+    }
+
+    private fun handleExchange(exchange: HttpExchange, workspaces: List<TestWorkspace>): Pair<Int, String> {
+        val matches = resourceEndpoint.find(exchange.requestURI.path)
+        if (matches != null) {
+            val templateVersionId = UUID.fromString(matches.destructured.toList()[0])
+            val ws = workspaces.first { it.workspace.latestBuild.templateVersionID == templateVersionId }
+            return Pair(HttpURLConnection.HTTP_OK, toJson(ws.resources))
+        }
+
+        when (exchange.requestURI.path) {
+            "/api/v2/workspaces" -> {
+                return Pair(HttpsURLConnection.HTTP_OK, toJson(WorkspacesResponse(workspaces.map{ it.workspace }, workspaces.size)))
+            }
+            "/api/v2/users/me" -> {
+                val user = User(
+                    UUID.randomUUID(),
+                    "tester",
+                    "tester@example.com",
+                    Instant.now(),
+                    Instant.now(),
+                    UserStatus.ACTIVE,
+                    listOf(),
+                    listOf(),
+                    "",
+                )
+                return Pair(HttpsURLConnection.HTTP_OK, toJson(user))
+            }
+        }
+        return Pair(HttpsURLConnection.HTTP_NOT_FOUND, "not found")
+    }
+
+    private fun addServerContext(srv: HttpServer, workspaces: List<TestWorkspace> = emptyList(), spy: ((exchange: HttpExchange) -> Unit)? = null) {
         srv.createContext("/")  { exchange ->
-            var code = HttpURLConnection.HTTP_NOT_FOUND
-            var response = "not found"
+            spy?.invoke(exchange)
+            var code: Int
+            var response: String
             try {
-                val matches = resourceEndpoint.find(exchange.requestURI.path)
-                if (matches != null) {
-                    val templateVersionId = UUID.fromString(matches.destructured.toList()[0])
-                    val ws = workspaces.first { it.workspace.latestBuild.templateVersionID == templateVersionId }
-                    code = HttpURLConnection.HTTP_OK
-                    response = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter())
-                        .create().toJson(ws.resources)
-                } else if (exchange.requestURI.path == "/api/v2/workspaces") {
-                    code = HttpsURLConnection.HTTP_OK
-                    response = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter())
-                        .create().toJson(WorkspacesResponse(workspaces.map{ it.workspace }, workspaces.size))
-                } else if (exchange.requestURI.path == "/api/v2/users/me") {
-                    code = HttpsURLConnection.HTTP_OK
-                    val user = User(
-                        UUID.randomUUID(),
-                        "tester",
-                        "tester@example.com",
-                        Instant.now(),
-                        Instant.now(),
-                        UserStatus.ACTIVE,
-                        listOf(),
-                        listOf(),
-                        "",
-                    )
-                    response = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter())
-                        .create().toJson(user)
-                }
+                val p = handleExchange(exchange, workspaces)
+                code = p.first
+                response = p.second
             } catch (ex: Exception) {
                 // This will be a developer error.
                 code = HttpURLConnection.HTTP_INTERNAL_ERROR
