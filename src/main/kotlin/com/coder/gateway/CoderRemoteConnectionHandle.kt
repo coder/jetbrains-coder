@@ -10,7 +10,7 @@ import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
-import com.coder.gateway.services.CoderSettings
+import com.coder.gateway.settings.CoderSettings
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState

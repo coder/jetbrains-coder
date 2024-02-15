@@ -5,10 +5,9 @@ import kotlin.test.assertEquals
 
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.v2.models.*
-import com.coder.gateway.services.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
-
 import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpServer
 import com.sun.net.httpserver.HttpsConfigurator

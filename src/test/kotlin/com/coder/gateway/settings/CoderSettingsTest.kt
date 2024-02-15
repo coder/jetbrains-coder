@@ -1,12 +1,14 @@
 package com.coder.gateway.services
 
-import com.coder.gateway.util.OS
-import com.coder.gateway.util.getOS
-import com.coder.gateway.util.withPath
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
+import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.settings.Environment
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.getOS
+import com.coder.gateway.util.withPath
 import java.net.URL
 import java.nio.file.Path
 
@@ -19,7 +21,8 @@ internal class CoderSettingsTest {
             env = Environment(mapOf(
                 "LOCALAPPDATA"     to "/tmp/coder-gateway-test/localappdata",
                 "HOME"             to "/tmp/coder-gateway-test/home",
-                "XDG_DATA_HOME"    to "/tmp/coder-gateway-test/xdg-data")))
+                "XDG_DATA_HOME"    to "/tmp/coder-gateway-test/xdg-data"))
+        )
         var expected = when(getOS()) {
             OS.WINDOWS -> "/tmp/coder-gateway-test/localappdata/coder-gateway/localhost"
             OS.MAC -> "/tmp/coder-gateway-test/home/Library/Application Support/coder-gateway/localhost"
@@ -34,7 +37,8 @@ internal class CoderSettingsTest {
             settings = CoderSettings(state,
                 env = Environment(mapOf(
                     "XDG_DATA_HOME" to "",
-                    "HOME" to "/tmp/coder-gateway-test/home")))
+                    "HOME" to "/tmp/coder-gateway-test/home"))
+            )
             expected = "/tmp/coder-gateway-test/home/.local/share/coder-gateway/localhost"
 
             assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
@@ -47,7 +51,8 @@ internal class CoderSettingsTest {
             env = Environment(mapOf(
                 "LOCALAPPDATA"     to "/ignore",
                 "HOME"             to "/ignore",
-                "XDG_DATA_HOME"    to "/ignore")))
+                "XDG_DATA_HOME"    to "/ignore"))
+        )
         expected = "/tmp/coder-gateway-test/data-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url).parent)
@@ -87,7 +92,8 @@ internal class CoderSettingsTest {
             env = Environment(
                 mapOf("APPDATA"          to "/tmp/coder-gateway-test/cli-appdata",
                     "HOME"             to "/tmp/coder-gateway-test/cli-home",
-                    "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config")))
+                    "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config"))
+        )
         var expected = when(getOS()) {
             OS.WINDOWS -> "/tmp/coder-gateway-test/cli-appdata/coderv2"
             OS.MAC -> "/tmp/coder-gateway-test/cli-home/Library/Application Support/coderv2"
@@ -101,7 +107,8 @@ internal class CoderSettingsTest {
                 env = Environment(
                     mapOf("XDG_CONFIG_HOME" to "",
                         "HOME" to "/tmp/coder-gateway-test/cli-home",
-                    )))
+                    ))
+            )
             expected = "/tmp/coder-gateway-test/cli-home/.config/coderv2"
             assertEquals(Path.of(expected), settings.coderConfigDir)
         }
@@ -114,7 +121,8 @@ internal class CoderSettingsTest {
                     "APPDATA"          to "/ignore",
                     "HOME"             to "/ignore",
                     "XDG_CONFIG_HOME"  to "/ignore",
-                )))
+                ))
+        )
         expected = "/tmp/coder-gateway-test/coder-config-dir"
         assertEquals(Path.of(expected), settings.coderConfigDir)
     }

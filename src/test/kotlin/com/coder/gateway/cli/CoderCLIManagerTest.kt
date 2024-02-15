@@ -1,11 +1,5 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.cli
 
-import com.coder.gateway.services.CoderSettings
-import com.coder.gateway.services.CoderSettingsState
-import com.coder.gateway.util.InvalidVersionException
-import com.coder.gateway.util.OS
-import com.coder.gateway.util.getOS
-import com.coder.gateway.util.toURL
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -16,9 +10,15 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeAll
 
-import com.coder.gateway.util.sha1
+import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.util.InvalidVersionException
+import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.escape
+import com.coder.gateway.util.getOS
+import com.coder.gateway.util.sha1
+import com.coder.gateway.util.toURL
 import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpServer
 import java.net.HttpURLConnection
@@ -107,7 +107,8 @@ internal class CoderCLIManagerTest {
 
         val (srv, url) = mockServer()
         val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString())))
+            dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString()))
+        )
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.parent.toFile().setWritable(false)
@@ -132,7 +133,8 @@ internal class CoderCLIManagerTest {
         }
 
         val ccm = CoderCLIManager(url.toURL(), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("real-cli").toString())))
+            dataDirectory = tmpdir.resolve("real-cli").toString()))
+        )
 
         assertTrue(ccm.download())
         assertDoesNotThrow { ccm.version() }
@@ -150,7 +152,8 @@ internal class CoderCLIManagerTest {
     fun testDownloadMockCLI() {
         val (srv, url) = mockServer()
         var ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("mock-cli").toString())))
+            dataDirectory = tmpdir.resolve("mock-cli").toString()))
+        )
 
         assertEquals(true, ccm.download())
 
@@ -168,7 +171,8 @@ internal class CoderCLIManagerTest {
         // Should use the source override.
         ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
             binarySource = "/bin/override",
-            dataDirectory = tmpdir.resolve("mock-cli").toString())))
+            dataDirectory = tmpdir.resolve("mock-cli").toString()))
+        )
 
         assertEquals(true, ccm.download())
         assertContains(ccm.localBinaryPath.toFile().readText(), "0.0.0")
@@ -179,7 +183,8 @@ internal class CoderCLIManagerTest {
     @Test
     fun testRunNonExistentBinary() {
         val ccm = CoderCLIManager(URL("https://foo"), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("does-not-exist").toString())))
+            dataDirectory = tmpdir.resolve("does-not-exist").toString()))
+        )
 
         assertFailsWith(
             exceptionClass = ProcessInitException::class,
@@ -190,7 +195,8 @@ internal class CoderCLIManagerTest {
     fun testOverwitesWrongVersion() {
         val (srv, url) = mockServer()
         val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("overwrite-cli").toString())))
+            dataDirectory = tmpdir.resolve("overwrite-cli").toString()))
+        )
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.toFile().writeText("cli")
@@ -323,7 +329,8 @@ internal class CoderCLIManagerTest {
 
         tests.forEach {
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), CoderSettings(CoderSettingsState(
-                headerCommand = it)))
+                headerCommand = it))
+            )
 
             assertFailsWith(
                 exceptionClass = Exception::class,
@@ -347,7 +354,8 @@ internal class CoderCLIManagerTest {
         )
 
         val ccm = CoderCLIManager(URL("https://test.coder.parse-fail.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("bad-version").toString())))
+            binaryDirectory = tmpdir.resolve("bad-version").toString()))
+        )
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         tests.forEach {
@@ -388,7 +396,8 @@ internal class CoderCLIManagerTest {
             Triple("""exit 1""", "v1.0.0", null))
 
         val ccm = CoderCLIManager(URL("https://test.coder.matches-version.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("matches-version").toString())))
+            binaryDirectory = tmpdir.resolve("matches-version").toString()))
+        )
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         test.forEach {
@@ -415,7 +424,8 @@ internal class CoderCLIManagerTest {
     data class EnsureCLITest(
         val version: String?, val fallbackVersion: String?, val buildVersion: String,
         val writable: Boolean, val enableDownloads: Boolean, val enableFallback: Boolean,
-        val expect: Result)
+        val expect: Result
+    )
 
     @Test
     fun testEnsureCLI() {

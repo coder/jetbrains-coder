@@ -8,14 +8,14 @@ import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.sdk.CoderCLIManager
+import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClientService
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
-import com.coder.gateway.sdk.ResponseException
+import com.coder.gateway.cli.ResponseException
 import com.coder.gateway.sdk.TemplateIconDownloader
-import com.coder.gateway.sdk.ensureCLI
+import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -93,7 +93,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private val clientService: CoderRestClientService = service()
     private var cliManager: CoderCLIManager? = null
     private val iconDownloader: TemplateIconDownloader = service()
-    private val settings: CoderSettingsService = service()
+    private val settings: CoderSettingsService = service<CoderSettingsService>()
 
     private val appPropertiesService: PropertiesComponent = service()
 

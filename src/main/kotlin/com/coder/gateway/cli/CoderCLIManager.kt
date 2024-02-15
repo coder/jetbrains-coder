@@ -1,6 +1,6 @@
-package com.coder.gateway.sdk
+package com.coder.gateway.cli
 
-import com.coder.gateway.services.CoderSettings
+import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.InvalidVersionException

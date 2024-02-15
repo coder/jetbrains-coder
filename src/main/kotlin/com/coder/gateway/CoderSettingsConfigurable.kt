@@ -20,7 +20,7 @@ import java.nio.file.Path
 class CoderSettingsConfigurable : BoundConfigurable("Coder") {
     override fun createPanel(): DialogPanel {
         val state: CoderSettingsState = service()
-        val settings: CoderSettingsService = service()
+        val settings: CoderSettingsService = service<CoderSettingsService>()
         return panel {
             row(CoderGatewayBundle.message("gateway.connector.settings.data-directory.title")) {
                 textField().resizableColumn().align(AlignX.FILL)

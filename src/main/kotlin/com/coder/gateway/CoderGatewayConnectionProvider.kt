@@ -4,10 +4,10 @@ package com.coder.gateway
 
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.sdk.CoderCLIManager
+import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.DefaultCoderRestClient
-import com.coder.gateway.sdk.ensureCLI
+import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -38,7 +38,7 @@ private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 // CoderGatewayConnectionProvider handles connecting via a Gateway link such as
 // jetbrains-gateway://connect#type=coder.
 class CoderGatewayConnectionProvider : GatewayConnectionProvider {
-    private val settings: CoderSettingsService = service()
+    private val settings: CoderSettingsService = service<CoderSettingsService>()
 
     override suspend fun connect(parameters: Map<String, String>, requestor: ConnectionRequestor): GatewayConnectionHandle? {
         CoderRemoteConnectionHandle().connect{ indicator ->

@@ -1,6 +1,6 @@
 package com.coder.gateway.util
 
-import com.coder.gateway.services.CoderTLSSettings
+import com.coder.gateway.settings.CoderTLSSettings
 import okhttp3.internal.tls.OkHostnameVerifier
 import org.slf4j.LoggerFactory
 import java.io.File
