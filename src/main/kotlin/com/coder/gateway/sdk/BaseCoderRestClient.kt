@@ -227,10 +227,22 @@ open class BaseCoderRestClient(
     }
 
     fun updateWorkspace(workspaceID: UUID, workspaceName: String, lastWorkspaceTransition: WorkspaceTransition, templateID: UUID): WorkspaceBuild {
+        // Best practice is to STOP a workspace before doing an update if it is
+        // started.
+        // 1. If the update changes parameters, the old template might be needed
+        //    to correctly STOP with the existing parameter values.
+        // 2. The agent gets a new ID and token on each START build.  Many
+        //    template authors are not diligent about making sure the agent gets
+        //    restarted with this information when we do two START builds in a
+        //    row.
+        if (lastWorkspaceTransition == WorkspaceTransition.START) {
+            stopWorkspace(workspaceID, workspaceName)
+        }
+
         val template = template(templateID)
 
         val buildRequest =
-            CreateWorkspaceBuildRequest(template.activeVersionID, lastWorkspaceTransition, null, null, null, null)
+            CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
             throw WorkspaceResponseException(
