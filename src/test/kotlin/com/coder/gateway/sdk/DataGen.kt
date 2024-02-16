@@ -4,6 +4,8 @@ import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
 import com.coder.gateway.sdk.v2.models.*
+import com.google.gson.annotations.SerializedName
+import java.time.Instant
 import java.util.*
 
 class DataGen {
@@ -75,60 +77,76 @@ class DataGen {
             )
         }
 
-        fun workspace(
-            name: String,
-            agents: Map<String, String> = emptyMap(),
-            transition: WorkspaceTransition = WorkspaceTransition.START): Workspace  {
+        fun workspace(name: String,
+                      templateID: UUID = UUID.randomUUID(),
+                      agents: Map<String, String> = emptyMap(),
+                      transition: WorkspaceTransition = WorkspaceTransition.START): Workspace  {
             val wsId = UUID.randomUUID()
             val ownerId = UUID.randomUUID()
-            val resources: List<WorkspaceResource> = agents.map{ resource(it.key, it.value) }
             return Workspace(
-                wsId,
+                id = wsId,
                 createdAt = Date().toInstant(),
                 updatedAt = Date().toInstant(),
-                ownerId,
-                "owner-name",
-                templateID = UUID.randomUUID(),
-                "template-name",
-                "template-display-name",
-                "template-icon",
+                ownerID = ownerId,
+                ownerName = "owner-name",
+                templateID = templateID,
+                templateName = "template-name",
+                templateDisplayName = "template-display-name",
+                templateIcon = "template-icon",
                 templateAllowUserCancelWorkspaceJobs = false,
-                WorkspaceBuild(
-                    id = UUID.randomUUID(),
-                    createdAt = Date().toInstant(),
-                    updatedAt = Date().toInstant(),
-                    wsId,
-                    name,
-                    ownerId,
-                    "owner-name",
-                    templateVersionID = UUID.randomUUID(),
-                    buildNumber = 0,
-                    transition,
-                    initiatorID = UUID.randomUUID(),
-                    "initiator-name",
-                    ProvisionerJob(
-                        id = UUID.randomUUID(),
-                        createdAt = Date().toInstant(),
-                        startedAt = null,
-                        completedAt = null,
-                        canceledAt = null,
-                        error = null,
-                        ProvisionerJobStatus.SUCCEEDED,
-                        workerID = null,
-                        fileID = UUID.randomUUID(),
-                        tags = emptyMap(),
-                    ),
-                    BuildReason.INITIATOR,
-                    resources,
-                    deadline = null,
-                    WorkspaceStatus.RUNNING,
-                    dailyCost = 0,
+                latestBuild = build(
+                    workspaceID = wsId,
+                    workspaceName = name,
+                    ownerID = ownerId,
+                    ownerName = "owner-name",
+                    transition = transition,
+                    resources = agents.map{ resource(it.key, it.value) },
                 ),
                 outdated = false,
-                name,
+                name = name,
                 autostartSchedule = null,
                 ttlMillis = null,
                 lastUsedAt = Date().toInstant(),
+            )
+        }
+
+        fun build(workspaceID: UUID,
+                  workspaceName: String,
+                  ownerID: UUID,
+                  ownerName: String,
+                  transition: WorkspaceTransition = WorkspaceTransition.START,
+                  templateVersionID: UUID = UUID.randomUUID(),
+                  resources: List<WorkspaceResource> = emptyList()): WorkspaceBuild {
+            return WorkspaceBuild(
+                id = UUID.randomUUID(),
+                createdAt = Date().toInstant(),
+                updatedAt = Date().toInstant(),
+                workspaceID = workspaceID,
+                workspaceName = workspaceName,
+                workspaceOwnerID = ownerID,
+                workspaceOwnerName = ownerName,
+                templateVersionID = templateVersionID,
+                buildNumber = 0,
+                transition = transition,
+                initiatorID = UUID.randomUUID(),
+                initiatorUsername = ownerName,
+                job = ProvisionerJob(
+                    id = UUID.randomUUID(),
+                    createdAt = Date().toInstant(),
+                    startedAt = null,
+                    completedAt = null,
+                    canceledAt = null,
+                    error = null,
+                    ProvisionerJobStatus.SUCCEEDED,
+                    workerID = null,
+                    fileID = UUID.randomUUID(),
+                    tags = emptyMap(),
+                ),
+                reason = BuildReason.INITIATOR,
+                resources = resources,
+                deadline = Date().toInstant(),
+                status = WorkspaceStatus.RUNNING,
+                dailyCost = 0,
             )
         }
 
@@ -151,6 +169,20 @@ class DataGen {
                 createdByID = UUID.randomUUID(),
                 createdByName = "",
                 allowUserCancelWorkspaceJobs = true,
+            )
+        }
+
+        fun user(): User {
+            return User(
+                UUID.randomUUID(),
+                "tester",
+                "tester@example.com",
+                Instant.now(),
+                Instant.now(),
+                UserStatus.ACTIVE,
+                listOf(),
+                listOf(),
+                "",
             )
         }
     }

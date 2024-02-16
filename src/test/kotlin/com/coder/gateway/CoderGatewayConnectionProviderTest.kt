@@ -20,7 +20,7 @@ internal class CoderGatewayConnectionProviderTest {
 
     @Test
     fun getMatchingAgent() {
-        val ws = DataGen.workspace("ws", agents)
+        val ws = DataGen.workspace("ws", agents = agents)
 
         val tests = listOf(
             Pair(mapOf("agent" to "agent_name"), "9a920eee-47fb-4571-9501-e4b3120c12f2"),
@@ -41,7 +41,7 @@ internal class CoderGatewayConnectionProviderTest {
 
     @Test
     fun failsToGetMatchingAgent() {
-        val ws = DataGen.workspace("ws", agents)
+        val ws = DataGen.workspace("ws", agents = agents)
         val tests = listOf(
             Triple(emptyMap(), MissingArgumentException::class, "Unable to determine"),
             Triple(mapOf("agent" to ""), MissingArgumentException::class, "Unable to determine"),
@@ -68,7 +68,7 @@ internal class CoderGatewayConnectionProviderTest {
 
     @Test
     fun getsFirstAgentWhenOnlyOne() {
-        val ws = DataGen.workspace("ws", oneAgent)
+        val ws = DataGen.workspace("ws", agents = oneAgent)
         val tests = listOf(
             emptyMap(),
             mapOf("agent" to ""),
@@ -84,7 +84,7 @@ internal class CoderGatewayConnectionProviderTest {
 
     @Test
     fun failsToGetAgentWhenOnlyOne() {
-        val ws = DataGen.workspace("ws", oneAgent)
+        val ws = DataGen.workspace("ws", agents = oneAgent)
         val tests = listOf(
             Triple(mapOf("agent" to "ws"), IllegalArgumentException::class, "agent named"),
             Triple(mapOf("agent" to "ws.agent_name_3"), IllegalArgumentException::class, "agent named"),
