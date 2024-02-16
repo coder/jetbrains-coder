@@ -36,7 +36,6 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.imgscalr.Scalr
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
@@ -103,6 +102,11 @@ open class BaseCoderRestClient(
             .build().create(CoderV2RestFacade::class.java)
     }
 
+    private fun <T> error(action: String, res: retrofit2.Response<T>): String {
+        val details = res.errorBody()?.charStream()?.use{ it.readText() } ?: "no details provided"
+        return "Unable to $action: url=$url, code=${res.code()}, details=$details"
+    }
+
     /**
      * Authenticate and load information about the current user and the build
      * version.
@@ -122,11 +126,7 @@ open class BaseCoderRestClient(
     fun me(): User {
         val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
-            throw AuthenticationResponseException(
-                "Unable to authenticate to $url: code ${userResponse.code()}, ${
-                    userResponse.message().ifBlank { "has your token expired?" }
-                }"
-            )
+            throw AuthenticationResponseException(error("authenticate", userResponse))
         }
 
         return userResponse.body()!!
@@ -139,11 +139,7 @@ open class BaseCoderRestClient(
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
         if (!workspacesResponse.isSuccessful) {
-            throw WorkspaceResponseException(
-                "Unable to retrieve workspaces from $url: code ${workspacesResponse.code()}, reason: ${
-                    workspacesResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw WorkspaceResponseException(error("retrieve workspaces", workspacesResponse))
         }
 
         return workspacesResponse.body()!!.workspaces
@@ -169,11 +165,7 @@ open class BaseCoderRestClient(
     fun resources(workspace: Workspace): List<WorkspaceResource> {
         val resourcesResponse = retroRestClient.templateVersionResources(workspace.latestBuild.templateVersionID).execute()
         if (!resourcesResponse.isSuccessful) {
-            throw WorkspaceResponseException(
-                "Unable to retrieve template resources for ${workspace.name} from $url: code ${resourcesResponse.code()}, reason: ${
-                    resourcesResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw WorkspaceResponseException(error("retrieve resources for ${workspace.name}", resourcesResponse))
         }
         return resourcesResponse.body()!!
     }
@@ -181,7 +173,7 @@ open class BaseCoderRestClient(
     fun buildInfo(): BuildInfo {
         val buildInfoResponse = retroRestClient.buildInfo().execute()
         if (!buildInfoResponse.isSuccessful) {
-            throw java.lang.IllegalStateException("Unable to retrieve build information for $url, code: ${buildInfoResponse.code()}, reason: ${buildInfoResponse.message().ifBlank { "no reason provided" }}")
+            throw java.lang.IllegalStateException(error("retrieve build information", buildInfoResponse))
         }
         return buildInfoResponse.body()!!
     }
@@ -189,11 +181,7 @@ open class BaseCoderRestClient(
     private fun template(templateID: UUID): Template {
         val templateResponse = retroRestClient.template(templateID).execute()
         if (!templateResponse.isSuccessful) {
-            throw TemplateResponseException(
-                "Unable to retrieve template with ID $templateID from $url, code: ${templateResponse.code()}, reason: ${
-                    templateResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw TemplateResponseException(error("retrieve template with ID $templateID", templateResponse))
         }
         return templateResponse.body()!!
     }
@@ -202,11 +190,7 @@ open class BaseCoderRestClient(
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(
-                "Unable to build workspace $workspaceName on $url, code: ${buildResponse.code()}, reason: ${
-                    buildResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw WorkspaceResponseException(error("start workspace $workspaceName", buildResponse))
         }
 
         return buildResponse.body()!!
@@ -216,11 +200,7 @@ open class BaseCoderRestClient(
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(
-                "Unable to stop workspace $workspaceName on $url, code: ${buildResponse.code()}, reason: ${
-                    buildResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw WorkspaceResponseException(error("stop workspace $workspaceName", buildResponse))
         }
 
         return buildResponse.body()!!
@@ -245,11 +225,7 @@ open class BaseCoderRestClient(
             CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START, null, null, null, null)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(
-                "Unable to update workspace $workspaceName on $url, code: ${buildResponse.code()}, reason: ${
-                    buildResponse.message().ifBlank { "no reason provided" }
-                }"
-            )
+            throw WorkspaceResponseException(error("update workspace $workspaceName", buildResponse))
         }
 
         return buildResponse.body()!!

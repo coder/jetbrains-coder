@@ -30,24 +30,34 @@ import java.time.Instant
 import java.util.UUID
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
+import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
 
-class BaseHttpHandler(private val method: String,
+internal fun toJson(src: Any?): String {
+    return GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).create().toJson(src)
+}
+
+internal class BaseHttpHandler(private val method: String,
                       private val handler: (exchange: HttpExchange) -> Unit): HttpHandler {
     override fun handle(exchange: HttpExchange) {
         try {
             if (exchange.requestMethod != method) {
-                exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, 0)
+                val body = toJson(Response("Not allowed", "Expected $method but got ${exchange.requestMethod}")).toByteArray()
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, body.size.toLong())
+                exchange.responseBody.write(body)
             } else {
                 handler(exchange)
                 if (exchange.responseCode == -1) {
-                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, 0)
+                    val body = toJson(Response("Not found", "The requested resource could not be found")).toByteArray()
+                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, body.size.toLong())
+                    exchange.responseBody.write(body)
                 }
             }
         } catch (ex: Exception) {
             // If we get here it is because of developer error.
-            println(ex)
-            exchange.sendResponseHeaders(HttpURLConnection.HTTP_INTERNAL_ERROR, 0)
+            val body = toJson(Response("Developer error", ex.message ?: "unknown error")).toByteArray()
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, body.size.toLong())
+            exchange.responseBody.write(body)
         }
         exchange.close()
     }
@@ -63,10 +73,6 @@ class BaseCoderRestClientTest {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
         srv.start()
         return Pair(srv, "http://localhost:" + srv.address.port)
-    }
-
-    private fun toJson(src: Any?): String {
-        return GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).create().toJson(src)
     }
 
     private fun mockTLSServer(certName: String): Pair<HttpServer, String> {
@@ -226,10 +232,11 @@ class BaseCoderRestClientTest {
 
         // Fails to stop a non-existent workspace.
         val badWorkspace = DataGen.workspace("bad")
-        assertFailsWith(
+        val ex = assertFailsWith(
             exceptionClass = WorkspaceResponseException::class,
             block = { client.updateWorkspace(badWorkspace.id, badWorkspace.name, badWorkspace.latestBuild.transition, badWorkspace.templateID) })
         assertEquals(listOf(Pair("stop", badWorkspace.id)), actions)
+        assertContains(ex.message.toString(), "The requested resource could not be found")
         actions.clear()
 
         // When workspace is started it should stop first.
