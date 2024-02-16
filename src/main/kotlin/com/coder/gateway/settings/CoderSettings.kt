@@ -40,8 +40,8 @@ open class CoderSettings(
      */
     fun dataDir(url: URL): Path {
         val dir = if (state.dataDirectory.isBlank()) dataDir
-        else Path.of(expand(state.dataDirectory)).toAbsolutePath()
-        return withHost(dir, url)
+        else Path.of(expand(state.dataDirectory))
+        return withHost(dir, url).toAbsolutePath()
     }
 
     /**
@@ -67,8 +67,8 @@ open class CoderSettings(
     fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
         val binaryName = getCoderCLIForOS(getOS(), getArch())
         val dir = if (forceDownloadToData || state.binaryDirectory.isBlank()) dataDir(url)
-        else withHost(Path.of(expand(state.binaryDirectory)).toAbsolutePath(), url)
-        return dir.resolve(binaryName)
+        else withHost(Path.of(expand(state.binaryDirectory)), url)
+        return dir.resolve(binaryName).toAbsolutePath()
     }
 
     /**

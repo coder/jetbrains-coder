@@ -19,11 +19,11 @@ internal class CoderSettingsTest {
         val url = URL("http://localhost")
         val home = Path.of(System.getProperty("user.home"))
 
-        state.binaryDirectory = "~/coder-gateway-test/expand-bin-dir"
+        state.binaryDirectory = Path.of("~/coder-gateway-test/expand-bin-dir").toString()
         var expected = home.resolve("coder-gateway-test/expand-bin-dir/localhost")
         assertEquals(expected.toAbsolutePath(), settings.binPath(url).parent)
 
-        state.dataDirectory = "~/coder-gateway-test/expand-data-dir"
+        state.dataDirectory = Path.of("~/coder-gateway-test/expand-data-dir").toString()
         expected = home.resolve("coder-gateway-test/expand-data-dir/localhost")
         assertEquals(expected.toAbsolutePath(), settings.dataDir(url))
     }
