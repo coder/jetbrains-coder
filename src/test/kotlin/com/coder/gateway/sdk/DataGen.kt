@@ -75,7 +75,10 @@ class DataGen {
             )
         }
 
-        fun workspace(name: String, agents: Map<String, String> = emptyMap()): Workspace  {
+        fun workspace(
+            name: String,
+            agents: Map<String, String> = emptyMap(),
+            transition: WorkspaceTransition = WorkspaceTransition.START): Workspace  {
             val wsId = UUID.randomUUID()
             val ownerId = UUID.randomUUID()
             val resources: List<WorkspaceResource> = agents.map{ resource(it.key, it.value) }
@@ -100,7 +103,7 @@ class DataGen {
                     "owner-name",
                     templateVersionID = UUID.randomUUID(),
                     buildNumber = 0,
-                    WorkspaceTransition.START,
+                    transition,
                     initiatorID = UUID.randomUUID(),
                     "initiator-name",
                     ProvisionerJob(
@@ -126,6 +129,28 @@ class DataGen {
                 autostartSchedule = null,
                 ttlMillis = null,
                 lastUsedAt = Date().toInstant(),
+            )
+        }
+
+        fun template(name: String): Template {
+            return Template(
+                id = UUID.randomUUID(),
+                createdAt = Date().toInstant(),
+                updatedAt = Date().toInstant(),
+                organizationIterator = UUID.randomUUID(),
+                name = name,
+                displayName = name,
+                provisioner = ProvisionerType.ECHO,
+                activeVersionID = UUID.randomUUID(),
+                workspaceOwnerCount = 0,
+                activeUserCount = 0,
+                buildTimeStats = emptyMap(),
+                description = "",
+                icon = "",
+                defaultTTLMillis = 0,
+                createdByID = UUID.randomUUID(),
+                createdByName = "",
+                allowUserCancelWorkspaceJobs = true,
             )
         }
     }

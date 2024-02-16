@@ -8,6 +8,7 @@ import com.coder.gateway.sdk.v2.models.*
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
@@ -30,6 +31,17 @@ import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
 import kotlin.test.assertFailsWith
 
+enum class SpyAction {
+    GET_WORKSPACES,
+    GET_ME,
+    GET_WORKSPACE,
+    GET_TEMPLATE,
+    GET_RESOURCES,
+    STOP_WORKSPACE,
+    START_WORKSPACE,
+    UPDATE_WORKSPACE,
+}
+
 class BaseCoderRestClientTest {
     data class TestWorkspace(var workspace: Workspace, var resources: List<WorkspaceResource>? = emptyList())
 
@@ -40,32 +52,75 @@ class BaseCoderRestClientTest {
      * hardcode IDs everywhere since you cannot use variables in the where
      * blocks).
      */
-    private fun mockServer(workspaces: List<TestWorkspace>, spy: ((exchange: HttpExchange) -> Unit)? = null): Pair<HttpServer, String> {
+    private fun mockServer(
+        workspaces: List<TestWorkspace>,
+        templates: List<Template> = emptyList(),
+        spy: ((action: SpyAction, id: UUID?) -> Unit)? = null): Pair<HttpServer, String> {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
-        addServerContext(srv, workspaces, spy)
+        addServerContext(srv, workspaces, templates, spy)
         srv.start()
         return Pair(srv, "http://localhost:" + srv.address.port)
     }
 
     private val resourceEndpoint = "/api/v2/templateversions/([^/]+)/resources".toRegex()
+    private val templateEndpoint = "/api/v2/templates/([^/]+)".toRegex()
+    private val buildEndpoint = "/api/v2/workspaces/([^/]+)/builds".toRegex()
 
     private fun toJson(src: Any?): String {
         return GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).create().toJson(src)
     }
 
-    private fun handleExchange(exchange: HttpExchange, workspaces: List<TestWorkspace>): Pair<Int, String> {
-        val matches = resourceEndpoint.find(exchange.requestURI.path)
-        if (matches != null) {
+    private fun handleExchange(
+        exchange: HttpExchange,
+        workspaces: List<TestWorkspace>,
+        templates: List<Template>,
+        spy: ((action: SpyAction, id: UUID?) -> Unit)?): Pair<Int, String> {
+        var matches = resourceEndpoint.find(exchange.requestURI.path)
+        if (exchange.requestMethod == "GET" && matches != null) {
             val templateVersionId = UUID.fromString(matches.destructured.toList()[0])
-            val ws = workspaces.first { it.workspace.latestBuild.templateVersionID == templateVersionId }
-            return Pair(HttpURLConnection.HTTP_OK, toJson(ws.resources))
+            spy?.invoke(SpyAction.GET_RESOURCES, templateVersionId)
+            val ws = workspaces.firstOrNull { it.workspace.latestBuild.templateVersionID == templateVersionId }
+            if (ws != null) {
+                return Pair(HttpURLConnection.HTTP_OK, toJson(ws.resources))
+            }
+        }
+
+        matches = templateEndpoint.find(exchange.requestURI.path)
+        if (exchange.requestMethod == "GET" && matches != null) {
+            val templateId = UUID.fromString(matches.destructured.toList()[0])
+            spy?.invoke(SpyAction.GET_TEMPLATE, templateId)
+            val template = templates.firstOrNull { it.id == templateId }
+            if (template != null) {
+                return Pair(HttpURLConnection.HTTP_OK, toJson(template))
+            }
+        }
+
+        matches = buildEndpoint.find(exchange.requestURI.path)
+        if (exchange.requestMethod == "POST" && matches != null) {
+            val workspaceId = UUID.fromString(matches.destructured.toList()[0])
+            val json = Gson().fromJson(InputStreamReader(exchange.requestBody), CreateWorkspaceBuildRequest::class.java)
+            if (json.templateVersionID != null) {
+                spy?.invoke(SpyAction.UPDATE_WORKSPACE, workspaceId)
+            } else {
+                when (json.transition) {
+                    WorkspaceTransition.START -> spy?.invoke(SpyAction.START_WORKSPACE, workspaceId)
+                    WorkspaceTransition.STOP -> spy?.invoke(SpyAction.STOP_WORKSPACE, workspaceId)
+                    WorkspaceTransition.DELETE -> Unit
+                }
+            }
+            val ws = workspaces.firstOrNull { it.workspace.id == workspaceId }
+            if (ws != null) {
+                return Pair(HttpURLConnection.HTTP_CREATED, toJson(ws.workspace))
+            }
         }
 
         when (exchange.requestURI.path) {
             "/api/v2/workspaces" -> {
+                spy?.invoke(SpyAction.GET_WORKSPACES, null)
                 return Pair(HttpsURLConnection.HTTP_OK, toJson(WorkspacesResponse(workspaces.map{ it.workspace }, workspaces.size)))
             }
             "/api/v2/users/me" -> {
+                spy?.invoke(SpyAction.GET_ME, null)
                 val user = User(
                     UUID.randomUUID(),
                     "tester",
@@ -83,13 +138,16 @@ class BaseCoderRestClientTest {
         return Pair(HttpsURLConnection.HTTP_NOT_FOUND, "not found")
     }
 
-    private fun addServerContext(srv: HttpServer, workspaces: List<TestWorkspace> = emptyList(), spy: ((exchange: HttpExchange) -> Unit)? = null) {
+    private fun addServerContext(
+        srv: HttpServer,
+        workspaces: List<TestWorkspace> = emptyList(),
+        templates: List<Template> = emptyList(),
+        spy: ((action: SpyAction, id: UUID?) -> Unit)? = null) {
         srv.createContext("/")  { exchange ->
-            spy?.invoke(exchange)
             var code: Int
             var response: String
             try {
-                val p = handleExchange(exchange, workspaces)
+                val p = handleExchange(exchange, workspaces, templates, spy)
                 code = p.first
                 response = p.second
             } catch (ex: Exception) {
@@ -204,6 +262,49 @@ class BaseCoderRestClientTest {
     }
 
     @Test
+    fun testUpdate() {
+        val actions = mutableListOf<Pair<SpyAction, UUID?>>()
+        val template = DataGen.template("template")
+        val workspaces = listOf(TestWorkspace(DataGen.workspace("ws1")),
+            TestWorkspace(DataGen.workspace("ws2", transition = WorkspaceTransition.STOP)))
+        val (srv, url) = mockServer(workspaces, listOf(template)) { action, id ->
+            actions.add(Pair(action, id))
+        }
+        val client = BaseCoderRestClient(URL(url), "token")
+
+        // Fails to stop a non-existent workspace.
+        val badWorkspaceId = UUID.randomUUID()
+        assertFailsWith(
+            exceptionClass = Exception::class,
+            block = { client.updateWorkspace(badWorkspaceId, "name", WorkspaceTransition.START, template.id) })
+        assertEquals(listOf(Pair(SpyAction.STOP_WORKSPACE, badWorkspaceId)), actions)
+        actions.clear()
+
+        // When workspace is started it should stop first.
+        with(workspaces[0].workspace) {
+            client.updateWorkspace(this.id, this.name, this.latestBuild.transition, template.id)
+            val expected: List<Pair<SpyAction, UUID?>> = listOf(
+                Pair(SpyAction.STOP_WORKSPACE, this.id),
+                Pair(SpyAction.GET_TEMPLATE, template.id),
+                Pair(SpyAction.UPDATE_WORKSPACE, this.id))
+            assertEquals(expected, actions)
+            actions.clear()
+        }
+
+        // When workspace is stopped it will not stop first.
+        with(workspaces[1].workspace) {
+            client.updateWorkspace(this.id, this.name, this.latestBuild.transition, template.id)
+            val expected: List<Pair<SpyAction, UUID?>> = listOf(
+                Pair(SpyAction.GET_TEMPLATE, template.id),
+                Pair(SpyAction.UPDATE_WORKSPACE, this.id))
+            assertEquals(expected, actions)
+            actions.clear()
+        }
+
+        srv.stop(0)
+    }
+
+    @Test
     fun testValidSelfSignedCert() {
         val settings = CoderSettings(CoderSettingsState(
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
@@ -284,4 +385,3 @@ class BaseCoderRestClientTest {
         srv2.stop(0)
     }
 }
-
