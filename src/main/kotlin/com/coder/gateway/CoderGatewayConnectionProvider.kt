@@ -93,7 +93,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(client.agentNames())
+            cli.configSsh(client.agentNames(workspaces))
 
             // TODO: Ask for these if missing.  Maybe we can reuse the second
             //  step of the wizard?  Could also be nice if we automatically used

@@ -170,9 +170,12 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         val deploymentURL = wizardModel.coderURL.toURL()
         val selectedItem = wizardModel.selectedListItem
-        if (selectedItem?.agent == null) {
+        val cli = wizardModel.cliManager
+        val client = wizardModel.client
+        val workspaces = wizardModel.workspaces
+        if (selectedItem?.agent == null || cli == null || client == null || workspaces == null) {
             // TODO: Should be impossible, tweak the types/flow to enforce this.
-            logger.warn("No agent was selected. Please go back to the previous step and select an agent")
+            logger.warn("Failed to read data from previous step; this is a developer error")
             return
         }
 
@@ -183,6 +186,12 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
 
         ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
             try {
+                logger.info("Configuring Coder CLI...")
+                cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
+                withContext(Dispatchers.IO) {
+                    cli.configSsh(client.agentNames(workspaces))
+                }
+
                 val ides = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
                         logger.info("Connecting with SSH and uploading worker if missing... (attempt $attempt)")

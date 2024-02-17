@@ -3,7 +3,6 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.CoderSupportedVersions
-import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
@@ -88,8 +87,6 @@ private const val SESSION_TOKEN = "session-token"
 class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var localWizardModel = CoderWorkspacesWizardModel()
-    private var client: CoderRestClient? = null
-    private var cliManager: CoderCLIManager? = null
     private val settings: CoderSettingsService = service<CoderSettingsService>()
 
     private val appPropertiesService: PropertiesComponent = service()
@@ -227,7 +224,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class GoToDashboardAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (c != null) {
                 BrowserUtil.browse(c.url)
             }
@@ -237,7 +234,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class GoToTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
@@ -248,7 +245,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StartWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
@@ -268,7 +265,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class UpdateWorkspaceTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
@@ -290,7 +287,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StopWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
@@ -310,7 +307,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class CreateWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = client
+            val c = localWizardModel.client
             if (c != null) {
                 BrowserUtil.browse(c.url.toURI().resolve("/templates"))
             }
@@ -350,8 +347,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     private fun updateWorkspaceActions() {
-        goToDashboardAction.isEnabled = client != null
-        createWorkspaceAction.isEnabled = client != null
+        goToDashboardAction.isEnabled = localWizardModel.client != null
+        createWorkspaceAction.isEnabled = localWizardModel.client != null
         goToTemplateAction.isEnabled = tableOfWorkspaces.selectedObject != null
         when (tableOfWorkspaces.selectedObject?.workspace?.latestBuild?.status) {
             WorkspaceStatus.RUNNING -> {
@@ -417,8 +414,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         onAuthFailure: (() -> Unit)? = null,
     ): Job {
         // Clear out old deployment details.
-        cliManager = null
-        client = null
+        localWizardModel.cliManager = null
+        localWizardModel.client = null
         poller?.cancel()
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
         tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
@@ -430,7 +427,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             try {
                 this.indicator.text = "Authenticating client..."
                 val authedClient = authenticate(deploymentURL, token.first)
-                client = authedClient
+                localWizardModel.client = authedClient
 
                 // Remember these in order to default to them for future attempts.
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
@@ -452,7 +449,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
 
-                cliManager = cli
+                localWizardModel.cliManager = cli
                 tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
                 tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
             } catch (e: Exception) {
@@ -575,7 +572,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private suspend fun loadWorkspaces() {
         val ws = withContext(Dispatchers.IO) {
             val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
-            val clientNow = client ?: return@withContext emptySet()
+            val clientNow = localWizardModel.client ?: return@withContext emptySet()
             try {
                 val ws = clientNow.workspaces()
                 val ams = ws.flatMap { it.toAgentList() }
@@ -609,38 +606,35 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
-        wizardModel.apply {
-            coderURL = localWizardModel.coderURL
-            token = localWizardModel.token
-        }
-
         // These being null would be a developer error.
         val selected = tableOfWorkspaces.selectedObject
-        val cli = cliManager
-        val clientNow = client
         if (selected?.agent == null) {
             logger.error("No selected agent")
             return false
-        } else if (cli == null) {
-            logger.error("No configured CLI")
-            return false
-        } else if (clientNow == null) {
-            logger.error("No configured client")
-            return false
         }
 
-        wizardModel.selectedListItem = selected
+        // Apply values that will be used in the next step.
+        wizardModel.apply {
+            coderURL = localWizardModel.coderURL
+            token = localWizardModel.token
+            selectedListItem = selected
+            // The next step will use these to configure the CLI.  We could do it
+            // here but then we would need to show another progress indicator.
+            // The next step already has one so might as well use it.
+            cliManager = localWizardModel.cliManager
+            client = localWizardModel.client
+            // Pass along the latest workspaces so the next step can configure
+            // the CLI a bit faster, otherwise it would have to fetch the
+            // workspaces again.
+            workspaces = tableOfWorkspaces.items.map { it.workspace }
+            // The config directory can be used to pull the URL and token in
+            // order to query this workspace's status in other flows, for
+            // example from the recent connections screen.
+            configDirectory = cliManager?.coderConfigPath?.toString() ?: ""
+        }
         poller?.cancel()
 
-        logger.info("Configuring Coder CLI...")
-        cli.configSsh(clientNow.agentNames())
-
-        // The config directory can be used to pull the URL and token in
-        // order to query this workspace's status in other flows, for
-        // example from the recent connections screen.
-        wizardModel.configDirectory = cli.coderConfigPath.toString()
-
-        logger.info("Opening IDE and Project Location window for ${selected.name}")
+        logger.info("Opening IDE selection window for ${selected.name}")
         return true
     }
 
