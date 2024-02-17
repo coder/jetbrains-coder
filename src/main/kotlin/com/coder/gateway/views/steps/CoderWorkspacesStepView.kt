@@ -70,6 +70,7 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import java.time.Duration
 import javax.net.ssl.SSLHandshakeException
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -271,8 +272,47 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            c.updateWorkspace(workspace)
-                            loadWorkspaces()
+                            // Stop the workspace first if it is running.
+                            if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
+                                logger.info("Waiting for ${workspace.name} to stop before updating")
+                                c.stopWorkspace(workspace)
+                                loadWorkspaces()
+                                var elapsed = Duration.ofSeconds(0)
+                                val timeout = Duration.ofSeconds(1)
+                                val maxWait = Duration.ofMinutes(10)
+                                while (isActive) { // Wait for the workspace to fully stop.
+                                    delay(timeout.toMillis())
+                                    val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
+                                    when (val status = found?.workspace?.latestBuild?.status) {
+                                        WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
+                                            logger.info("Still waiting for ${workspace.name} to stop before updating")
+                                        }
+                                        WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
+                                        WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+                                        WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
+                                            logger.warn("Canceled ${workspace.name} update due to status change to $status")
+                                            break
+                                        }
+                                        null -> {
+                                            logger.warn("Canceled ${workspace.name} update because it no longer exists")
+                                            break
+                                        }
+                                        WorkspaceStatus.STOPPED -> {
+                                            logger.info("${workspace.name} has stopped; updating now")
+                                            c.updateWorkspace(workspace)
+                                            break
+                                        }
+                                    }
+                                    elapsed += timeout
+                                    if (elapsed > maxWait) {
+                                        logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
+                                        break
+                                    }
+                                }
+                            } else {
+                                c.updateWorkspace(workspace)
+                                loadWorkspaces()
+                            }
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not update workspace ${workspace.name}, reason: $e")
                         } catch (e: TemplateResponseException) {

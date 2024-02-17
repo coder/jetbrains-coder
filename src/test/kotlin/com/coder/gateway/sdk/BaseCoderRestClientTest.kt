@@ -235,26 +235,25 @@ class BaseCoderRestClientTest {
         })
 
         // Fails to stop a non-existent workspace.
-        val badWorkspace = DataGen.workspace("bad")
+        val badWorkspace = DataGen.workspace("bad", templates[0].id)
         val ex = assertFailsWith(
             exceptionClass = WorkspaceResponseException::class,
             block = { client.updateWorkspace(badWorkspace) })
-        assertEquals(listOf(Pair("stop", badWorkspace.id)), actions)
+        assertEquals(listOf(
+            Pair("get_template", badWorkspace.templateID),
+            Pair("update", badWorkspace.id)), actions)
         assertContains(ex.message.toString(), "The requested resource could not be found")
         actions.clear()
 
-        // When workspace is started it should stop first.
         with(workspaces[0]) {
             client.updateWorkspace(this)
             val expected = listOf(
-                Pair("stop", id),
                 Pair("get_template", templateID),
                 Pair("update", id))
             assertEquals(expected, actions)
             actions.clear()
         }
 
-        // When workspace is stopped it will not stop first.
         with(workspaces[1]) {
             client.updateWorkspace(this)
             val expected = listOf(

@@ -213,19 +213,16 @@ open class BaseCoderRestClient(
         return buildResponse.body()!!
     }
 
+    /**
+     * Start the workspace with the latest template version.  Best practice is
+     * to STOP a workspace before doing an update if it is started.
+     * 1. If the update changes parameters, the old template might be needed to
+     *    correctly STOP with the existing parameter values.
+     * 2. The agent gets a new ID and token on each START build.  Many template
+     *    authors are not diligent about making sure the agent gets restarted
+     *    with this information when we do two START builds in a row.
+     */
     fun updateWorkspace(workspace: Workspace): WorkspaceBuild {
-        // Best practice is to STOP a workspace before doing an update if it is
-        // started.
-        // 1. If the update changes parameters, the old template might be needed
-        //    to correctly STOP with the existing parameter values.
-        // 2. The agent gets a new ID and token on each START build.  Many
-        //    template authors are not diligent about making sure the agent gets
-        //    restarted with this information when we do two START builds in a
-        //    row.
-        if (workspace.latestBuild.transition == WorkspaceTransition.START) {
-            stopWorkspace(workspace)
-        }
-
         val template = template(workspace.templateID)
 
         val buildRequest =
