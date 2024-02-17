@@ -3,7 +3,9 @@ package com.coder.gateway.sdk
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.icons.toRetinaAwareIcon
 import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.sdk.convertors.ArchConverter
 import com.coder.gateway.sdk.convertors.InstantConverter
+import com.coder.gateway.sdk.convertors.OSConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -19,7 +21,9 @@ import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.util.Arch
 import com.coder.gateway.util.CoderHostnameVerifier
+import com.coder.gateway.util.OS
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
 import com.coder.gateway.util.getHeaders
@@ -59,7 +63,11 @@ open class BaseCoderRestClient(
     lateinit var buildVersion: String
 
     init {
-        val gson: Gson = GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).setPrettyPrinting().create()
+        val gson: Gson = GsonBuilder()
+            .registerTypeAdapter(Instant::class.java, InstantConverter())
+            .registerTypeAdapter(Arch::class.java, ArchConverter())
+            .registerTypeAdapter(OS::class.java, OSConverter())
+            .setPrettyPrinting().create()
 
         val socketFactory = coderSocketFactory(settings.tls)
         val trustManagers = coderTrustManagers(settings.tls.caPath)

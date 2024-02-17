@@ -1,8 +1,10 @@
 package com.coder.gateway.sdk.v2.models
 
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
 import com.google.gson.annotations.SerializedName
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 data class WorkspaceAgent(
     @SerializedName("id") val id: UUID,
@@ -15,9 +17,9 @@ data class WorkspaceAgent(
     @SerializedName("name") val name: String,
     @SerializedName("resource_id") val resourceID: UUID,
     @SerializedName("instance_id") val instanceID: String?,
-    @SerializedName("architecture") val architecture: String,
+    @SerializedName("architecture") val architecture: Arch?,
     @SerializedName("environment_variables") val envVariables: Map<String, String>,
-    @SerializedName("operating_system") val operatingSystem: String,
+    @SerializedName("operating_system") val operatingSystem: OS?,
     @SerializedName("startup_script") val startupScript: String?,
     @SerializedName("directory") val directory: String?,
     @SerializedName("expanded_directory") val expandedDirectory: String?,

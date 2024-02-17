@@ -3,11 +3,9 @@ package com.coder.gateway.sdk.v2.models
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.util.Arch
-import com.coder.gateway.util.OS
 import com.google.gson.annotations.SerializedName
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 
 /**
  * Represents a deployment of a template. It references a specific version and can be updated.
@@ -47,8 +45,8 @@ fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuil
             this.latestBuild.status,
             WorkspaceAndAgentStatus.from(this, agent),
             this.latestBuild.transition,
-            OS.from(agent.operatingSystem),
-            Arch.from(agent.architecture),
+            agent.operatingSystem,
+            agent.architecture,
             agent.expandedDirectory ?: agent.directory,
         )
 

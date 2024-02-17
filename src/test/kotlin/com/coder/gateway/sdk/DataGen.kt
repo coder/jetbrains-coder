@@ -3,8 +3,23 @@ package com.coder.gateway.sdk
 import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.sdk.v2.models.*
-import com.google.gson.annotations.SerializedName
+import com.coder.gateway.sdk.v2.models.BuildReason
+import com.coder.gateway.sdk.v2.models.ProvisionerJob
+import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
+import com.coder.gateway.sdk.v2.models.ProvisionerType
+import com.coder.gateway.sdk.v2.models.Template
+import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.UserStatus
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.sdk.v2.models.WorkspaceAgentLifecycleState
+import com.coder.gateway.sdk.v2.models.WorkspaceAgentStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceBuild
+import com.coder.gateway.sdk.v2.models.WorkspaceResource
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
+import com.coder.gateway.util.Arch
+import com.coder.gateway.util.OS
 import java.time.Instant
 import java.util.*
 
@@ -58,9 +73,9 @@ class DataGen {
                     agentName,
                     resourceID = UUID.randomUUID(),
                     instanceID = null,
-                    architecture = "arch",
+                    architecture = Arch.from("amd64"),
                     envVariables = emptyMap(),
-                    operatingSystem = "os",
+                    operatingSystem = OS.from("linux"),
                     startupScript = null,
                     directory = null,
                     expandedDirectory = null,
