@@ -71,6 +71,7 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 import java.time.Duration
+import java.util.*
 import javax.net.ssl.SSLHandshakeException
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -87,6 +88,7 @@ private const val SESSION_TOKEN = "session-token"
 
 class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
     private val cs = CoroutineScope(Dispatchers.Main)
+    private val jobs: MutableMap<UUID, Job> = mutableMapOf()
     private var localWizardModel = CoderWorkspacesWizardModel()
     private val settings: CoderSettingsService = service<CoderSettingsService>()
 
@@ -249,7 +251,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                cs.launch {
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
                             c.startWorkspace(workspace)
@@ -269,7 +272,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                cs.launch {
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
                             // Stop the workspace first if it is running.
@@ -278,7 +282,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                                 c.stopWorkspace(workspace)
                                 loadWorkspaces()
                                 var elapsed = Duration.ofSeconds(0)
-                                val timeout = Duration.ofSeconds(1)
+                                val timeout = Duration.ofSeconds(5)
                                 val maxWait = Duration.ofMinutes(10)
                                 while (isActive) { // Wait for the workspace to fully stop.
                                     delay(timeout.toMillis())
@@ -330,7 +334,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             val c = localWizardModel.client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
                 val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                cs.launch {
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
                             c.stopWorkspace(workspace)
@@ -457,6 +462,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         localWizardModel.cliManager = null
         localWizardModel.client = null
         poller?.cancel()
+        jobs.forEach { it.value.cancel() }
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
         tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
         tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host))
@@ -555,6 +561,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
 
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
         poller?.cancel()
+        jobs.forEach { it.value.cancel() }
 
         poller = cs.launch {
             if (fetchNow) {
@@ -643,6 +650,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         super.onPrevious()
         logger.info("Going back to the main view")
         poller?.cancel()
+        jobs.forEach { it.value.cancel() }
     }
 
     override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
@@ -673,6 +681,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             configDirectory = cliManager?.coderConfigPath?.toString() ?: ""
         }
         poller?.cancel()
+        jobs.forEach { it.value.cancel() }
 
         logger.info("Opening IDE selection window for ${selected.name}")
         return true
