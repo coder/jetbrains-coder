@@ -1,12 +1,11 @@
 package com.coder.gateway
 
+import com.coder.gateway.sdk.DataGen
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-
-import com.coder.gateway.sdk.DataGen
-import java.util.UUID
 
 internal class CoderGatewayConnectionProviderTest {
     private val agents = mapOf(
@@ -35,7 +34,7 @@ internal class CoderGatewayConnectionProviderTest {
         )
 
         tests.forEach {
-            assertEquals(UUID.fromString(it.second), CoderGatewayConnectionProvider.getMatchingAgent(it.first, ws).agentID)
+            assertEquals(UUID.fromString(it.second), getMatchingAgent(it.first, ws).id)
         }
     }
 
@@ -61,7 +60,7 @@ internal class CoderGatewayConnectionProviderTest {
         tests.forEach {
             val ex = assertFailsWith(
                 exceptionClass = it.second,
-                block = { CoderGatewayConnectionProvider.getMatchingAgent(it.first, ws) })
+                block = { getMatchingAgent(it.first, ws).id })
             assertContains(ex.message.toString(), it.third)
         }
     }
@@ -78,7 +77,7 @@ internal class CoderGatewayConnectionProviderTest {
         )
 
         tests.forEach {
-            assertEquals(UUID.fromString("b0e4c54d-9ba9-4413-8512-11ca1e826a24"), CoderGatewayConnectionProvider.getMatchingAgent(it, ws).agentID)
+            assertEquals(UUID.fromString("b0e4c54d-9ba9-4413-8512-11ca1e826a24"), getMatchingAgent(it, ws).id)
         }
     }
 
@@ -95,7 +94,7 @@ internal class CoderGatewayConnectionProviderTest {
         tests.forEach {
             val ex = assertFailsWith(
                 exceptionClass = it.second,
-                block = { CoderGatewayConnectionProvider.getMatchingAgent(it.first, ws) })
+                block = { getMatchingAgent(it.first, ws).id })
             assertContains(ex.message.toString(), it.third)
         }
     }
@@ -116,7 +115,7 @@ internal class CoderGatewayConnectionProviderTest {
         tests.forEach {
             val ex = assertFailsWith(
                 exceptionClass = it.second,
-                block = { CoderGatewayConnectionProvider.getMatchingAgent(it.first, ws) })
+                block = { getMatchingAgent(it.first, ws).id })
             assertContains(ex.message.toString(), it.third)
         }
     }

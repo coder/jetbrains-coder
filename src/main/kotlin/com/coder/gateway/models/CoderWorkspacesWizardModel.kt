@@ -10,7 +10,7 @@ enum class TokenSource {
 data class CoderWorkspacesWizardModel(
     var coderURL: String = "https://coder.example.com",
     var token: Pair<String, TokenSource>? = null,
-    var selectedWorkspace: WorkspaceAgentModel? = null,
+    var selectedListItem: WorkspaceAgentListModel? = null,
     var useExistingToken: Boolean = false,
     var configDirectory: String = "",
 )

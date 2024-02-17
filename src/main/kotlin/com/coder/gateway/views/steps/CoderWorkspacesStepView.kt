@@ -3,26 +3,25 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.CoderSupportedVersions
+import com.coder.gateway.cli.CoderCLIManager
+import com.coder.gateway.cli.ensureCLI
+import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
-import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceVersionStatus
-import com.coder.gateway.cli.CoderCLIManager
-import com.coder.gateway.util.SemVer
-import com.coder.gateway.util.InvalidVersionException
-import com.coder.gateway.util.OS
-import com.coder.gateway.cli.ex.ResponseException
-import com.coder.gateway.cli.ensureCLI
+import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
+import com.coder.gateway.sdk.v2.models.toAgentList
+import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.util.InvalidVersionException
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
-import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.sdk.v2.models.toAgentModels
-import com.coder.gateway.services.CoderSettingsService
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
@@ -115,8 +114,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            setNextButtonEnabled(selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS == OS.LINUX)
-            if (selectedObject?.agentStatus?.ready() == true && selectedObject?.agentOS != OS.LINUX) {
+            setNextButtonEnabled(selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX)
+            if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
                     showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
@@ -240,7 +239,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         override fun actionPerformed(p0: AnActionEvent) {
             val c = client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
             }
         }
@@ -251,11 +250,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         override fun actionPerformed(p0: AnActionEvent) {
             val c = client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            c.startWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            c.startWorkspace(workspace)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not build workspace ${workspace.name}, reason: $e")
@@ -271,11 +270,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         override fun actionPerformed(p0: AnActionEvent) {
             val c = client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            c.updateWorkspace(workspace.workspaceID, workspace.workspaceName, workspace.lastBuildTransition, workspace.templateID)
+                            c.updateWorkspace(workspace)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not update workspace ${workspace.name}, reason: $e")
@@ -293,11 +292,11 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         override fun actionPerformed(p0: AnActionEvent) {
             val c = client
             if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = tableOfWorkspaces.selectedObject as WorkspaceAgentModel
+                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
                 cs.launch {
                     withContext(Dispatchers.IO) {
                         try {
-                            c.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            c.stopWorkspace(workspace)
                             loadWorkspaces()
                         } catch (e: WorkspaceResponseException) {
                             logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
@@ -354,24 +353,17 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         goToDashboardAction.isEnabled = client != null
         createWorkspaceAction.isEnabled = client != null
         goToTemplateAction.isEnabled = tableOfWorkspaces.selectedObject != null
-        when (tableOfWorkspaces.selectedObject?.workspaceStatus) {
+        when (tableOfWorkspaces.selectedObject?.workspace?.latestBuild?.status) {
             WorkspaceStatus.RUNNING -> {
                 startWorkspaceAction.isEnabled = false
                 stopWorkspaceAction.isEnabled = true
-                when (tableOfWorkspaces.selectedObject?.status) {
-                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
-                    else -> updateWorkspaceTemplateAction.isEnabled = false
-                }
-
+                updateWorkspaceTemplateAction.isEnabled = tableOfWorkspaces.selectedObject?.workspace?.outdated == true
             }
 
             WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED -> {
                 startWorkspaceAction.isEnabled = true
                 stopWorkspaceAction.isEnabled = false
-                when (tableOfWorkspaces.selectedObject?.status) {
-                    WorkspaceVersionStatus.OUTDATED -> updateWorkspaceTemplateAction.isEnabled = true
-                    else -> updateWorkspaceTemplateAction.isEnabled = false
-                }
+                updateWorkspaceTemplateAction.isEnabled = tableOfWorkspaces.selectedObject?.workspace?.outdated == true
             }
 
             else -> {
@@ -586,10 +578,10 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             val clientNow = client ?: return@withContext emptySet()
             try {
                 val ws = clientNow.workspaces()
-                val ams = ws.flatMap { it.toAgentModels() }
+                val ams = ws.flatMap { it.toAgentList() }
                 ams.forEach {
                     cs.launch(Dispatchers.IO) {
-                        it.templateIcon = clientNow.loadIcon(it.templateIconPath, it.name)
+                        it.icon = clientNow.loadIcon(it.workspace.templateIcon, it.workspace.name)
                         withContext(Dispatchers.Main) {
                             tableOfWorkspaces.updateUI()
                         }
@@ -623,29 +615,32 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
 
         // These being null would be a developer error.
-        val workspace = tableOfWorkspaces.selectedObject
+        val selected = tableOfWorkspaces.selectedObject
         val cli = cliManager
-        if (workspace == null) {
-            logger.error("No selected workspace")
+        val clientNow = client
+        if (selected?.agent == null) {
+            logger.error("No selected agent")
             return false
         } else if (cli == null) {
             logger.error("No configured CLI")
             return false
+        } else if (clientNow == null) {
+            logger.error("No configured client")
+            return false
         }
 
-        wizardModel.selectedWorkspace = workspace
+        wizardModel.selectedListItem = selected
         poller?.cancel()
 
         logger.info("Configuring Coder CLI...")
-        val workspaces = client?.workspaces() ?: emptyList()
-        cli.configSsh((client?.agents(workspaces) ?: emptyList()).map { it.name })
+        cli.configSsh(clientNow.agentNames())
 
         // The config directory can be used to pull the URL and token in
         // order to query this workspace's status in other flows, for
         // example from the recent connections screen.
         wizardModel.configDirectory = cli.coderConfigPath.toString()
 
-        logger.info("Opening IDE and Project Location window for ${workspace.name}")
+        logger.info("Opening IDE and Project Location window for ${selected.name}")
         return true
     }
 
@@ -658,26 +653,26 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 }
 
-class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
+class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
     WorkspaceIconColumnInfo(""),
     WorkspaceNameColumnInfo("Name"),
     WorkspaceTemplateNameColumnInfo("Template"),
     WorkspaceVersionColumnInfo("Version"),
     WorkspaceStatusColumnInfo("Status")
 ) {
-    private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.templateName
+    private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? {
+            return item?.workspace?.templateName
         }
 
-        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : IconTableCellRenderer<String>() {
                 override fun getText(): String {
                     return ""
                 }
 
                 override fun getIcon(value: String, table: JTable?, row: Int): Icon {
-                    return item?.templateIcon ?: CoderIcons.UNKNOWN
+                    return item?.icon ?: CoderIcons.UNKNOWN
                 }
 
                 override fun isCenterAlignment() = true
@@ -692,18 +687,18 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
         }
     }
 
-    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.name
+    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? {
+            return item?.name
         }
 
-        override fun getComparator(): Comparator<WorkspaceAgentModel> {
+        override fun getComparator(): Comparator<WorkspaceAgentListModel> {
             return Comparator { a, b ->
                 a.name.compareTo(b.name, ignoreCase = true)
             }
         }
 
-        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
@@ -720,18 +715,18 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
     }
 
     private class WorkspaceTemplateNameColumnInfo(columnName: String) :
-        ColumnInfo<WorkspaceAgentModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.templateName
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? {
+            return item?.workspace?.templateName
         }
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> {
             return Comparator { a, b ->
-                a.templateName.compareTo(b.templateName, ignoreCase = true)
+                a.workspace.templateName.compareTo(b.workspace.templateName, ignoreCase = true)
             }
         }
 
-        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
@@ -746,12 +741,12 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
         }
     }
 
-    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
+    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(workspace: WorkspaceAgentListModel?): String? {
             return workspace?.status?.label
         }
 
-        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
@@ -766,26 +761,26 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
         }
     }
 
-    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentModel?): String? {
-            return workspace?.agentStatus?.label
+    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? {
+            return item?.status?.label
         }
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentModel> {
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> {
             return Comparator { a, b ->
-                a.agentStatus.label.compareTo(b.agentStatus.label, ignoreCase = true)
+                a.status.label.compareTo(b.status.label, ignoreCase = true)
             }
         }
 
-        override fun getRenderer(item: WorkspaceAgentModel?): TableCellRenderer {
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                private val workspace = item
+                private val item = item
                 override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
-                        foreground = workspace?.agentStatus?.statusColor()
-                        toolTipText = workspace?.agentStatus?.description
+                        foreground = this.item?.status?.statusColor()
+                        toolTipText = this.item?.status?.description
                     }
                     font = table.tableHeader.font
                     border = JBUI.Borders.empty(0, 8)
@@ -796,13 +791,13 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentModel>(
     }
 }
 
-class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
+class WorkspacesTable : TableView<WorkspaceAgentListModel>(WorkspacesTableModel()) {
     /**
      * Given either a workspace or an agent select in order of preference:
      * 1. That same agent or workspace.
      * 2. The first match for the workspace (workspace itself or first agent).
      */
-    fun selectItem(workspace: WorkspaceAgentModel?) {
+    fun selectItem(workspace: WorkspaceAgentListModel?) {
         val index = getNewSelection(workspace)
         if (index > -1) {
             selectionModel.addSelectionInterval(convertRowIndexToView(index), convertRowIndexToView(index))
@@ -811,16 +806,17 @@ class WorkspacesTable : TableView<WorkspaceAgentModel>(WorkspacesTableModel()) {
         }
     }
 
-    fun getNewSelection(oldSelection: WorkspaceAgentModel?): Int {
+    fun getNewSelection(oldSelection: WorkspaceAgentListModel?): Int {
         if (oldSelection == null) {
             return -1
         }
-        val index = listTableModel.items.indexOfFirst {
-            it.name == oldSelection.name && it.workspaceName == oldSelection.workspaceName
-        }
+        val index = listTableModel.items.indexOfFirst { it.name == oldSelection.name }
         if (index > -1) {
             return index
         }
-        return listTableModel.items.indexOfFirst { it.workspaceName == oldSelection.workspaceName }
+        // If there is no matching agent, try matching on just the workspace.
+        // It is possible it turned off so it no longer has agents displaying;
+        // in this case we want to keep it highlighted.
+        return listTableModel.items.indexOfFirst { it.workspace.name == oldSelection.workspace.name }
     }
 }

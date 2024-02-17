@@ -7,14 +7,14 @@ import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
-import com.coder.gateway.models.WorkspaceAgentModel
+import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.sdk.v2.models.toAgentModels
+import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.toWorkspaceParams
+import com.coder.gateway.util.toURL
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
@@ -29,7 +29,13 @@ import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.dsl.builder.*
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
+import com.intellij.ui.dsl.builder.BottomGap
+import com.intellij.ui.dsl.builder.RightGap
+import com.intellij.ui.dsl.builder.TopGap
+import com.intellij.ui.dsl.builder.actionButton
+import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -48,7 +54,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.Dimension
 import java.nio.file.Path
-import java.util.Locale
+import java.util.*
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
@@ -61,7 +67,7 @@ data class DeploymentInfo(
     // Null if unable to create the client (config directory did not exist).
     var client: BaseCoderRestClient? = null,
     // Null if we have not fetched workspaces yet.
-    var workspaces: List<WorkspaceAgentModel>? = null,
+    var items: List<WorkspaceAgentListModel>? = null,
     // Null if there have not been any errors yet.
     var error: String? = null,
 )
@@ -151,13 +157,13 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 val workspaceName = name?.split(".", limit = 2)?.first()
                 val configDirectory = connections.firstNotNullOfOrNull { it.configDirectory }
                 val deployment = deployments[configDirectory]
-                val workspace = deployment?.workspaces
-                    ?.firstOrNull { it.name == name || it.workspaceName == workspaceName  }
+                val item = deployment?.items
+                    ?.firstOrNull { it.name == name || it.workspace.name == workspaceName  }
                 row {
-                    (if (workspace != null) {
-                        icon(workspace.agentStatus.icon).applyToComponent {
-                            foreground = workspace.agentStatus.statusColor()
-                            toolTipText = workspace.agentStatus.description
+                    (if (item != null) {
+                        icon(item.status.icon).applyToComponent {
+                            foreground = item.status.statusColor()
+                            toolTipText = item.status.description
                         }
                     } else if (configDirectory == null || workspaceName == null) {
                         icon(CoderIcons.UNKNOWN).applyToComponent {
@@ -167,7 +173,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         icon(UIUtil.getBalloonErrorIcon()).applyToComponent {
                             toolTipText = deployment.error
                         }
-                    } else if (deployment?.workspaces != null) {
+                    } else if (deployment?.items != null) {
                         icon(UIUtil.getBalloonErrorIcon()).applyToComponent {
                             toolTipText = "Workspace $workspaceName does not exist"
                         }
@@ -184,20 +190,22 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     label("").resizableColumn().align(AlignX.FILL)
                     actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.start.button.tooltip"), "", CoderIcons.RUN) {
                         override fun actionPerformed(e: AnActionEvent) {
-                            if (workspace != null) {
-                                deployment.client?.startWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            if (item != null) {
+                                deployment.client?.startWorkspace(item.workspace)
                                 cs.launch { fetchWorkspaces() }
                             }
                         }
-                    }).applyToComponent { isEnabled = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED).contains(workspace?.workspaceStatus) }.gap(RightGap.SMALL)
+                    }).applyToComponent { isEnabled = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED).contains(item?.workspace?.latestBuild?.status) }
+                        .gap(RightGap.SMALL)
                     actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.stop.button.tooltip"), "", CoderIcons.STOP) {
                         override fun actionPerformed(e: AnActionEvent) {
-                            if (workspace != null) {
-                                deployment.client?.stopWorkspace(workspace.workspaceID, workspace.workspaceName)
+                            if (item != null) {
+                                deployment.client?.stopWorkspace(item.workspace)
                                 cs.launch { fetchWorkspaces() }
                             }
                         }
-                    }).applyToComponent { isEnabled = workspace?.workspaceStatus == WorkspaceStatus.RUNNING }.gap(RightGap.SMALL)
+                    }).applyToComponent { isEnabled = item?.workspace?.latestBuild?.status == WorkspaceStatus.RUNNING }
+                        .gap(RightGap.SMALL)
                     actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
                         override fun actionPerformed(e: AnActionEvent) {
                             BrowserUtil.browse(connections[0].webTerminalLink ?: "")
@@ -288,8 +296,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 .forEach { deployment ->
                     val url = deployment.client!!.url
                     try {
-                        deployment.workspaces = deployment.client!!
-                            .workspaces().flatMap { it.toAgentModels() }
+                        deployment.items = deployment.client!!
+                            .workspaces().flatMap { it.toAgentList() }
                     } catch (e: Exception) {
                         logger.error("Failed to fetch workspaces from $url", e)
                         deployment.error = e.message ?: "Request failed without further details"

@@ -2,7 +2,6 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.icons.toRetinaAwareIcon
-import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.sdk.convertors.ArchConverter
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.convertors.OSConverter
@@ -18,7 +17,6 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
-import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.Arch
@@ -154,13 +152,14 @@ open class BaseCoderRestClient(
     }
 
     /**
-     * Retrieves agents for the specified workspaces, including those that are
-     * off.
+     * Retrieves all the agent names for all workspaces, including those that
+     * are off.  Meant to be used when configuring SSH.
      */
-    fun agents(workspaces: List<Workspace>): List<WorkspaceAgentModel> {
-        return workspaces.flatMap {
-            val resources = resources(it)
-            it.toAgentModels(resources)
+    fun agentNames(): List<String> {
+        return workspaces().flatMap { ws ->
+            resources(ws).filter { it.agents != null }.flatMap { it.agents!! }.map {
+                "${ws.name}.${it.name}"
+            }
         }
     }
 
@@ -194,27 +193,27 @@ open class BaseCoderRestClient(
         return templateResponse.body()!!
     }
 
-    fun startWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
+    fun startWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
-        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("start workspace $workspaceName", buildResponse))
+            throw WorkspaceResponseException(error("start workspace ${workspace.name}", buildResponse))
         }
 
         return buildResponse.body()!!
     }
 
-    fun stopWorkspace(workspaceID: UUID, workspaceName: String): WorkspaceBuild {
+    fun stopWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
-        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("stop workspace $workspaceName", buildResponse))
+            throw WorkspaceResponseException(error("stop workspace ${workspace.name}", buildResponse))
         }
 
         return buildResponse.body()!!
     }
 
-    fun updateWorkspace(workspaceID: UUID, workspaceName: String, lastWorkspaceTransition: WorkspaceTransition, templateID: UUID): WorkspaceBuild {
+    fun updateWorkspace(workspace: Workspace): WorkspaceBuild {
         // Best practice is to STOP a workspace before doing an update if it is
         // started.
         // 1. If the update changes parameters, the old template might be needed
@@ -223,17 +222,17 @@ open class BaseCoderRestClient(
         //    template authors are not diligent about making sure the agent gets
         //    restarted with this information when we do two START builds in a
         //    row.
-        if (lastWorkspaceTransition == WorkspaceTransition.START) {
-            stopWorkspace(workspaceID, workspaceName)
+        if (workspace.latestBuild.transition == WorkspaceTransition.START) {
+            stopWorkspace(workspace)
         }
 
-        val template = template(templateID)
+        val template = template(workspace.templateID)
 
         val buildRequest =
             CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START, null, null, null, null)
-        val buildResponse = retroRestClient.createWorkspaceBuild(workspaceID, buildRequest).execute()
+        val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("update workspace $workspaceName", buildResponse))
+            throw WorkspaceResponseException(error("update workspace ${workspace.name}", buildResponse))
         }
 
         return buildResponse.body()!!

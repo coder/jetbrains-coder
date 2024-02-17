@@ -1,8 +1,6 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAndAgentStatus
-import com.coder.gateway.models.WorkspaceVersionStatus
+import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.v2.models.BuildReason
 import com.coder.gateway.sdk.v2.models.ProvisionerJob
 import com.coder.gateway.sdk.v2.models.ProvisionerJobStatus
@@ -18,6 +16,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
+import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import java.time.Instant
@@ -25,31 +24,10 @@ import java.util.*
 
 class DataGen {
     companion object {
-        // Create a random workspace agent model.  If the workspace name is omitted
-        // then return a model without any agent bits, similar to what
-        // toAgentModels() does if the workspace does not specify any agents.
-        // TODO: Maybe better to randomly generate the workspace and then call
-        //       toAgentModels() on it.  Also the way an "agent" model can have no
-        //       agent in it seems weird; can we refactor to remove
-        //       WorkspaceAgentModel and use the original structs from the API?
-        fun workspaceAgentModel(name: String, workspaceName: String = "", agentId: UUID = UUID.randomUUID()): WorkspaceAgentModel  {
-            return WorkspaceAgentModel(
-                if (workspaceName == "") null else agentId,
-                UUID.randomUUID(),
-                if (workspaceName == "") name else workspaceName,
-                if (workspaceName == "") name else ("$workspaceName.$name"),
-                UUID.randomUUID(),
-                "template-name",
-                "template-icon-path",
-                null,
-                WorkspaceVersionStatus.UPDATED,
-                WorkspaceStatus.RUNNING,
-                WorkspaceAndAgentStatus.READY,
-                WorkspaceTransition.START,
-                null,
-                null,
-                null
-            )
+        // Create a list of random agents for a random workspace.
+        fun agentList(workspaceName: String, vararg agentName: String): List<WorkspaceAgentListModel> {
+            val workspace = workspace(workspaceName, agents = agentName.associateWith { UUID.randomUUID().toString() })
+            return workspace.toAgentList()
         }
 
         fun resource(agentName: String, agentId: String): WorkspaceResource {

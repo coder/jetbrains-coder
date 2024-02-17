@@ -1,8 +1,6 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.coder.gateway.models.WorkspaceAgentModel
-import com.coder.gateway.models.WorkspaceAndAgentStatus
-import com.coder.gateway.models.WorkspaceVersionStatus
+import com.coder.gateway.models.WorkspaceAgentListModel
 import com.google.gson.annotations.SerializedName
 import java.time.Instant
 import java.util.*
@@ -29,48 +27,14 @@ data class Workspace(
     @SerializedName("last_used_at") val lastUsedAt: Instant,
 )
 
-fun Workspace.toAgentModels(resources: List<WorkspaceResource> = this.latestBuild.resources): Set<WorkspaceAgentModel> {
-    val wam = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-        val workspaceWithAgentName = "${this.name}.${agent.name}"
-        val wm = WorkspaceAgentModel(
-            agent.id,
-            this.id,
-            this.name,
-            workspaceWithAgentName,
-            this.templateID,
-            this.templateName,
-            this.templateIcon,
-            null,
-            WorkspaceVersionStatus.from(this),
-            this.latestBuild.status,
-            WorkspaceAndAgentStatus.from(this, agent),
-            this.latestBuild.transition,
-            agent.operatingSystem,
-            agent.architecture,
-            agent.expandedDirectory ?: agent.directory,
-        )
-
-        wm
-    }.toSet()
-    if (wam.isNullOrEmpty()) {
-        val wm = WorkspaceAgentModel(
-            null,
-            this.id,
-            this.name,
-            this.name,
-            this.templateID,
-            this.templateName,
-            this.templateIcon,
-            null,
-            WorkspaceVersionStatus.from(this),
-            this.latestBuild.status,
-            WorkspaceAndAgentStatus.from(this),
-            this.latestBuild.transition,
-            null,
-            null,
-            null
-        )
-        return setOf(wm)
+/**
+ * Return a list of agents combined with this workspace to display in the list.
+ * If the workspace has no agents, return just itself with a null agent.
+ */
+fun Workspace.toAgentList(resources: List<WorkspaceResource> = this.latestBuild.resources): List<WorkspaceAgentListModel> {
+    return resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+        WorkspaceAgentListModel(this, agent)
+    }.ifEmpty {
+        listOf(WorkspaceAgentListModel(this))
     }
-    return wam
 }

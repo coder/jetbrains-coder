@@ -1,11 +1,13 @@
 package com.coder.gateway.sdk
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
-import com.coder.gateway.sdk.v2.models.*
+import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
+import com.coder.gateway.sdk.v2.models.Response
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceResource
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
+import com.coder.gateway.sdk.v2.models.WorkspacesResponse
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
@@ -27,10 +29,12 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.Path
 import java.time.Instant
-import java.util.UUID
+import java.util.*
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
+import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 internal fun toJson(src: Any?): String {
@@ -234,14 +238,14 @@ class BaseCoderRestClientTest {
         val badWorkspace = DataGen.workspace("bad")
         val ex = assertFailsWith(
             exceptionClass = WorkspaceResponseException::class,
-            block = { client.updateWorkspace(badWorkspace.id, badWorkspace.name, badWorkspace.latestBuild.transition, badWorkspace.templateID) })
+            block = { client.updateWorkspace(badWorkspace) })
         assertEquals(listOf(Pair("stop", badWorkspace.id)), actions)
         assertContains(ex.message.toString(), "The requested resource could not be found")
         actions.clear()
 
         // When workspace is started it should stop first.
         with(workspaces[0]) {
-            client.updateWorkspace(id, name, latestBuild.transition, templateID)
+            client.updateWorkspace(this)
             val expected = listOf(
                 Pair("stop", id),
                 Pair("get_template", templateID),
@@ -252,7 +256,7 @@ class BaseCoderRestClientTest {
 
         // When workspace is stopped it will not stop first.
         with(workspaces[1]) {
-            client.updateWorkspace(id, name, latestBuild.transition, templateID)
+            client.updateWorkspace(this)
             val expected = listOf(
                 Pair("get_template", templateID),
                 Pair("update", id))

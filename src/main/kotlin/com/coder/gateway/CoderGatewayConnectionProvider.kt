@@ -2,18 +2,18 @@
 
 package com.coder.gateway
 
-import com.coder.gateway.models.TokenSource
-import com.coder.gateway.models.WorkspaceAgentModel
 import com.coder.gateway.cli.CoderCLIManager
+import com.coder.gateway.cli.ensureCLI
+import com.coder.gateway.models.TokenSource
+import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
-import com.coder.gateway.util.toURL
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.sdk.v2.models.toAgentModels
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -73,12 +73,13 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
             // TODO: Show a dropdown and ask for an agent if missing.
             val agent = getMatchingAgent(parameters, workspace)
+            val status = WorkspaceAndAgentStatus.from(workspace, agent)
 
-            if (agent.agentStatus.pending()) {
+            if (status.pending()) {
                 // TODO: Wait for the agent to be ready.
-                throw IllegalArgumentException("The agent \"${agent.name}\" is ${agent.agentStatus.toString().lowercase()}; please wait then try again")
-            } else if (!agent.agentStatus.ready()) {
-                throw IllegalArgumentException("The agent \"${agent.name}\" is ${agent.agentStatus.toString().lowercase()}; unable to connect")
+                throw IllegalArgumentException("The agent \"${agent.name}\" is ${status.toString().lowercase()}; please wait then try again")
+            } else if (!status.ready()) {
+                throw IllegalArgumentException("The agent \"${agent.name}\" is ${status.toString().lowercase()}; unable to connect")
             }
 
             val cli = ensureCLI(
@@ -92,7 +93,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(client.agents(workspaces).map { it.name })
+            cli.configSsh(client.agentNames())
 
             // TODO: Ask for these if missing.  Maybe we can reuse the second
             //  step of the wizard?  Could also be nice if we automatically used
@@ -194,49 +195,42 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
 
     companion object {
         val logger = Logger.getInstance(CoderGatewayConnectionProvider::class.java.simpleName)
+    }
+}
 
-        /**
-         * Return the agent matching the provided agent ID or name in the
-         * parameters.  The name is ignored if the ID is set.  If neither was
-         * supplied and the workspace has only one agent, return that.
-         * Otherwise throw an error.
-         *
-         * @throws [MissingArgumentException, IllegalArgumentException]
-         */
-        @JvmStatic
-        fun getMatchingAgent(parameters: Map<String, String?>, workspace: Workspace): WorkspaceAgentModel {
-            // A WorkspaceAgentModel will still be returned if there are no
-            // agents; in this case it represents the workspace instead.
-            // TODO: Seems confusing for something with "agent" in the name to
-            //       potentially not actually be an agent; can we replace
-            //       WorkspaceAgentModel with the original structs from the API?
-            val agents = workspace.toAgentModels()
-            if (agents.isEmpty() || (agents.size == 1 && agents.first().agentID == null)) {
-                throw IllegalArgumentException("The workspace \"${workspace.name}\" has no agents")
-            }
+/**
+ * Return the agent matching the provided agent ID or name in the parameters.
+ * The name is ignored if the ID is set.  If neither was supplied and the
+ * workspace has only one agent, return that.  Otherwise throw an error.
+ *
+ * @throws [MissingArgumentException, IllegalArgumentException]
+ */
+fun getMatchingAgent(parameters: Map<String, String?>, workspace: Workspace): WorkspaceAgent {
+    val agents = workspace.latestBuild.resources.filter { it.agents != null }.flatMap { it.agents!! }
+    if (agents.isEmpty()) {
+        throw IllegalArgumentException("The workspace \"${workspace.name}\" has no agents")
+    }
 
-            // If the agent is missing and the workspace has only one, use that.
-            // Prefer the ID over the name if both are set.
-            val agent = if (!parameters[AGENT_ID].isNullOrBlank())
-                agents.firstOrNull { it.agentID.toString() == parameters[AGENT_ID] }
-            else if (!parameters[AGENT_NAME].isNullOrBlank())
-                agents.firstOrNull { it.name == "${workspace.name}.${parameters[AGENT_NAME]}"}
-            else if (agents.size == 1) agents.first()
-            else null
+    // If the agent is missing and the workspace has only one, use that.
+    // Prefer the ID over the name if both are set.
+    val agent = if (!parameters[AGENT_ID].isNullOrBlank())
+        agents.firstOrNull { it.id.toString() == parameters[AGENT_ID] }
+    else if (!parameters[AGENT_NAME].isNullOrBlank())
+        agents.firstOrNull { it.name == parameters[AGENT_NAME]}
+    else if (agents.size == 1) agents.first()
+    else null
 
-            if (agent == null) {
-                if (!parameters[AGENT_ID].isNullOrBlank()) {
-                    throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters[AGENT_ID]}\"")
-                } else if (!parameters[AGENT_NAME].isNullOrBlank()){
-                    throw IllegalArgumentException("The workspace \"${workspace.name}\"does not have an agent named \"${parameters[AGENT_NAME]}\"")
-                } else {
-                    throw MissingArgumentException("Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because the workspace \"${workspace.name}\" has more than one agent")
-                }
-            }
-
-            return agent
+    if (agent == null) {
+        if (!parameters[AGENT_ID].isNullOrBlank()) {
+            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters[AGENT_ID]}\"")
+        } else if (!parameters[AGENT_NAME].isNullOrBlank()){
+            throw IllegalArgumentException("The workspace \"${workspace.name}\"does not have an agent named \"${parameters[AGENT_NAME]}\"")
+        } else {
+            throw MissingArgumentException("Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because the workspace \"${workspace.name}\" has more than one agent")
         }
     }
+
+    return agent
 }
 
 class MissingArgumentException(message: String) : IllegalArgumentException(message)
