@@ -3,14 +3,15 @@ package com.coder.gateway.cli
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
-import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.InvalidVersionException
-import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.OS
+import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.escape
+import com.coder.gateway.util.escapeSubcommand
 import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
@@ -228,7 +229,7 @@ class CoderCLIManager(
             escape(localBinaryPath.toString()),
             "--global-config", escape(coderConfigPath.toString()),
             if (settings.headerCommand.isNotBlank()) "--header-command" else null,
-            if (settings.headerCommand.isNotBlank()) escape(settings.headerCommand) else null,
+            if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
            "ssh", "--stdio")
         val blockContent = workspaceNames.joinToString(
             System.lineSeparator(),

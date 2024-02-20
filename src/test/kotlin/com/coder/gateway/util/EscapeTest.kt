@@ -19,4 +19,22 @@ internal class EscapeTest {
             assertEquals(it.value, escape(it.key))
         }
     }
+
+    @Test
+    fun testEscapeSubcommand() {
+        val tests = if (getOS() == OS.WINDOWS) {
+            mapOf(
+                "auth.exe --url=%CODER_URL%"        to "\"auth.exe --url=%%CODER_URL%%\"",
+                "\"my auth.exe\" --url=%CODER_URL%" to "\"\\\"my auth.exe\\\" --url=%%CODER_URL%%\"",
+            )
+        } else {
+            mapOf(
+                "auth --url=\$CODER_URL"              to "'auth --url=\$CODER_URL'",
+                "'my auth program' --url=\$CODER_URL" to "''\\''my auth program'\\'' --url=\$CODER_URL'",
+            )
+        }
+        tests.forEach {
+            assertEquals(it.value, escapeSubcommand(it.key))
+        }
+    }
 }

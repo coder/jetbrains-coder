@@ -3,16 +3,6 @@ package com.coder.gateway.cli
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.BeforeAll
-
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.InvalidVersionException
@@ -24,13 +14,22 @@ import com.coder.gateway.util.sha1
 import com.coder.gateway.util.toURL
 import com.google.gson.JsonSyntaxException
 import com.sun.net.httpserver.HttpServer
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.zeroturnaround.exec.InvalidExitValueException
+import org.zeroturnaround.exec.ProcessInitException
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.URL
 import java.nio.file.AccessDeniedException
 import java.nio.file.Path
-import org.zeroturnaround.exec.InvalidExitValueException
-import org.zeroturnaround.exec.ProcessInitException
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 internal class CoderCLIManagerTest {
     private fun mkbin(version: String): String {
@@ -253,8 +252,11 @@ internal class CoderCLIManagerTest {
             SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks", null),
             SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks", null),
             SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks", null),
-            SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command \"test\""),
-            SSHTest(listOf("header"), null, "header-command-windows", "blank", """C:\Program Files\My Header Command\"also has quotes"\HeaderCommand.exe"""),
+            if (getOS() == OS.WINDOWS) {
+                SSHTest(listOf("header"), null, "header-command-windows", "blank", """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""")
+            } else {
+                SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'")
+            }
         )
 
         val newlineRe = "\r?\n".toRegex()
