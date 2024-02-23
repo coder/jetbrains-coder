@@ -1,5 +1,7 @@
 package com.coder.gateway.services
 
+import com.coder.gateway.util.OS
+import com.coder.gateway.util.getOS
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.RoamingType
 import com.intellij.openapi.components.Service
@@ -56,6 +58,10 @@ class CoderSettingsState(
     // connections. This is useful when the hostname used to connect to the
     // Coder service does not match the hostname in the TLS certificate.
     var tlsAlternateHostname: String = "",
+    // Whether to add --disable-autostart to the proxy command.  This works
+    // around issues on macOS where it periodically wakes and Gateway
+    // reconnects, keeping the workspace constantly up.
+    var disableAutostart: Boolean = getOS() == OS.MAC,
 ) : PersistentStateComponent<CoderSettingsState> {
     override fun getState(): CoderSettingsState {
         return this

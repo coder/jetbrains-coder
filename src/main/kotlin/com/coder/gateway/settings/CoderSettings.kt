@@ -35,6 +35,9 @@ open class CoderSettings(
     val headerCommand: String
         get() = state.headerCommand
 
+    val disableAutostart: Boolean
+        get() = state.disableAutostart
+
     /**
      * Where the specified deployment should put its data.
      */

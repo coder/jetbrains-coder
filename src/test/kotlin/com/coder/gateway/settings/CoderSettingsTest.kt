@@ -1,15 +1,14 @@
 package com.coder.gateway.settings
 
 import com.coder.gateway.services.CoderSettingsState
-import kotlin.test.Test
-import kotlin.test.assertContains
-import kotlin.test.assertEquals
-
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath
 import java.net.URL
 import java.nio.file.Path
+import kotlin.test.Test
+import kotlin.test.assertContains
+import kotlin.test.assertEquals
 
 internal class CoderSettingsTest {
     @Test
@@ -179,14 +178,15 @@ internal class CoderSettingsTest {
         // Make sure the remaining settings are being conveyed.
         val settings = CoderSettings(
             CoderSettingsState(
-            enableDownloads = false,
-            enableBinaryDirectoryFallback = true,
-            headerCommand = "test header",
-            tlsCertPath = "tls cert path",
-            tlsKeyPath = "tls key path",
-            tlsCAPath = "tls ca path",
-            tlsAlternateHostname = "tls alt hostname",
-        )
+                enableDownloads = false,
+                enableBinaryDirectoryFallback = true,
+                headerCommand = "test header",
+                tlsCertPath = "tls cert path",
+                tlsKeyPath = "tls key path",
+                tlsCAPath = "tls ca path",
+                tlsAlternateHostname = "tls alt hostname",
+                disableAutostart = true,
+            )
         )
 
         assertEquals(false, settings.enableDownloads)
@@ -196,5 +196,6 @@ internal class CoderSettingsTest {
         assertEquals("tls key path", settings.tls.keyPath)
         assertEquals("tls ca path", settings.tls.caPath)
         assertEquals("tls alt hostname", settings.tls.altHostname)
+        assertEquals(true, settings.disableAutostart)
     }
 }
