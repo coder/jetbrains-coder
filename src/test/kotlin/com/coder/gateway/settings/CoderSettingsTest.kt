@@ -4,6 +4,7 @@ import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath
+import org.junit.Assert.assertNotEquals
 import java.net.URL
 import java.nio.file.Path
 import kotlin.test.Test
@@ -84,6 +85,7 @@ internal class CoderSettingsTest {
     fun testBinPath() {
         val state = CoderSettingsState()
         val settings = CoderSettings(state)
+        val settings2 = CoderSettings(state, binaryName = "foo-bar.baz")
         // The binary path should fall back to the data directory but that is
         // already tested in the data directory tests.
         val url = URL("http://localhost")
@@ -92,11 +94,16 @@ internal class CoderSettingsTest {
         state.binaryDirectory = "/tmp/coder-gateway-test/bin-dir"
         var expected = "/tmp/coder-gateway-test/bin-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url).parent)
+        assertEquals(Path.of(expected).toAbsolutePath(), settings2.binPath(url).parent)
 
         // Second argument bypasses override.
         state.dataDirectory = "/tmp/coder-gateway-test/data-dir"
         expected = "/tmp/coder-gateway-test/data-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url, true).parent)
+        assertEquals(Path.of(expected).toAbsolutePath(), settings2.binPath(url, true).parent)
+
+        assertNotEquals("foo-bar.baz", settings.binPath(url).fileName)
+        assertEquals("foo-bar.baz", settings2.binPath(url).fileName.toString())
     }
 
     @Test
