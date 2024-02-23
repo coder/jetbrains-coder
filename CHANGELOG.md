@@ -7,8 +7,24 @@
 ### Changed
 
 - Disable autostarting workspaces by default on macOS to prevent an issue where
-  it wakes periodically and keeps the workspace on.  This can be toggled via the
+  it wakes periodically and keeps the workspace on. This can be toggled via the
   "Disable autostart" setting.
+- CLI configuration is now reported in the progress indicator. Before it
+  happened in the background so it made the "Select IDE and project" button
+  appear to hang for a short time while it completed.
+
+### Fixed
+
+- Prevent environment variables being expanded too early in the header
+  command. This will make header commands like `auth --url=$CODER_URL` work.
+- Stop workspaces before updating them. This is necessary in some cases where
+  the update changes parameters and the old template needs to be stopped with
+  the existing parameter values first or where the template author was not
+  diligent about making sure the agent gets restarted with the new ID and token
+  when doing two build starts in a row.
+- Errors from API requests are now read and reported rather than only reporting
+  the HTTP status code.
+- Data and binary directories are expanded so things like `~` can be used now.
 
 ## 2.9.3 - 2024-02-10
 
