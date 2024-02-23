@@ -97,6 +97,13 @@ fun ensureCLI(
 }
 
 /**
+ * The supported features of the CLI.
+ */
+data class Features (
+    val disableAutostart: Boolean = false,
+)
+
+/**
  * Manage the CLI for a single deployment.
  */
 class CoderCLIManager(
@@ -200,10 +207,10 @@ class CoderCLIManager(
     /**
      * Configure SSH to use this binary.
      *
-     * This can take a version for testing purposes only.
+     * This can take supported features for testing purposes only.
      */
-    fun configSsh(workspaceNames: List<String>, version: SemVer? = tryVersion()) {
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, version))
+    fun configSsh(workspaceNames: List<String>, feats: Features = features) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, feats))
     }
 
     /**
@@ -221,8 +228,11 @@ class CoderCLIManager(
      * Given an existing SSH config modify it to add or remove the config for
      * this deployment and return the modified config or null if it does not
      * need to be modified.
+     *
+     * If features are not provided, calculate them based on the binary
+     * version.
      */
-    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>, version: SemVer?): String? {
+    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>, feats: Features): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
@@ -233,8 +243,7 @@ class CoderCLIManager(
             if (settings.headerCommand.isNotBlank()) "--header-command" else null,
             if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
            "ssh", "--stdio",
-            // Autostart on SSH was added in 2.5.0.
-            if (settings.disableAutostart && version != null && version >= SemVer(2, 5, 0)) "--disable-autostart" else null)
+            if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null)
         val blockContent = workspaceNames.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
@@ -391,6 +400,18 @@ class CoderCLIManager(
         logger.info("`$localBinaryPath $redactedArgs`: $stdout")
         return stdout
     }
+
+    val features: Features
+        get() {
+            val version = tryVersion()
+            return if (version == null) {
+                Features()
+            } else {
+                Features(
+                    // Autostart with SSH was added in 2.5.0.
+                    disableAutostart = version >= SemVer(2, 5, 0))
+            }
+        }
 
     companion object {
         val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)

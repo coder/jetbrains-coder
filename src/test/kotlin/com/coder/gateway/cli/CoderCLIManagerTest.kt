@@ -33,18 +33,18 @@ import kotlin.test.assertTrue
 
 internal class CoderCLIManagerTest {
     private fun mkbin(version: String): String {
-        return listOf("#!/bin/sh", """echo '{"version": "${version}"}'""")
+        return listOf("#!/bin/sh", """echo '{"version": "$version"}'""")
             .joinToString("\n")
     }
 
-    private fun mockServer(errorCode: Int = 0): Pair<HttpServer, URL> {
+    private fun mockServer(errorCode: Int = 0, version: String? = null): Pair<HttpServer, URL> {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
         srv.createContext("/") {exchange ->
             var code = HttpURLConnection.HTTP_OK
             // TODO: Is there some simple way to create an executable file on
             // Windows without having to execute something to generate said
             // executable or having to commit one to the repo?
-            var response = mkbin("${srv.address.port}.0.0")
+            var response = mkbin(version ?: "${srv.address.port}.0.0")
             val eTags = exchange.requestHeaders["If-None-Match"]
             if (exchange.requestURI.path == "/bin/override") {
                 code = HttpURLConnection.HTTP_OK
@@ -241,7 +241,7 @@ internal class CoderCLIManagerTest {
         val remove: String,
         val headerCommand: String?,
         val disableAutostart: Boolean = false,
-        val version: SemVer? = null,
+        val features: Features? = null,
     )
 
     @Test
@@ -265,11 +265,8 @@ internal class CoderCLIManagerTest {
             } else {
                 SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'")
             },
-            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, SemVer(2, 5, 0)),
-            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, SemVer(3, 5, 0)),
-            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, SemVer(2, 4, 9)),
-            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, SemVer(1, 0, 1)),
-            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true),
+            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, Features(true)),
+            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, Features(false)),
         )
 
         val newlineRe = "\r?\n".toRegex()
@@ -299,12 +296,12 @@ internal class CoderCLIManagerTest {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
 
             // Add workspaces.
-            ccm.configSsh(it.workspaces, it.version)
+            ccm.configSsh(it.workspaces, it.features ?: Features())
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
 
             // Remove configuration.
-            ccm.configSsh(emptyList(), it.version)
+            ccm.configSsh(emptyList(), it.features ?: Features())
 
             // Remove is the configuration we expect after removing.
             assertEquals(
@@ -552,6 +549,31 @@ internal class CoderCLIManagerTest {
         }
 
         srv.stop(0)
+    }
+
+    @Test
+    fun testFeatures() {
+        if (getOS() == OS.WINDOWS) {
+            return // Cannot execute mock binaries on Windows.
+        }
+
+        val tests = listOf(
+            Pair("2.5.0", Features(true)),
+            Pair("4.9.0", Features(true)),
+            Pair("2.4.9", Features(false)),
+            Pair("1.0.1", Features(false)),
+        )
+
+        tests.forEach {
+            val (srv, url) = mockServer(version = it.first)
+            val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
+                dataDirectory = tmpdir.resolve("features").toString()))
+            )
+            assertEquals(true, ccm.download())
+            assertEquals(it.second, ccm.features, "version: ${it.first}")
+
+            srv.stop(0)
+        }
     }
 
     companion object {
