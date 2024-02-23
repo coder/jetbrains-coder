@@ -22,8 +22,10 @@ open class CoderSettings(
     private val state: CoderSettingsState,
     // The location of the SSH config.  Defaults to ~/.ssh/config.
     val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
-    // Env allows overriding the default environment.
+    // Overrides the default environment (for tests).
     private val env: Environment = Environment(),
+    // Overrides the default binary name (for tests).
+    private val binaryName: String? = null,
 ) {
     val tls = CoderTLSSettings(state)
     val enableDownloads: Boolean
@@ -68,10 +70,10 @@ open class CoderSettings(
      * To where the specified deployment should download the binary.
      */
     fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
-        val binaryName = getCoderCLIForOS(getOS(), getArch())
+        val name = binaryName ?: getCoderCLIForOS(getOS(), getArch())
         val dir = if (forceDownloadToData || state.binaryDirectory.isBlank()) dataDir(url)
         else withHost(Path.of(expand(state.binaryDirectory)), url)
-        return dir.resolve(binaryName).toAbsolutePath()
+        return dir.resolve(name).toAbsolutePath()
     }
 
     /**

@@ -32,23 +32,34 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 internal class CoderCLIManagerTest {
-    private fun mkbin(version: String): String {
-        return listOf("#!/bin/sh", """echo '{"version": "$version"}'""")
-            .joinToString("\n")
+    /**
+     * Return the contents of a script that contains the string.
+     */
+    private fun mkbin(str: String): String {
+        return if (getOS() == OS.WINDOWS) {
+            // Must use a .bat extension for this to work.
+            listOf("@echo off", str)
+        } else {
+            listOf("#!/bin/sh", str)
+        }.joinToString(System.lineSeparator())
+    }
+
+    /**
+     * Return the contents of a script that outputs JSON containing the version.
+     */
+    private fun mkbinVersion(version: String): String {
+        return mkbin(echo("""{"version": "$version"}"""))
     }
 
     private fun mockServer(errorCode: Int = 0, version: String? = null): Pair<HttpServer, URL> {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
         srv.createContext("/") {exchange ->
             var code = HttpURLConnection.HTTP_OK
-            // TODO: Is there some simple way to create an executable file on
-            // Windows without having to execute something to generate said
-            // executable or having to commit one to the repo?
-            var response = mkbin(version ?: "${srv.address.port}.0.0")
+            var response = mkbinVersion(version ?: "${srv.address.port}.0.0")
             val eTags = exchange.requestHeaders["If-None-Match"]
             if (exchange.requestURI.path == "/bin/override") {
                 code = HttpURLConnection.HTTP_OK
-                response = mkbin("0.0.0")
+                response = mkbinVersion("0.0.0")
             } else if (!exchange.requestURI.path.startsWith("/bin/coder-")) {
                 code = HttpURLConnection.HTTP_NOT_FOUND
                 response = "not found"
@@ -159,13 +170,7 @@ internal class CoderCLIManagerTest {
 
         assertEquals(true, ccm.download())
 
-        // The mock does not serve a binary that works on Windows so do not
-        // actually execute.  Checking the contents works just as well as proof
-        // that the binary was correctly downloaded anyway.
-        assertContains(ccm.localBinaryPath.toFile().readText(), url.port.toString())
-        if (getOS() != OS.WINDOWS) {
-            assertEquals(SemVer(url.port.toLong(), 0, 0), ccm.version())
-        }
+        assertEquals(SemVer(url.port.toLong(), 0, 0), ccm.version())
 
         // It should skip the second attempt.
         assertEquals(false, ccm.download())
@@ -173,8 +178,7 @@ internal class CoderCLIManagerTest {
         // Should use the source override.
         ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
             binarySource = "/bin/override",
-            dataDirectory = tmpdir.resolve("mock-cli").toString()))
-        )
+            dataDirectory = tmpdir.resolve("mock-cli").toString())))
 
         assertEquals(true, ccm.download())
         assertContains(ccm.localBinaryPath.toFile().readText(), "0.0.0")
@@ -354,32 +358,52 @@ internal class CoderCLIManagerTest {
         }
     }
 
+    /**
+     * Return an echo command for the OS.
+     */
+    private fun echo(str: String): String {
+        return if (getOS() == OS.WINDOWS) {
+            "echo $str"
+        } else {
+            "echo '$str'"
+        }
+    }
+
+    /**
+     * Return an exit command for the OS.
+     */
+    private fun exit(code: Number): String {
+        return if (getOS() == OS.WINDOWS) {
+            "exit /b $code"
+        } else {
+            "exit $code"
+        }
+    }
+
     @Test
     fun testFailVersionParse() {
-        if (getOS() == OS.WINDOWS) {
-            return // Cannot execute mock binaries on Windows.
-        }
-
         val tests = mapOf(
-            null                                 to ProcessInitException::class,
-            """echo '{"foo": true, "baz": 1}'""" to MissingVersionException::class,
-            """echo '{"version: '"""             to JsonSyntaxException::class,
-            """echo '{"version": "invalid"}'"""  to InvalidVersionException::class,
-            "exit 0"                             to MissingVersionException::class,
-            "exit 1"                             to InvalidExitValueException::class,
+            null                                to ProcessInitException::class,
+            echo("""{"foo": true, "baz": 1}""") to MissingVersionException::class,
+            echo("""{"version: """)             to JsonSyntaxException::class,
+            echo("""{"version": "invalid"}""")  to InvalidVersionException::class,
+            exit(0)                             to MissingVersionException::class,
+            exit(1)                             to InvalidExitValueException::class,
         )
 
         val ccm = CoderCLIManager(URL("https://test.coder.parse-fail.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("bad-version").toString()))
-        )
+            binaryDirectory = tmpdir.resolve("bad-version").toString()),
+            binaryName = "coder.bat"))
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         tests.forEach {
             if (it.key == null) {
                 ccm.localBinaryPath.toFile().deleteRecursively()
             } else {
-                ccm.localBinaryPath.toFile().writeText("#!/bin/sh\n${it.key}")
-                ccm.localBinaryPath.toFile().setExecutable(true)
+                ccm.localBinaryPath.toFile().writeText(mkbin(it.key!!))
+                if (getOS() != OS.WINDOWS) {
+                    ccm.localBinaryPath.toFile().setExecutable(true)
+                }
             }
             assertFailsWith(
                 exceptionClass = it.value,
@@ -389,39 +413,37 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testMatchesVersion() {
-        if (getOS() == OS.WINDOWS) {
-            return
-        }
-
         val test = listOf(
             Triple(null, "v1.0.0", null),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v1.0.0", true),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v1.0.0-devel+b5b5b5b5", true),
-            Triple("""echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""", "v1.0.0-devel+b5b5b5b5", true),
-            Triple("""echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""", "v1.0.0", true),
-            Triple("""echo '{"version": "v1.0.0-devel+b5b5b5b5"}'""", "v1.0.0-devel+c6c6c6c6", true),
-            Triple("""echo '{"version": "v1.0.0-prod+b5b5b5b5"}'""", "v1.0.0-devel+b5b5b5b5", true),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v1.0.1", false),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v1.1.0", false),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v2.0.0", false),
-            Triple("""echo '{"version": "v1.0.0"}'""", "v0.0.0", false),
-            Triple("""echo '{"version": ""}'""", "v1.0.0", null),
-            Triple("""echo '{"version": "v1.0.0"}'""", "", null),
-            Triple("""echo '{"version'""", "v1.0.0", null),
-            Triple("""exit 0""", "v1.0.0", null),
-            Triple("""exit 1""", "v1.0.0", null))
+            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0", true),
+            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0-devel+b5b5b5b5", true),
+            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
+            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0", true),
+            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+c6c6c6c6", true),
+            Triple(echo("""{"version": "v1.0.0-prod+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
+            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.1", false),
+            Triple(echo("""{"version": "v1.0.0"}"""), "v1.1.0", false),
+            Triple(echo("""{"version": "v1.0.0"}"""), "v2.0.0", false),
+            Triple(echo("""{"version": "v1.0.0"}"""), "v0.0.0", false),
+            Triple(echo("""{"version": ""}"""), "v1.0.0", null),
+            Triple(echo("""{"version": "v1.0.0"}"""), "", null),
+            Triple(echo("""{"version"""), "v1.0.0", null),
+            Triple(exit(0), "v1.0.0", null),
+            Triple(exit(1), "v1.0.0", null))
 
         val ccm = CoderCLIManager(URL("https://test.coder.matches-version.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("matches-version").toString()))
-        )
+            binaryDirectory = tmpdir.resolve("matches-version").toString()),
+            binaryName = "coder.bat"))
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         test.forEach {
             if (it.first == null) {
                 ccm.localBinaryPath.toFile().deleteRecursively()
             } else {
-                ccm.localBinaryPath.toFile().writeText("#!/bin/sh\n${it.first}")
-                ccm.localBinaryPath.toFile().setExecutable(true)
+                ccm.localBinaryPath.toFile().writeText(mkbin(it.first!!))
+                if (getOS() != OS.WINDOWS) {
+                    ccm.localBinaryPath.toFile().setExecutable(true)
+                }
             }
 
             assertEquals(it.third, ccm.matchesVersion(it.second), it.first)
@@ -446,7 +468,9 @@ internal class CoderCLIManagerTest {
     @Test
     fun testEnsureCLI() {
         if (getOS() == OS.WINDOWS) {
-            return // Cannot execute mock binaries on Windows and setWritable() works differently.
+            // TODO: setWritable() does not work the same way on Windows but we
+            //       should test what we can.
+            return
         }
 
         val tests = listOf(
@@ -490,7 +514,7 @@ internal class CoderCLIManagerTest {
             // Create a binary in the regular location.
             if (it.version != null) {
                 settings.binPath(url).parent.toFile().mkdirs()
-                settings.binPath(url).toFile().writeText(mkbin(it.version))
+                settings.binPath(url).toFile().writeText(mkbinVersion(it.version))
                 settings.binPath(url).toFile().setExecutable(true)
             }
 
@@ -503,7 +527,7 @@ internal class CoderCLIManagerTest {
             // Create a binary in the fallback location.
             if (it.fallbackVersion != null) {
                 settings.binPath(url, true).parent.toFile().mkdirs()
-                settings.binPath(url, true).toFile().writeText(mkbin(it.fallbackVersion))
+                settings.binPath(url, true).toFile().writeText(mkbinVersion(it.fallbackVersion))
                 settings.binPath(url, true).toFile().setExecutable(true)
             }
 
@@ -553,10 +577,6 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testFeatures() {
-        if (getOS() == OS.WINDOWS) {
-            return // Cannot execute mock binaries on Windows.
-        }
-
         val tests = listOf(
             Pair("2.5.0", Features(true)),
             Pair("4.9.0", Features(true)),
@@ -567,8 +587,8 @@ internal class CoderCLIManagerTest {
         tests.forEach {
             val (srv, url) = mockServer(version = it.first)
             val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-                dataDirectory = tmpdir.resolve("features").toString()))
-            )
+                dataDirectory = tmpdir.resolve("features").toString()),
+                binaryName = "coder.bat"))
             assertEquals(true, ccm.download())
             assertEquals(it.second, ccm.features, "version: ${it.first}")
 
