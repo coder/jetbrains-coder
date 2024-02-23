@@ -41,7 +41,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import javax.net.ssl.X509TrustManager
 import javax.swing.Icon
 
