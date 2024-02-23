@@ -120,8 +120,7 @@ internal class CoderCLIManagerTest {
 
         val (srv, url) = mockServer()
         val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString()))
-        )
+            dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString())))
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.parent.toFile().setWritable(false)
@@ -146,8 +145,7 @@ internal class CoderCLIManagerTest {
         }
 
         val ccm = CoderCLIManager(url.toURL(), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("real-cli").toString()))
-        )
+            dataDirectory = tmpdir.resolve("real-cli").toString())))
 
         assertTrue(ccm.download())
         assertDoesNotThrow { ccm.version() }
@@ -165,11 +163,10 @@ internal class CoderCLIManagerTest {
     fun testDownloadMockCLI() {
         val (srv, url) = mockServer()
         var ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("mock-cli").toString()))
-        )
+            dataDirectory = tmpdir.resolve("mock-cli").toString()),
+            binaryName = "coder.bat"))
 
         assertEquals(true, ccm.download())
-
         assertEquals(SemVer(url.port.toLong(), 0, 0), ccm.version())
 
         // It should skip the second attempt.
@@ -189,8 +186,7 @@ internal class CoderCLIManagerTest {
     @Test
     fun testRunNonExistentBinary() {
         val ccm = CoderCLIManager(URL("https://foo"), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("does-not-exist").toString()))
-        )
+            dataDirectory = tmpdir.resolve("does-not-exist").toString())))
 
         assertFailsWith(
             exceptionClass = ProcessInitException::class,
@@ -201,8 +197,7 @@ internal class CoderCLIManagerTest {
     fun testOverwitesWrongVersion() {
         val (srv, url) = mockServer()
         val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("overwrite-cli").toString()))
-        )
+            dataDirectory = tmpdir.resolve("overwrite-cli").toString())))
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.toFile().writeText("cli")
@@ -329,9 +324,7 @@ internal class CoderCLIManagerTest {
                 sshConfigPath = tmpdir.resolve("configured$it.conf"))
             settings.sshConfigPath.parent.toFile().mkdirs()
             Path.of("src/test/fixtures/inputs").resolve("$it.conf").toFile().copyTo(
-                settings.sshConfigPath.toFile(),
-                true,
-            )
+                settings.sshConfigPath.toFile(), true)
 
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), settings)
 
@@ -349,8 +342,7 @@ internal class CoderCLIManagerTest {
 
         tests.forEach {
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), CoderSettings(CoderSettingsState(
-                headerCommand = it))
-            )
+                headerCommand = it)))
 
             assertFailsWith(
                 exceptionClass = Exception::class,

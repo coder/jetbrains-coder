@@ -36,8 +36,7 @@ internal class CoderSettingsTest {
             env = Environment(mapOf(
                 "LOCALAPPDATA"     to "/tmp/coder-gateway-test/localappdata",
                 "HOME"             to "/tmp/coder-gateway-test/home",
-                "XDG_DATA_HOME"    to "/tmp/coder-gateway-test/xdg-data"))
-        )
+                "XDG_DATA_HOME"    to "/tmp/coder-gateway-test/xdg-data")))
         var expected = when(getOS()) {
             OS.WINDOWS -> "/tmp/coder-gateway-test/localappdata/coder-gateway/localhost"
             OS.MAC -> "/tmp/coder-gateway-test/home/Library/Application Support/coder-gateway/localhost"
@@ -52,8 +51,7 @@ internal class CoderSettingsTest {
             settings = CoderSettings(state,
                 env = Environment(mapOf(
                     "XDG_DATA_HOME" to "",
-                    "HOME" to "/tmp/coder-gateway-test/home"))
-            )
+                    "HOME" to "/tmp/coder-gateway-test/home")))
             expected = "/tmp/coder-gateway-test/home/.local/share/coder-gateway/localhost"
 
             assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
@@ -66,8 +64,7 @@ internal class CoderSettingsTest {
             env = Environment(mapOf(
                 "LOCALAPPDATA"     to "/ignore",
                 "HOME"             to "/ignore",
-                "XDG_DATA_HOME"    to "/ignore"))
-        )
+                "XDG_DATA_HOME"    to "/ignore")))
         expected = "/tmp/coder-gateway-test/data-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url).parent)
@@ -110,11 +107,10 @@ internal class CoderSettingsTest {
     fun testCoderConfigDir() {
         val state = CoderSettingsState()
         var settings = CoderSettings(state,
-            env = Environment(
-                mapOf("APPDATA"          to "/tmp/coder-gateway-test/cli-appdata",
-                    "HOME"             to "/tmp/coder-gateway-test/cli-home",
-                    "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config"))
-        )
+            env = Environment(mapOf(
+                "APPDATA"        to "/tmp/coder-gateway-test/cli-appdata",
+                "HOME"             to "/tmp/coder-gateway-test/cli-home",
+                "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config")))
         var expected = when(getOS()) {
             OS.WINDOWS -> "/tmp/coder-gateway-test/cli-appdata/coderv2"
             OS.MAC -> "/tmp/coder-gateway-test/cli-home/Library/Application Support/coderv2"
@@ -125,25 +121,20 @@ internal class CoderSettingsTest {
         // Fall back to HOME on Linux.
         if (getOS() == OS.LINUX) {
             settings = CoderSettings(state,
-                env = Environment(
-                    mapOf("XDG_CONFIG_HOME" to "",
-                        "HOME" to "/tmp/coder-gateway-test/cli-home",
-                    ))
-            )
+                env = Environment(mapOf(
+                    "XDG_CONFIG_HOME" to "",
+                    "HOME" to "/tmp/coder-gateway-test/cli-home")))
             expected = "/tmp/coder-gateway-test/cli-home/.config/coderv2"
             assertEquals(Path.of(expected), settings.coderConfigDir)
         }
 
         // Read CODER_CONFIG_DIR.
         settings = CoderSettings(state,
-            env = Environment(
-                mapOf(
-                    "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
-                    "APPDATA"          to "/ignore",
-                    "HOME"             to "/ignore",
-                    "XDG_CONFIG_HOME"  to "/ignore",
-                ))
-        )
+            env = Environment(mapOf(
+                "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
+                "APPDATA"          to "/ignore",
+                "HOME"             to "/ignore",
+                "XDG_CONFIG_HOME"  to "/ignore")))
         expected = "/tmp/coder-gateway-test/coder-config-dir"
         assertEquals(Path.of(expected), settings.coderConfigDir)
     }
