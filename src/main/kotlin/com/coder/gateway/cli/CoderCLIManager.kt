@@ -116,7 +116,7 @@ class CoderCLIManager(
      * Download the CLI from the deployment if necessary.
      */
     fun download(): Boolean {
-        val etag = getBinaryETag()
+        val eTag = getBinaryETag()
         val conn = remoteBinaryURL.openConnection() as HttpURLConnection
         if (settings.headerCommand.isNotBlank()) {
             val headersFromHeaderCommand = getHeaders(deploymentURL, settings.headerCommand)
@@ -124,9 +124,9 @@ class CoderCLIManager(
                 conn.setRequestProperty(key, value)
             }
         }
-        if (etag != null) {
-            logger.info("Found existing binary at $localBinaryPath; calculated hash as $etag")
-            conn.setRequestProperty("If-None-Match", "\"$etag\"")
+        if (eTag != null) {
+            logger.info("Found existing binary at $localBinaryPath; calculated hash as $eTag")
+            conn.setRequestProperty("If-None-Match", "\"$eTag\"")
         }
         conn.setRequestProperty("Accept-Encoding", "gzip")
         if (conn is HttpsURLConnection) {
