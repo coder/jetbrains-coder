@@ -199,9 +199,11 @@ class CoderCLIManager(
 
     /**
      * Configure SSH to use this binary.
+     *
+     * This can take a version for testing purposes only.
      */
-    fun configSsh(workspaceNames: List<String>) {
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames))
+    fun configSsh(workspaceNames: List<String>, version: SemVer? = tryVersion()) {
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, version))
     }
 
     /**
@@ -220,7 +222,7 @@ class CoderCLIManager(
      * this deployment and return the modified config or null if it does not
      * need to be modified.
      */
-    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>): String? {
+    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>, version: SemVer?): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
@@ -230,7 +232,9 @@ class CoderCLIManager(
             "--global-config", escape(coderConfigPath.toString()),
             if (settings.headerCommand.isNotBlank()) "--header-command" else null,
             if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
-           "ssh", "--stdio")
+           "ssh", "--stdio",
+            // Autostart on SSH was added in 2.5.0.
+            if (settings.disableAutostart && version != null && version >= SemVer(2, 5, 0)) "--disable-autostart" else null)
         val blockContent = workspaceNames.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
@@ -238,7 +242,7 @@ class CoderCLIManager(
             transform = {
                 """
                 Host ${getHostName(deploymentURL, it)}
-                  ProxyCommand ${proxyArgs.joinToString(" ")} ${it}
+                  ProxyCommand ${proxyArgs.joinToString(" ")} $it
                   ConnectTimeout 0
                   StrictHostKeyChecking no
                   UserKnownHostsFile /dev/null
@@ -333,31 +337,36 @@ class CoderCLIManager(
     }
 
     /**
-     * Returns true if the CLI has the same major/minor/patch version as the
-     * provided version, false if it does not match, or null if the CLI version
-     * could not be determined because the binary could not be executed or the
-     * version could not be parsed.
+     * Like version(), but logs errors instead of throwing them.
      */
-    fun matchesVersion(rawBuildVersion: String): Boolean? {
-        val cliVersion = try {
+    private fun tryVersion(): SemVer? {
+        return try {
             version()
         } catch (e: Exception) {
             when (e) {
                 is JsonSyntaxException,
                 is InvalidVersionException -> {
                     logger.info("Got invalid version from $localBinaryPath: ${e.message}")
-                    return null
                 }
                 else -> {
                     // An error here most likely means the CLI does not exist or
                     // it executed successfully but output no version which
                     // suggests it is not the right binary.
                     logger.info("Unable to determine $localBinaryPath version: ${e.message}")
-                    return null
                 }
             }
+            null
         }
+    }
 
+    /**
+     * Returns true if the CLI has the same major/minor/patch version as the
+     * provided version, false if it does not match, or null if the CLI version
+     * could not be determined because the binary could not be executed or the
+     * version could not be parsed.
+     */
+    fun matchesVersion(rawBuildVersion: String): Boolean? {
+        val cliVersion = tryVersion() ?: return null
         val buildVersion = try {
             SemVer.parse(rawBuildVersion)
         } catch (e: InvalidVersionException) {

@@ -1,8 +1,8 @@
 package com.coder.gateway
 
 import com.coder.gateway.services.CoderSettingsService
-import com.coder.gateway.util.canCreateDirectory
 import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.util.canCreateDirectory
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable
 import com.intellij.openapi.ui.DialogPanel
@@ -100,6 +100,13 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::tlsAlternateHostname)
                     .comment(
                         CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.heading")) {
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.title"))
+                    .bindSelected(state::disableAutostart)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment")
                     )
             }.layout(RowLayout.PARENT_GRID)
         }

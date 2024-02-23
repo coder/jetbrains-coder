@@ -234,7 +234,15 @@ internal class CoderCLIManagerTest {
         srv2.stop(0)
     }
 
-    data class SSHTest(val workspaces: List<String>, val input: String?, val output: String, val remove: String, val headerCommand: String?)
+    data class SSHTest(
+        val workspaces: List<String>,
+        val input: String?,
+        val output: String,
+        val remove: String,
+        val headerCommand: String?,
+        val disableAutostart: Boolean = false,
+        val version: SemVer? = null,
+    )
 
     @Test
     fun testConfigureSSH() {
@@ -256,13 +264,19 @@ internal class CoderCLIManagerTest {
                 SSHTest(listOf("header"), null, "header-command-windows", "blank", """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""")
             } else {
                 SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'")
-            }
+            },
+            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, SemVer(2, 5, 0)),
+            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, SemVer(3, 5, 0)),
+            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, SemVer(2, 4, 9)),
+            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, SemVer(1, 0, 1)),
+            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true),
         )
 
         val newlineRe = "\r?\n".toRegex()
 
         tests.forEach {
             val settings = CoderSettings(CoderSettingsState(
+                disableAutostart = it.disableAutostart,
                 dataDirectory = tmpdir.resolve("configure-ssh").toString(),
                 headerCommand = it.headerCommand ?: ""),
                 sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"))
@@ -285,12 +299,12 @@ internal class CoderCLIManagerTest {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
 
             // Add workspaces.
-            ccm.configSsh(it.workspaces)
+            ccm.configSsh(it.workspaces, it.version)
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
 
             // Remove configuration.
-            ccm.configSsh(emptyList())
+            ccm.configSsh(emptyList(), it.version)
 
             // Remove is the configuration we expect after removing.
             assertEquals(

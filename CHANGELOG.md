@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Disable autostarting workspaces by default on macOS to prevent an issue where
+  it wakes periodically and keeps the workspace on.  This can be toggled via the
+  settings.
+
 ## 2.9.3 - 2024-02-10
 
 ### Fixed
