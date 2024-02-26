@@ -4,12 +4,12 @@ import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath
-import org.junit.Assert.assertNotEquals
 import java.net.URL
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 internal class CoderSettingsTest {
     @Test
@@ -99,7 +99,7 @@ internal class CoderSettingsTest {
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url, true).parent)
         assertEquals(Path.of(expected).toAbsolutePath(), settings2.binPath(url, true).parent)
 
-        assertNotEquals("foo-bar.baz", settings.binPath(url).fileName)
+        assertNotEquals("foo-bar.baz", settings.binPath(url).fileName.toString())
         assertEquals("foo-bar.baz", settings2.binPath(url).fileName.toString())
     }
 
