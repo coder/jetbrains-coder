@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.9.4 - 2024-02-26
+
 ### Changed
 
 - Disable autostarting workspaces by default on macOS to prevent an issue where
