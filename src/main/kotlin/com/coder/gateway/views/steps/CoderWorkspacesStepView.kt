@@ -3,16 +3,18 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.CoderSupportedVersions
+import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
-import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderSettingsService
@@ -26,7 +28,6 @@ import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.IdeBundle
 import com.intellij.ide.util.PropertiesComponent
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
@@ -71,7 +72,7 @@ import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 import java.time.Duration
-import java.util.*
+import java.util.UUID
 import javax.net.ssl.SSLHandshakeException
 import javax.swing.Icon
 import javax.swing.JCheckBox
@@ -82,17 +83,53 @@ import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
+// Used to store the most recently used URL and token.
 private const val CODER_URL_KEY = "coder-url"
-
 private const val SESSION_TOKEN = "session-token"
 
-class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
+/**
+ * Form fields used in the step for the user to fill out.
+ */
+private data class CoderWorkspacesFormFields(
+    var coderURL: String = "https://coder.example.com",
+    var token: Pair<String, TokenSource>? = null,
+    var useExistingToken: Boolean = false)
+
+
+/**
+ * The data gathered by this step.
+ */
+data class CoderWorkspacesStepSelection(
+    // The workspace and agent we want to view.
+    val agent: WorkspaceAgent,
+    val workspace: Workspace,
+    // This step needs the client and cliManager to configure SSH.
+    val cliManager: CoderCLIManager,
+    val client: CoderRestClient,
+    // Pass along the latest workspaces so we can configure the CLI a bit
+    // faster, otherwise this step would have to fetch the workspaces again.
+    val workspaces: List<Workspace>)
+
+/**
+ * A list of agents/workspaces belonging to a deployment.  Has inputs for
+ * connecting and authorizing to different deployments.
+ */
+class CoderWorkspacesStepView(
+    // Called with a boolean to indicate whether agent selection is complete.
+    private val nextButtonEnabled: (Boolean) -> Unit,
+) : CoderWizardStep {
+    private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
     private val jobs: MutableMap<UUID, Job> = mutableMapOf()
-    private var localWizardModel = CoderWorkspacesWizardModel()
-    private val settings: CoderSettingsService = service<CoderSettingsService>()
-
     private val appPropertiesService: PropertiesComponent = service()
+    private var poller: Job? = null
+
+    override var nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
+    override var previousActionText = IdeBundle.message("button.back")
+
+    private val fields = CoderWorkspacesFormFields()
+    private var client: CoderRestClient? = null
+    private var cliManager: CoderCLIManager? = null
 
     private var tfUrl: JTextField? = null
     private var tfUrlComment: JLabel? = null
@@ -114,7 +151,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            setNextButtonEnabled(selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX)
+            nextButtonEnabled(selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX)
             if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
@@ -139,9 +176,6 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         .disableRemoveAction()
         .disableUpDownActions()
         .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction, goToTemplateAction as AnAction)
-
-
-    private var poller: Job? = null
 
     override val component = panel {
         row {
@@ -168,7 +202,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
         row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
             tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
-                .bindText(localWizardModel::coderURL).applyToComponent {
+                .bindText(fields::coderURL).applyToComponent {
                 addActionListener {
                     // Reconnect when the enter key is pressed.
                     askTokenAndConnect()
@@ -194,7 +228,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         row {
             cell() // Empty cell for alignment.
             cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
-                .bindSelected(localWizardModel::useExistingToken)
+                .bindSelected(fields::useExistingToken)
                 .component
         }.layout(RowLayout.PARENT_GRID)
         row {
@@ -216,31 +250,23 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
             }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
 
-    }.apply {
-        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16)
     }
-
-    override val previousActionText = IdeBundle.message("button.back")
-    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
 
     private inner class GoToDashboardAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (c != null) {
-                BrowserUtil.browse(c.url)
-            }
+            withoutNull(client) { BrowserUtil.browse(it.url) }
         }
     }
 
     private inner class GoToTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
+            withoutNull(client) {
+                if (tableOfWorkspaces.selectedObject != null) {
+                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+                    BrowserUtil.browse(it.url.toURI().resolve("/templates/${workspace.templateName}"))
+                }
             }
         }
     }
@@ -248,17 +274,18 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StartWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            c.startWorkspace(workspace)
-                            loadWorkspaces()
-                        } catch (e: WorkspaceResponseException) {
-                            logger.warn("Could not build workspace ${workspace.name}, reason: $e")
+            withoutNull(client) {
+                if (tableOfWorkspaces.selectedObject != null) {
+                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+                    jobs[workspace.id]?.cancel()
+                    jobs[workspace.id] = cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                it.startWorkspace(workspace)
+                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.warn("Could not build workspace ${workspace.name}, reason: $e")
+                            }
                         }
                     }
                 }
@@ -269,58 +296,59 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class UpdateWorkspaceTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            // Stop the workspace first if it is running.
-                            if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
-                                logger.info("Waiting for ${workspace.name} to stop before updating")
-                                c.stopWorkspace(workspace)
-                                loadWorkspaces()
-                                var elapsed = Duration.ofSeconds(0)
-                                val timeout = Duration.ofSeconds(5)
-                                val maxWait = Duration.ofMinutes(10)
-                                while (isActive) { // Wait for the workspace to fully stop.
-                                    delay(timeout.toMillis())
-                                    val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
-                                    when (val status = found?.workspace?.latestBuild?.status) {
-                                        WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
-                                            logger.info("Still waiting for ${workspace.name} to stop before updating")
+            withoutNull(client) {
+                if (tableOfWorkspaces.selectedObject != null) {
+                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+                    jobs[workspace.id]?.cancel()
+                    jobs[workspace.id] = cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                // Stop the workspace first if it is running.
+                                if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
+                                    logger.info("Waiting for ${workspace.name} to stop before updating")
+                                    it.stopWorkspace(workspace)
+                                    loadWorkspaces()
+                                    var elapsed = Duration.ofSeconds(0)
+                                    val timeout = Duration.ofSeconds(5)
+                                    val maxWait = Duration.ofMinutes(10)
+                                    while (isActive) { // Wait for the workspace to fully stop.
+                                        delay(timeout.toMillis())
+                                        val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
+                                        when (val status = found?.workspace?.latestBuild?.status) {
+                                            WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
+                                                logger.info("Still waiting for ${workspace.name} to stop before updating")
+                                            }
+                                            WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
+                                            WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+                                            WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
+                                                logger.warn("Canceled ${workspace.name} update due to status change to $status")
+                                                break
+                                            }
+                                            null -> {
+                                                logger.warn("Canceled ${workspace.name} update because it no longer exists")
+                                                break
+                                            }
+                                            WorkspaceStatus.STOPPED -> {
+                                                logger.info("${workspace.name} has stopped; updating now")
+                                                it.updateWorkspace(workspace)
+                                                break
+                                            }
                                         }
-                                        WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
-                                        WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-                                        WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
-                                            logger.warn("Canceled ${workspace.name} update due to status change to $status")
-                                            break
-                                        }
-                                        null -> {
-                                            logger.warn("Canceled ${workspace.name} update because it no longer exists")
-                                            break
-                                        }
-                                        WorkspaceStatus.STOPPED -> {
-                                            logger.info("${workspace.name} has stopped; updating now")
-                                            c.updateWorkspace(workspace)
+                                        elapsed += timeout
+                                        if (elapsed > maxWait) {
+                                            logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
                                             break
                                         }
                                     }
-                                    elapsed += timeout
-                                    if (elapsed > maxWait) {
-                                        logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
-                                        break
-                                    }
+                                } else {
+                                    it.updateWorkspace(workspace)
+                                    loadWorkspaces()
                                 }
-                            } else {
-                                c.updateWorkspace(workspace)
-                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                            } catch (e: TemplateResponseException) {
+                                logger.warn("Could not update workspace ${workspace.name}, reason: $e")
                             }
-                        } catch (e: WorkspaceResponseException) {
-                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
-                        } catch (e: TemplateResponseException) {
-                            logger.warn("Could not update workspace ${workspace.name}, reason: $e")
                         }
                     }
                 }
@@ -331,17 +359,18 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class StopWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (tableOfWorkspaces.selectedObject != null && c != null) {
-                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            c.stopWorkspace(workspace)
-                            loadWorkspaces()
-                        } catch (e: WorkspaceResponseException) {
-                            logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
+            withoutNull(client) {
+                if (tableOfWorkspaces.selectedObject != null) {
+                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+                    jobs[workspace.id]?.cancel()
+                    jobs[workspace.id] = cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                it.stopWorkspace(workspace)
+                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
+                            }
                         }
                     }
                 }
@@ -352,25 +381,24 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private inner class CreateWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            val c = localWizardModel.client
-            if (c != null) {
-                BrowserUtil.browse(c.url.toURI().resolve("/templates"))
-            }
+            withoutNull(client) { BrowserUtil.browse(it.url.toURI().resolve("/templates")) }
         }
     }
 
-    override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
-        tableOfWorkspaces.listTableModel.items = emptyList()
-        if (localWizardModel.coderURL.isNotBlank() && localWizardModel.token != null) {
+    /**
+     * Authorize the client and start polling for workspaces if we can.
+     */
+    fun init() {
+        if (fields.coderURL.isNotBlank() && fields.token != null) {
             triggerWorkspacePolling(true)
         } else {
             val (url, token) = readStorageOrConfig()
             if (!url.isNullOrBlank()) {
-                localWizardModel.coderURL = url
+                fields.coderURL = url
                 tfUrl?.text = url
             }
             if (!token.isNullOrBlank()) {
-                localWizardModel.token = Pair(token, TokenSource.CONFIG)
+                fields.token = Pair(token, TokenSource.CONFIG)
             }
             if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
                 connect(url.toURL(), Pair(token, TokenSource.CONFIG))
@@ -392,8 +420,8 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     }
 
     private fun updateWorkspaceActions() {
-        goToDashboardAction.isEnabled = localWizardModel.client != null
-        createWorkspaceAction.isEnabled = localWizardModel.client != null
+        goToDashboardAction.isEnabled = client != null
+        createWorkspaceAction.isEnabled = client != null
         goToTemplateAction.isEnabled = tableOfWorkspaces.selectedObject != null
         when (tableOfWorkspaces.selectedObject?.workspace?.latestBuild?.status) {
             WorkspaceStatus.RUNNING -> {
@@ -425,19 +453,19 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
      * unless retry is false.
      */
     private fun askTokenAndConnect(isRetry: Boolean = false) {
-        val oldURL = localWizardModel.coderURL.toURL()
+        val oldURL = fields.coderURL.toURL()
         component.apply() // Force bindings to be filled.
-        val newURL = localWizardModel.coderURL.toURL()
+        val newURL = fields.coderURL.toURL()
         val pastedToken = CoderRemoteConnectionHandle.askToken(
             newURL,
             // If this is a new URL there is no point in trying to use the same
             // token.
-            if (oldURL == newURL) localWizardModel.token else null,
+            if (oldURL == newURL) fields.token else null,
             isRetry,
-            localWizardModel.useExistingToken,
+            fields.useExistingToken,
             settings,
         ) ?: return // User aborted.
-        localWizardModel.token = pastedToken
+        fields.token = pastedToken
         connect(newURL, pastedToken) {
             askTokenAndConnect(true)
         }
@@ -458,22 +486,22 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         token: Pair<String, TokenSource>,
         onAuthFailure: (() -> Unit)? = null,
     ): Job {
-        // Clear out old deployment details.
-        localWizardModel.cliManager = null
-        localWizardModel.client = null
-        poller?.cancel()
-        jobs.forEach { it.value.cancel() }
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
         tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
         tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host))
+
         tableOfWorkspaces.listTableModel.items = emptyList()
+        cliManager = null
+        client = null
+
+        stop()
 
         // Authenticate and load in a background process with progress.
         return LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title")) {
             try {
                 this.indicator.text = "Authenticating client..."
                 val authedClient = authenticate(deploymentURL, token.first)
-                localWizardModel.client = authedClient
+                client = authedClient
 
                 // Remember these in order to default to them for future attempts.
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
@@ -495,7 +523,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
                 updateWorkspaceActions()
                 triggerWorkspacePolling(false)
 
-                localWizardModel.cliManager = cli
+                cliManager = cli
                 tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
                 tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
             } catch (e: Exception) {
@@ -559,10 +587,14 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
+    /**
+     * Start polling for workspace changes.  Throw if there is an existing
+     * poller and it has not been stopped.
+     */
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
-        poller?.cancel()
-        jobs.forEach { it.value.cancel() }
-
+        if (poller != null && poller?.isCancelled != true) {
+            throw Error("Poller was not canceled before starting a new one")
+        }
         poller = cs.launch {
             if (fetchNow) {
                 loadWorkspaces()
@@ -619,7 +651,7 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
     private suspend fun loadWorkspaces() {
         val ws = withContext(Dispatchers.IO) {
             val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
-            val clientNow = localWizardModel.client ?: return@withContext emptySet()
+            val clientNow = client ?: return@withContext emptySet()
             try {
                 val ws = clientNow.workspaces()
                 val ams = ws.flatMap { it.toAgentList() }
@@ -646,48 +678,32 @@ class CoderWorkspacesStepView(val setNextButtonEnabled: (Boolean) -> Unit) : Cod
         }
     }
 
-    override fun onPrevious() {
-        super.onPrevious()
-        logger.info("Going back to the main view")
-        poller?.cancel()
-        jobs.forEach { it.value.cancel() }
+    /**
+     * Return the selected agent.  Throw if not configured.
+     */
+    fun data(): CoderWorkspacesStepSelection {
+        val selected = tableOfWorkspaces.selectedObject
+        return withoutNull(client, cliManager, selected?.agent, selected?.workspace) { client, cli, agent, workspace ->
+            val name = "${workspace.name}.${agent.name}"
+            logger.info("Returning data for $name")
+            CoderWorkspacesStepSelection(
+                agent = agent,
+                workspace = workspace,
+                cliManager = cli,
+                client = client,
+                workspaces = tableOfWorkspaces.items.map { it.workspace }
+            )
+        }
     }
 
-    override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
-        // These being null would be a developer error.
-        val selected = tableOfWorkspaces.selectedObject
-        if (selected?.agent == null) {
-            logger.error("No selected agent")
-            return false
-        }
-
-        // Apply values that will be used in the next step.
-        wizardModel.apply {
-            coderURL = localWizardModel.coderURL
-            token = localWizardModel.token
-            selectedListItem = selected
-            // The next step will use these to configure the CLI.  We could do it
-            // here but then we would need to show another progress indicator.
-            // The next step already has one so might as well use it.
-            cliManager = localWizardModel.cliManager
-            client = localWizardModel.client
-            // Pass along the latest workspaces so the next step can configure
-            // the CLI a bit faster, otherwise it would have to fetch the
-            // workspaces again.
-            workspaces = tableOfWorkspaces.items.map { it.workspace }
-            // The config directory can be used to pull the URL and token in
-            // order to query this workspace's status in other flows, for
-            // example from the recent connections screen.
-            configDirectory = cliManager?.coderConfigPath?.toString() ?: ""
-        }
+    override fun stop() {
         poller?.cancel()
         jobs.forEach { it.value.cancel() }
-
-        logger.info("Opening IDE selection window for ${selected.name}")
-        return true
+        jobs.clear()
     }
 
     override fun dispose() {
+        stop()
         cs.cancel()
     }
 
