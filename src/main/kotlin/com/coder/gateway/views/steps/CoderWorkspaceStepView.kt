@@ -1,10 +1,8 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
-import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
-import com.coder.gateway.models.CoderWorkspacesWizardModel
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.toWorkspaceParams
@@ -14,7 +12,6 @@ import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.views.LazyBrowserLink
 import com.coder.gateway.withConfigDirectory
@@ -23,7 +20,6 @@ import com.coder.gateway.withProjectPath
 import com.coder.gateway.withWebTerminalLink
 import com.coder.gateway.withWorkspaceHostname
 import com.intellij.ide.IdeBundle
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -51,7 +47,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.update.MergingUpdateQueue
 import com.intellij.util.ui.update.Update
-import com.jetbrains.gateway.api.GatewayUI
 import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
 import com.jetbrains.gateway.ssh.DeployTargetOS
 import com.jetbrains.gateway.ssh.DeployTargetOS.OSArch
@@ -74,7 +69,7 @@ import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Component
 import java.awt.FlowLayout
-import java.util.*
+import java.util.Locale
 import java.util.concurrent.TimeoutException
 import javax.swing.ComboBoxModel
 import javax.swing.DefaultComboBoxModel
@@ -86,17 +81,28 @@ import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
-class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolean) -> Unit) : CoderWorkspacesWizardStep, Disposable {
+/**
+ * View for a single workspace.  In particular, show available IDEs and a button
+ * to connect to the workspace
+ */
+class CoderWorkspaceStepView(
+    // Called with a boolean indicating whether IDE selection is complete.
+    private val nextButtonEnabled: (Boolean) -> Unit,
+) : CoderWizardStep {
     private val cs = CoroutineScope(Dispatchers.Main)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
+    private var state: CoderWorkspacesStepSelection? = null
 
     private lateinit var titleLabel: JLabel
     private lateinit var cbIDE: IDEComboBox
     private lateinit var cbIDEComment: JLabel
     private var tfProject = JBTextField()
     private lateinit var terminalLink: LazyBrowserLink
-    private lateinit var ideResolvingJob: Job
+    private var ideResolvingJob: Job? = null
     private val pathValidationJobs = MergingUpdateQueue("remote-path-validation", 1000, true, tfProject)
+
+    override var nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
+    override var previousActionText = IdeBundle.message("button.back")
 
     override val component = panel {
         row {
@@ -109,7 +115,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
             label("IDE:")
             cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                 addActionListener {
-                    setNextButtonEnabled(this.selectedItem != null)
+                    nextButtonEnabled(this.selectedItem != null)
                     ApplicationManager.getApplication().invokeLater {
                         logger.info("Selected IDE: ${this.selectedItem}")
                         cbIDEComment.foreground = UIUtil.getContextHelpForeground()
@@ -158,38 +164,32 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         border = JBUI.Borders.empty(0, 16)
     }
 
-    override val previousActionText = IdeBundle.message("button.back")
-    override val nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
-
-    override fun onInit(wizardModel: CoderWorkspacesWizardModel) {
-        // Clear contents from the last attempt if any.
+    /**
+     * Query the workspaces for IDEs.
+     */
+    fun init(data: CoderWorkspacesStepSelection) {
+        // Clear contents from the last run, if any.
         cbIDEComment.foreground = UIUtil.getContextHelpForeground()
         cbIDEComment.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
         ideComboBoxModel.removeAllElements()
-        setNextButtonEnabled(false)
 
-        val deploymentURL = wizardModel.coderURL.toURL()
-        val selectedItem = wizardModel.selectedListItem
-        val cli = wizardModel.cliManager
-        val client = wizardModel.client
-        val workspaces = wizardModel.workspaces
-        if (selectedItem?.agent == null || cli == null || client == null || workspaces == null) {
-            // TODO: Should be impossible, tweak the types/flow to enforce this.
-            logger.warn("Failed to read data from previous step; this is a developer error")
-            return
-        }
+        // We use this when returning the connection params from data().
+        state = data
 
-        val homeDirectory = selectedItem.agent.expandedDirectory ?: selectedItem.agent.directory
+        val name = "${data.workspace.name}.${data.agent.name}"
+        logger.info("Initializing workspace step for $name")
+
+        val homeDirectory = data.agent.expandedDirectory ?: data.agent.directory
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
-        titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", selectedItem.name)
-        terminalLink.url = deploymentURL.withPath("/me/${selectedItem.name}/terminal").toString()
+        titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
+        terminalLink.url = data.client.url.withPath("/me/${name}/terminal").toString()
 
         ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
             try {
                 logger.info("Configuring Coder CLI...")
                 cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                 withContext(Dispatchers.IO) {
-                    cli.configSsh(client.agentNames(workspaces))
+                    data.cliManager.configSsh(data.client.agentNames(data.workspaces))
                 }
 
                 val ides = suspendingRetryWithExponentialBackOff(
@@ -199,7 +199,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                             if (attempt > 1)
                                 IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt))
                             else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
-                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(deploymentURL, selectedItem.name))
+                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(data.client.url, name))
 
                         if (ComponentValidator.getInstance(tfProject).isEmpty) {
                             logger.info("Installing remote path validator...")
@@ -211,7 +211,7 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
                             if (attempt > 1)
                                 IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt))
                             else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
-                        retrieveIDEs(executor, selectedItem.workspace, selectedItem.agent)
+                        retrieveIDEs(executor, data.workspace, data.agent)
                     },
                     retryIf = {
                         it is ConnectionException || it is TimeoutException
@@ -245,8 +245,11 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         }
     }
 
+    /**
+     * Validate the remote path whenever it changes.
+     */
     private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
-        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderLocateRemoteProjectStepView::class.java.name)
+        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceStepView::class.java.name)
         ComponentValidator(disposable).installOn(tfProject)
 
         tfProject.document.addDocumentListener(object : DocumentAdapter() {
@@ -275,6 +278,9 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         })
     }
 
+    /**
+     * Connect to the remote worker via SSH.
+     */
     private suspend fun createRemoteExecutor(host: String): HighLevelHostAccessor {
         return HighLevelHostAccessor.create(
             RemoteCredentialsHolder().apply {
@@ -287,9 +293,12 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         )
     }
 
+    /**
+     * Get a list of available IDEs.
+     */
     private suspend fun retrieveIDEs(executor: HighLevelHostAccessor, workspace: Workspace, agent: WorkspaceAgent): List<IdeWithStatus> {
         val name = "${workspace.name}.${agent.name}"
-        logger.info("Retrieving available IDE's for $name...")
+        logger.info("Retrieving available IDEs for $name...")
         val workspaceOS = if (agent.operatingSystem != null && agent.architecture != null)
             toDeployedOS(agent.operatingSystem, agent.architecture)
         else withContext(Dispatchers.IO) {
@@ -340,36 +349,28 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
         }
     }
 
-    override fun onNext(wizardModel: CoderWorkspacesWizardModel): Boolean {
-        val selectedIDE = cbIDE.selectedItem ?: return false
-        logger.info("Going to launch the IDE")
-        val deploymentURL = wizardModel.coderURL.toURL()
-        val selected = wizardModel.selectedListItem
-        if (selected == null) {
-            // TODO: Should be impossible, tweak the types/flow to enforce this.
-            logger.warn("No workspace was selected. Please go back to the previous step and select a workspace")
-            return false
-        }
-        CoderRemoteConnectionHandle().connect{
+    /**
+     * Return the selected parameters.  Throw if not configured.
+     */
+    fun data(): Map<String, String> {
+        return withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
+            val name = "${state.workspace.name}.${state.agent.name}"
             selectedIDE
                 .toWorkspaceParams()
-                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL, selected.name))
+                .withWorkspaceHostname(CoderCLIManager.getHostName(state.client.url, name))
                 .withProjectPath(tfProject.text)
                 .withWebTerminalLink("${terminalLink.url}")
-                .withConfigDirectory(wizardModel.configDirectory)
-                .withName(selected.name)
+                .withConfigDirectory(state.cliManager.coderConfigPath.toString())
+                .withName(name)
         }
-        GatewayUI.getInstance().reset()
-        return true
     }
 
-    override fun onPrevious() {
-        super.onPrevious()
-        logger.info("Going back to Workspace view")
-        ideResolvingJob.cancel()
+    override fun stop() {
+        ideResolvingJob?.cancel()
     }
 
     override fun dispose() {
+        stop()
         cs.cancel()
     }
 
@@ -412,6 +413,6 @@ class CoderLocateRemoteProjectStepView(private val setNextButtonEnabled: (Boolea
     }
 
     companion object {
-        val logger = Logger.getInstance(CoderLocateRemoteProjectStepView::class.java.simpleName)
+        val logger = Logger.getInstance(CoderWorkspaceStepView::class.java.simpleName)
     }
 }
