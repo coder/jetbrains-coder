@@ -284,7 +284,7 @@ class CoderWorkspacesStepView(
                                 it.startWorkspace(workspace)
                                 loadWorkspaces()
                             } catch (e: WorkspaceResponseException) {
-                                logger.warn("Could not build workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not start workspace ${workspace.name}, reason: $e")
                             }
                         }
                     }
@@ -345,9 +345,9 @@ class CoderWorkspacesStepView(
                                     loadWorkspaces()
                                 }
                             } catch (e: WorkspaceResponseException) {
-                                logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
                             } catch (e: TemplateResponseException) {
-                                logger.warn("Could not update workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
                             }
                         }
                     }
@@ -369,7 +369,7 @@ class CoderWorkspacesStepView(
                                 it.stopWorkspace(workspace)
                                 loadWorkspaces()
                             } catch (e: WorkspaceResponseException) {
-                                logger.warn("Could not stop workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not stop workspace ${workspace.name}, reason: $e")
                             }
                         }
                     }
