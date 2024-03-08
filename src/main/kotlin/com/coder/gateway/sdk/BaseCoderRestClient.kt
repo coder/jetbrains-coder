@@ -155,12 +155,14 @@ open class BaseCoderRestClient(
      * Retrieves all the agent names for all workspaces, including those that
      * are off.  Meant to be used when configuring SSH.
      */
-    fun agentNames(workspaces: List<Workspace>): List<String> {
+    fun agentNames(workspaces: List<Workspace>): Set<String> {
+        // It is possible for there to be resources with duplicate names so we
+        // need to use a set.
         return workspaces.flatMap { ws ->
             resources(ws).filter { it.agents != null }.flatMap { it.agents!! }.map {
                 "${ws.name}.${it.name}"
             }
-        }
+        }.toSet()
     }
 
     /**

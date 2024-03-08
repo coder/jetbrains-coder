@@ -19,7 +19,6 @@ import com.coder.gateway.withName
 import com.coder.gateway.withProjectPath
 import com.coder.gateway.withWebTerminalLink
 import com.coder.gateway.withWorkspaceHostname
-import com.intellij.ide.IdeBundle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -68,6 +67,7 @@ import kotlinx.coroutines.withContext
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.util.Locale
 import java.util.concurrent.TimeoutException
@@ -86,9 +86,10 @@ import javax.swing.event.DocumentEvent
  * to connect to the workspace
  */
 class CoderWorkspaceStepView(
-    // Called with a boolean indicating whether IDE selection is complete.
-    private val nextButtonEnabled: (Boolean) -> Unit,
-) : CoderWizardStep {
+    private val showTitle: Boolean = true,
+) : CoderWizardStep<Map<String, String>>(
+    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
+) {
     private val cs = CoroutineScope(Dispatchers.IO)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
     private var state: CoderWorkspacesStepSelection? = null
@@ -101,21 +102,18 @@ class CoderWorkspaceStepView(
     private var ideResolvingJob: Job? = null
     private val pathValidationJobs = MergingUpdateQueue("remote-path-validation", 1000, true, tfProject)
 
-    override var nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
-    override var previousActionText = IdeBundle.message("button.back")
-
-    override val component = panel {
+    private val component = panel {
         row {
             titleLabel = label("").applyToComponent {
                 font = JBFont.h3().asBold()
                 icon = CoderIcons.LOGO_16
             }.component
-        }.topGap(TopGap.SMALL)
+        }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE)
         row {
             label("IDE:")
             cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                 addActionListener {
-                    nextButtonEnabled(this.selectedItem != null)
+                    nextButton.isEnabled = this.selectedItem != null
                     ApplicationManager.getApplication().invokeLater {
                         logger.info("Selected IDE: ${this.selectedItem}")
                         cbIDEComment.foreground = UIUtil.getContextHelpForeground()
@@ -135,7 +133,7 @@ class CoderWorkspaceStepView(
                     }
                 }
             }).resizableColumn().align(AlignX.FILL).component
-        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+        }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
         row {
             cell() // Empty cell for alignment.
             cbIDEComment = cell(
@@ -147,7 +145,9 @@ class CoderWorkspaceStepView(
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
         row {
             label("Project directory:")
-            cell(tfProject).resizableColumn().align(AlignX.FILL).component
+            cell(tfProject).resizableColumn().align(AlignX.FILL).applyToComponent {
+                minimumSize = Dimension(520, -1)
+            }.component
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
         row {
             cell() // Empty cell for alignment.
@@ -162,6 +162,10 @@ class CoderWorkspaceStepView(
     }.apply {
         background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
         border = JBUI.Borders.empty(0, 16)
+    }
+
+    init {
+        addToCenter(component)
     }
 
     /**
@@ -182,6 +186,7 @@ class CoderWorkspaceStepView(
         val homeDirectory = data.agent.expandedDirectory ?: data.agent.directory
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
+        titleLabel.isVisible = showTitle
         terminalLink.url = data.client.url.withPath("/me/${name}/terminal").toString()
 
         ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
@@ -189,7 +194,7 @@ class CoderWorkspaceStepView(
                 logger.info("Configuring Coder CLI...")
                 cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                 withContext(Dispatchers.IO) {
-                    data.cliManager.configSsh(data.client.agentNames(data.workspaces).toSet())
+                    data.cliManager.configSsh(data.client.agentNames(data.workspaces))
                 }
 
                 val ides = suspendingRetryWithExponentialBackOff(
@@ -352,7 +357,7 @@ class CoderWorkspaceStepView(
     /**
      * Return the selected parameters.  Throw if not configured.
      */
-    fun data(): Map<String, String> {
+    override fun data(): Map<String, String> {
         return withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
             val name = "${state.workspace.name}.${state.agent.name}"
             selectedIDE

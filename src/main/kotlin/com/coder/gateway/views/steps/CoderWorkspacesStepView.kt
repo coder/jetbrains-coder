@@ -9,6 +9,7 @@ import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentListModel
+import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -26,7 +27,6 @@ import com.coder.gateway.util.toURL
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.IdeBundle
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -105,7 +105,7 @@ data class CoderWorkspacesStepSelection(
     val workspace: Workspace,
     // This step needs the client and cliManager to configure SSH.
     val cliManager: CoderCLIManager,
-    val client: CoderRestClient,
+    val client: BaseCoderRestClient,
     // Pass along the latest workspaces so we can configure the CLI a bit
     // faster, otherwise this step would have to fetch the workspaces again.
     val workspaces: List<Workspace>)
@@ -114,18 +114,14 @@ data class CoderWorkspacesStepSelection(
  * A list of agents/workspaces belonging to a deployment.  Has inputs for
  * connecting and authorizing to different deployments.
  */
-class CoderWorkspacesStepView(
-    // Called with a boolean to indicate whether agent selection is complete.
-    private val nextButtonEnabled: (Boolean) -> Unit,
-) : CoderWizardStep {
+class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
+    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
+) {
     private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
     private val jobs: MutableMap<UUID, Job> = mutableMapOf()
     private val appPropertiesService: PropertiesComponent = service()
     private var poller: Job? = null
-
-    override var nextActionText = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text")
-    override var previousActionText = IdeBundle.message("button.back")
 
     private val fields = CoderWorkspacesFormFields()
     private var client: CoderRestClient? = null
@@ -151,7 +147,7 @@ class CoderWorkspacesStepView(
         setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
         setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
         selectionModel.addListSelectionListener {
-            nextButtonEnabled(selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX)
+            nextButton.isEnabled = selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
             if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
                 notificationBanner.apply {
                     component.isVisible = true
@@ -177,7 +173,7 @@ class CoderWorkspacesStepView(
         .disableUpDownActions()
         .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction, goToTemplateAction as AnAction)
 
-    override val component = panel {
+    private val component = panel {
         row {
             label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.header.text")).applyToComponent {
                 font = JBFont.h3().asBold()
@@ -249,7 +245,9 @@ class CoderWorkspacesStepView(
                 add(notificationBanner.component.apply { isVisible = false }, "South")
             }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
         }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
-
+    }.apply {
+        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+        border = JBUI.Borders.empty(0, 16)
     }
 
     private inner class GoToDashboardAction :
@@ -383,6 +381,10 @@ class CoderWorkspacesStepView(
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client) { BrowserUtil.browse(it.url.toURI().resolve("/templates")) }
         }
+    }
+
+    init {
+        addToCenter(component)
     }
 
     /**
@@ -681,7 +683,7 @@ class CoderWorkspacesStepView(
     /**
      * Return the selected agent.  Throw if not configured.
      */
-    fun data(): CoderWorkspacesStepSelection {
+    override fun data(): CoderWorkspacesStepSelection {
         val selected = tableOfWorkspaces.selectedObject
         return withoutNull(client, cliManager, selected?.agent, selected?.workspace) { client, cli, agent, workspace ->
             val name = "${workspace.name}.${agent.name}"

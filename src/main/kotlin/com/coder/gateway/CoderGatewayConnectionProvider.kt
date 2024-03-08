@@ -6,6 +6,7 @@ import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAndAgentStatus
+import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -20,11 +21,18 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
+import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.ui.JBUI
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
 import java.net.URL
+import javax.swing.Action
+import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.border.Border
 
 // In addition to `type`, these are the keys that we support in our Gateway
 // links.
@@ -38,16 +46,50 @@ private const val IDE_DOWNLOAD_LINK = "ide_download_link"
 private const val IDE_PRODUCT_CODE = "ide_product_code"
 private const val IDE_BUILD_NUMBER = "ide_build_number"
 private const val IDE_PATH_ON_HOST = "ide_path_on_host"
-private const val PROJECT_PATH = "project_path"
 
-class SelectWorkspaceIDEDialog(private val comp: JComponent) : DialogWrapper(true) {
+/**
+ * A dialog wrapper around CoderWorkspaceStepView.
+ */
+class CoderWorkspaceStepDialog(
+    name: String,
+    private val state: CoderWorkspacesStepSelection,
+) : DialogWrapper(true) {
+    private val view = CoderWorkspaceStepView(showTitle = false)
+
     init {
         init()
-        title = "Select workspace IDE"
+        title = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
     }
 
-    override fun createCenterPanel(): JComponent? {
-        return comp
+    override fun show() {
+        view.init(state)
+        view.onPrevious = { close(1) }
+        view.onNext = { close(0) }
+        super.show()
+        view.dispose()
+    }
+
+    fun showAndGetData(): Map<String, String>? {
+        if (showAndGet()) {
+            return view.data()
+        }
+        return null
+    }
+
+    override fun createContentPaneBorder(): Border {
+        return JBUI.Borders.empty()
+    }
+
+    override fun createCenterPanel(): JComponent {
+        return view
+    }
+
+    override fun createSouthPanel(): JComponent {
+        // The plugin provides its own buttons.
+        // TODO: Is it more idiomatic to handle buttons out here?
+        return panel{}.apply {
+            border = JBUI.Borders.empty()
+        }
     }
 }
 
@@ -109,41 +151,34 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(client.agentNames(workspaces).toSet())
+            cli.configSsh(client.agentNames(workspaces))
 
-
+            val name = "${workspace.name}.${agent.name}"
             val openDialog = parameters[IDE_PRODUCT_CODE].isNullOrBlank() ||
                     parameters[IDE_BUILD_NUMBER].isNullOrBlank() ||
                     (parameters[IDE_PATH_ON_HOST].isNullOrBlank() && parameters[IDE_DOWNLOAD_LINK].isNullOrBlank()) ||
                     parameters[FOLDER].isNullOrBlank()
 
-            val params = if (openDialog) {
-                val view = CoderWorkspaceStepView{}
+            if (openDialog) {
+                var data: Map<String, String>? = null
                 ApplicationManager.getApplication().invokeAndWait {
-                    view.init(
-                        CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces)
-                    )
-                    val dialog = SelectWorkspaceIDEDialog(view.component)
-                    dialog.show()
+                    val dialog = CoderWorkspaceStepDialog(name,
+                        CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces))
+                    data = dialog.showAndGetData()
                 }
-                val p = parameters.toMutableMap()
+                data ?: throw Exception("IDE selection aborted; unable to connect")
+            } else {
+                // Check that both the domain and the redirected domain are
+                // allowlisted.  If not, check with the user whether to proceed.
+                verifyDownloadLink(parameters)
 
-
-                listOf(IDE_PRODUCT_CODE, IDE_BUILD_NUMBER, PROJECT_PATH, IDE_PATH_ON_HOST, IDE_DOWNLOAD_LINK).forEach { prop ->
-                    view.data()[prop]?.let { value -> p[prop] = value }
-                }
-                p
-            } else
-                parameters.withProjectPath(parameters[FOLDER]!!)
-
-            // Check that both the domain and the redirected domain are
-            // allowlisted.  If not, check with the user whether to proceed.
-            verifyDownloadLink(parameters)
-
-            params.withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), "${workspace.name}.${agent.name}"))
-                .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
-                .withConfigDirectory(cli.coderConfigPath.toString())
-                .withName(workspaceName)
+                parameters
+                    .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), name))
+                    .withProjectPath(parameters[FOLDER]!!)
+                    .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
+                    .withConfigDirectory(cli.coderConfigPath.toString())
+                    .withName(name)
+            }
         }
         return null
     }
@@ -152,7 +187,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * Return an authenticated Coder CLI and the user's name, asking for the
      * token as long as it continues to result in an authentication failure.
      */
-    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
+    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<BaseCoderRestClient, String> {
         // Use the token from the query, unless we already tried that.
         val isRetry = lastToken != null
         val token = if (!queryToken.isNullOrBlank() && !isRetry)

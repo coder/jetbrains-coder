@@ -90,6 +90,9 @@ fun Map<String, String>.withConfigDirectory(dir: String): Map<String, String> {
     return map
 }
 
+/**
+ * Set the full name in `workspace.agent` format.
+ */
 fun Map<String, String>.withName(name: String): Map<String, String> {
     val map = this.toMutableMap()
     map[NAME] = name
