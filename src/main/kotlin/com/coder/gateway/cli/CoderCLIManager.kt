@@ -209,7 +209,7 @@ class CoderCLIManager(
      *
      * This can take supported features for testing purposes only.
      */
-    fun configSsh(workspaceNames: List<String>, feats: Features = features) {
+    fun configSsh(workspaceNames: Set<String>, feats: Features = features) {
         writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, feats))
     }
 
@@ -232,7 +232,7 @@ class CoderCLIManager(
      * If features are not provided, calculate them based on the binary
      * version.
      */
-    private fun modifySSHConfig(contents: String?, workspaceNames: List<String>, feats: Features): String? {
+    private fun modifySSHConfig(contents: String?, workspaceNames: Set<String>, feats: Features): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"

@@ -295,12 +295,12 @@ internal class CoderCLIManagerTest {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
 
             // Add workspaces.
-            ccm.configSsh(it.workspaces, it.features ?: Features())
+            ccm.configSsh(it.workspaces.toSet(), it.features ?: Features())
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
 
             // Remove configuration.
-            ccm.configSsh(emptyList(), it.features ?: Features())
+            ccm.configSsh(emptySet(), it.features ?: Features())
 
             // Remove is the configuration we expect after removing.
             assertEquals(
@@ -330,7 +330,7 @@ internal class CoderCLIManagerTest {
 
             assertFailsWith(
                 exceptionClass = SSHConfigFormatException::class,
-                block = { ccm.configSsh(emptyList()) })
+                block = { ccm.configSsh(emptySet()) })
         }
     }
 
@@ -346,7 +346,7 @@ internal class CoderCLIManagerTest {
 
             assertFailsWith(
                 exceptionClass = Exception::class,
-                block = { ccm.configSsh(listOf("foo", "bar")) })
+                block = { ccm.configSsh(setOf("foo", "bar")) })
         }
     }
 
