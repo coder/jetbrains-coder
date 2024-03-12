@@ -114,22 +114,20 @@ class CoderWorkspaceStepView(
             cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
                 addActionListener {
                     nextButton.isEnabled = this.selectedItem != null
-                    ApplicationManager.getApplication().invokeLater {
-                        logger.info("Selected IDE: ${this.selectedItem}")
-                        cbIDEComment.foreground = UIUtil.getContextHelpForeground()
-                        when (this.selectedItem?.status) {
-                            IdeStatus.ALREADY_INSTALLED ->
-                                cbIDEComment.text =
-                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
+                    logger.info("Selected IDE: ${this.selectedItem}")
+                    cbIDEComment.foreground = UIUtil.getContextHelpForeground()
+                    when (this.selectedItem?.status) {
+                        IdeStatus.ALREADY_INSTALLED ->
+                            cbIDEComment.text =
+                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
 
-                            IdeStatus.DOWNLOAD ->
-                                cbIDEComment.text =
-                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
+                        IdeStatus.DOWNLOAD ->
+                            cbIDEComment.text =
+                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
 
-                            else ->
-                                cbIDEComment.text =
-                                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
-                        }
+                        else ->
+                            cbIDEComment.text =
+                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
                     }
                 }
             }).resizableColumn().align(AlignX.FILL).component
