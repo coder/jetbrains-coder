@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.10.0 - 2024-03-12
+
 ### Changed
 
 - If IDE details or the folder are missing from a Gateway link, the plugin will
