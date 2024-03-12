@@ -6,7 +6,6 @@ import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAndAgentStatus
-import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -15,12 +14,17 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
+import com.coder.gateway.views.steps.CoderWorkspaceStepView
+import com.coder.gateway.views.steps.CoderWorkspacesStepSelection
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.ui.DialogWrapper
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
 import java.net.URL
+import javax.swing.JComponent
 
 // In addition to `type`, these are the keys that we support in our Gateway
 // links.
@@ -34,6 +38,18 @@ private const val IDE_DOWNLOAD_LINK = "ide_download_link"
 private const val IDE_PRODUCT_CODE = "ide_product_code"
 private const val IDE_BUILD_NUMBER = "ide_build_number"
 private const val IDE_PATH_ON_HOST = "ide_path_on_host"
+private const val PROJECT_PATH = "project_path"
+
+class SelectWorkspaceIDEDialog(private val comp: JComponent) : DialogWrapper(true) {
+    init {
+        init()
+        title = "Select workspace IDE"
+    }
+
+    override fun createCenterPanel(): JComponent? {
+        return comp
+    }
+}
 
 // CoderGatewayConnectionProvider handles connecting via a Gateway link such as
 // jetbrains-gateway://connect#type=coder.
@@ -93,31 +109,38 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.login(client.token)
 
             indicator.text = "Configuring Coder CLI..."
-            cli.configSsh(client.agentNames(workspaces))
+            cli.configSsh(client.agentNames(workspaces).toSet())
 
-            // TODO: Ask for these if missing.  Maybe we can reuse the second
-            //  step of the wizard?  Could also be nice if we automatically used
-            //  the last IDE.
-            if (parameters[IDE_PRODUCT_CODE].isNullOrBlank()) {
-                throw IllegalArgumentException("Query parameter \"$IDE_PRODUCT_CODE\" is missing")
-            }
-            if (parameters[IDE_BUILD_NUMBER].isNullOrBlank()) {
-                throw IllegalArgumentException("Query parameter \"$IDE_BUILD_NUMBER\" is missing")
-            }
-            if (parameters[IDE_PATH_ON_HOST].isNullOrBlank() && parameters[IDE_DOWNLOAD_LINK].isNullOrBlank()) {
-                throw IllegalArgumentException("One of \"$IDE_PATH_ON_HOST\" or \"$IDE_DOWNLOAD_LINK\" is required")
-            }
+
+            val openDialog = parameters[IDE_PRODUCT_CODE].isNullOrBlank() ||
+                    parameters[IDE_BUILD_NUMBER].isNullOrBlank() ||
+                    (parameters[IDE_PATH_ON_HOST].isNullOrBlank() && parameters[IDE_DOWNLOAD_LINK].isNullOrBlank()) ||
+                    parameters[FOLDER].isNullOrBlank()
+
+            val params = if (openDialog) {
+                val view = CoderWorkspaceStepView{}
+                ApplicationManager.getApplication().invokeAndWait {
+                    view.init(
+                        CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces)
+                    )
+                    val dialog = SelectWorkspaceIDEDialog(view.component)
+                    dialog.show()
+                }
+                val p = parameters.toMutableMap()
+
+
+                listOf(IDE_PRODUCT_CODE, IDE_BUILD_NUMBER, PROJECT_PATH, IDE_PATH_ON_HOST, IDE_DOWNLOAD_LINK).forEach { prop ->
+                    view.data()[prop]?.let { value -> p[prop] = value }
+                }
+                p
+            } else
+                parameters.withProjectPath(parameters[FOLDER]!!)
 
             // Check that both the domain and the redirected domain are
             // allowlisted.  If not, check with the user whether to proceed.
             verifyDownloadLink(parameters)
 
-            // TODO: Ask for the project path if missing and validate the path.
-            val folder = parameters[FOLDER] ?: throw IllegalArgumentException("Query parameter \"$FOLDER\" is missing")
-
-            parameters
-                .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), agent.name))
-                .withProjectPath(folder)
+            params.withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), "${workspace.name}.${agent.name}"))
                 .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
                 .withConfigDirectory(cli.coderConfigPath.toString())
                 .withName(workspaceName)
@@ -129,7 +152,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * Return an authenticated Coder CLI and the user's name, asking for the
      * token as long as it continues to result in an authentication failure.
      */
-    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<BaseCoderRestClient, String> {
+    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
         // Use the token from the query, unless we already tried that.
         val isRetry = lastToken != null
         val token = if (!queryToken.isNullOrBlank() && !isRetry)

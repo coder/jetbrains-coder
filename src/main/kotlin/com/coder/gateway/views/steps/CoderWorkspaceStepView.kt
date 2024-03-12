@@ -89,7 +89,7 @@ class CoderWorkspaceStepView(
     // Called with a boolean indicating whether IDE selection is complete.
     private val nextButtonEnabled: (Boolean) -> Unit,
 ) : CoderWizardStep {
-    private val cs = CoroutineScope(Dispatchers.Main)
+    private val cs = CoroutineScope(Dispatchers.IO)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
     private var state: CoderWorkspacesStepSelection? = null
 
@@ -189,7 +189,7 @@ class CoderWorkspaceStepView(
                 logger.info("Configuring Coder CLI...")
                 cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                 withContext(Dispatchers.IO) {
-                    data.cliManager.configSsh(data.client.agentNames(data.workspaces))
+                    data.cliManager.configSsh(data.client.agentNames(data.workspaces).toSet())
                 }
 
                 val ides = suspendingRetryWithExponentialBackOff(
@@ -228,7 +228,7 @@ class CoderWorkspaceStepView(
                         cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed.retry", humanizeDuration(remainingMs)))
                     },
                 )
-                withContext(Dispatchers.Main) {
+                withContext(Dispatchers.IO) {
                     ideComboBoxModel.addAll(ides)
                     cbIDE.selectedIndex = 0
                 }
