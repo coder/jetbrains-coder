@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+### Changed
+
+- If IDE details or the folder are missing from a Gateway link, the plugin will
+  now show the IDE selection screen to allow filling in these details.
+
+### Fixed
+
+- Fix matching on the wrong workspace/agent name. If a Gateway link was failing,
+  this could be why.
+- Make errors when starting/stopping/updating a workspace visible.
+
 ## 2.9.4 - 2024-02-26
 
 ### Changed
