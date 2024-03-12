@@ -288,7 +288,7 @@ class CoderRemoteConnectionHandle {
                 conn.instanceFollowRedirects = false
                 conn.connect()
                 val code = conn.responseCode
-                val nextLocation = conn.getHeaderField("Location");
+                val nextLocation = conn.getHeaderField("Location")
                 conn.disconnect()
                 // Redirects are triggered by any code starting with 3 plus a
                 // location header.

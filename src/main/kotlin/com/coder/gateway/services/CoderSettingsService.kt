@@ -15,4 +15,4 @@ import com.intellij.openapi.components.service
  * prefer using CoderSettingsService over CoderSettingsState directly.
  */
 @Service(Service.Level.APP)
-class CoderSettingsService() : CoderSettings(service<CoderSettingsState>())
+class CoderSettingsService : CoderSettings(service<CoderSettingsState>())

@@ -21,17 +21,13 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBUI
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
 import java.net.URL
-import javax.swing.Action
-import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.border.Border
 
 // In addition to `type`, these are the keys that we support in our Gateway

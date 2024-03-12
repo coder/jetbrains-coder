@@ -313,7 +313,7 @@ class CoderWorkspaceStepView(
             executor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
         }
         val idesWithStatusJob = cs.async(Dispatchers.IO) {
-            IntelliJPlatformProduct.values()
+            IntelliJPlatformProduct.entries
                 .filter { it.showInGateway }
                 .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
                 .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
