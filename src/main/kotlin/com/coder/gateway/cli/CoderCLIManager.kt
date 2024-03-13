@@ -16,12 +16,11 @@ import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProgressIndicator
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
+import org.slf4j.LoggerFactory
 import org.zeroturnaround.exec.ProcessExecutor
 import java.io.EOFException
 import java.io.FileInputStream
@@ -59,7 +58,6 @@ fun ensureCLI(
     deploymentURL: URL,
     buildVersion: String,
     settings: CoderSettings,
-    indicator: ProgressIndicator? = null,
 ): CoderCLIManager {
     val cli = CoderCLIManager(deploymentURL, settings)
 
@@ -75,7 +73,6 @@ fun ensureCLI(
 
     // If downloads are enabled download the new version.
     if (settings.enableDownloads) {
-        indicator?.text = "Downloading Coder CLI..."
         try {
             cli.download()
             return cli
@@ -97,7 +94,6 @@ fun ensureCLI(
     }
 
     if (settings.enableDownloads) {
-        indicator?.text = "Downloading Coder CLI..."
         dataCLI.download()
         return dataCLI
     }
@@ -126,6 +122,8 @@ class CoderCLIManager(
     // manager to download to the data directory instead.
     forceDownloadToData: Boolean = false,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     val remoteBinaryURL: URL = settings.binSource(deploymentURL)
     val localBinaryPath: Path = settings.binPath(deploymentURL, forceDownloadToData)
     val coderConfigPath: Path = settings.dataDir(deploymentURL).resolve("config")
@@ -423,8 +421,6 @@ class CoderCLIManager(
         }
 
     companion object {
-        val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
-
         private val tokenRegex = "--token [^ ]+".toRegex()
 
         @JvmStatic

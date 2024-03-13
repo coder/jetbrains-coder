@@ -1,19 +1,6 @@
-## Intellij IDEA
-*.iml
-*.eml
-*.ipr
-*.iws
-.idea
-*java.orig
-**/out/*
-
-## Eclipse
-*.classpath
-*.project
-
-## Gradle
+# Gradle
 .gradle
 build
 
-## Qodana
-.qodana
+# IntelliJ IDEA
+.idea

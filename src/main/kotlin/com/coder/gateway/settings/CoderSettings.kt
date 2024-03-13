@@ -8,7 +8,7 @@ import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.intellij.openapi.diagnostic.Logger
+import org.slf4j.LoggerFactory
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
@@ -86,6 +86,8 @@ open class CoderSettings(
     // Overrides the default binary name (for tests).
     private val binaryName: String? = null,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     val tls = CoderTLSSettings(state)
 
     /**
@@ -249,9 +251,5 @@ open class CoderSettings(
                 else -> "coder-darwin-amd64"
             }
         }
-    }
-
-    companion object {
-        val logger = Logger.getInstance(CoderSettings::class.java.simpleName)
     }
 }
