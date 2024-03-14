@@ -194,7 +194,7 @@ open class BaseCoderRestClient(
     }
 
     fun startWorkspace(workspace: Workspace): WorkspaceBuild {
-        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START, null, null, null, null)
+        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
             throw WorkspaceResponseException(error("start workspace ${workspace.name}", buildResponse))
@@ -204,7 +204,7 @@ open class BaseCoderRestClient(
     }
 
     fun stopWorkspace(workspace: Workspace): WorkspaceBuild {
-        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP, null, null, null, null)
+        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
             throw WorkspaceResponseException(error("stop workspace ${workspace.name}", buildResponse))
@@ -226,7 +226,7 @@ open class BaseCoderRestClient(
         val template = template(workspace.templateID)
 
         val buildRequest =
-            CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START, null, null, null, null)
+            CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
             throw WorkspaceResponseException(error("update workspace ${workspace.name}", buildResponse))

@@ -131,7 +131,7 @@ class BaseCoderRestClientTest {
             val (srv, url) = mockServer()
             val client = BaseCoderRestClient(URL(url), "token")
             srv.createContext("/api/v2/workspaces", BaseHttpHandler("GET") { exchange ->
-                val response = WorkspacesResponse(workspaces, workspaces.size)
+                val response = WorkspacesResponse(workspaces)
                 val body = moshi.adapter(WorkspacesResponse::class.java).toJson(response).toByteArray()
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
                 exchange.responseBody.write(body)
@@ -194,10 +194,8 @@ class BaseCoderRestClientTest {
 
     @Test
     fun testUpdate() {
-        val templates = listOf(DataGen.template("template"))
-        val workspaces = listOf(
-            DataGen.workspace("ws1", templateID = templates[0].id),
-            DataGen.workspace("ws2", templateID = templates[0].id, transition = WorkspaceTransition.STOP))
+        val templates = listOf(DataGen.template())
+        val workspaces = listOf(DataGen.workspace("ws1", templateID = templates[0].id))
 
         val actions = mutableListOf<Pair<String, UUID>>()
         val (srv, url) = mockServer()
@@ -242,12 +240,7 @@ class BaseCoderRestClientTest {
                 }
                 if (ws != null && templateVersionID != null) {
                     val body = moshi.adapter(WorkspaceBuild::class.java).toJson(DataGen.build(
-                        workspaceID = ws.id,
-                        workspaceName = ws.name,
-                        ownerID = ws.ownerID,
-                        ownerName = ws.ownerName,
-                        templateVersionID = templateVersionID,
-                        transition = json.transition)).toByteArray()
+                        templateVersionID = templateVersionID)).toByteArray()
                     exchange.sendResponseHeaders(HttpURLConnection.HTTP_CREATED, body.size.toLong())
                     exchange.responseBody.write(body)
                 }
@@ -266,15 +259,6 @@ class BaseCoderRestClientTest {
         actions.clear()
 
         with(workspaces[0]) {
-            client.updateWorkspace(this)
-            val expected = listOf(
-                Pair("get_template", templateID),
-                Pair("update", id))
-            assertEquals(expected, actions)
-            actions.clear()
-        }
-
-        with(workspaces[1]) {
             client.updateWorkspace(this)
             val expected = listOf(
                 Pair("get_template", templateID),
@@ -358,7 +342,7 @@ class BaseCoderRestClientTest {
         val workspaces = listOf(DataGen.workspace("ws1"))
         val (srv1, url1) = mockServer()
         srv1.createContext("/api/v2/workspaces", BaseHttpHandler("GET") { exchange ->
-            val response = WorkspacesResponse(workspaces, workspaces.size)
+            val response = WorkspacesResponse(workspaces)
             val body = moshi.adapter(WorkspacesResponse::class.java).toJson(response).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
             exchange.responseBody.write(body)
