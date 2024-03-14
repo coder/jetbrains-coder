@@ -2,11 +2,14 @@ package com.coder.gateway.sdk.v2.models
 
 import com.coder.gateway.models.WorkspaceAgentListModel
 import com.squareup.moshi.Json
-import java.util.*
+import com.squareup.moshi.JsonClass
+import java.util.UUID
 
 /**
- * Represents a deployment of a template. It references a specific version and can be updated.
+ * Represents a deployment of a template. It references a specific version and
+ * can be updated.
  */
+@JsonClass(generateAdapter = true)
 data class Workspace(
     @Json(name = "id") val id: UUID,
     @Json(name = "template_id") val templateID: UUID,

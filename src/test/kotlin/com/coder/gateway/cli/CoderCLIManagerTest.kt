@@ -377,6 +377,7 @@ internal class CoderCLIManagerTest {
         val tests = mapOf(
             null                                to ProcessInitException::class,
             echo("""{"foo": true, "baz": 1}""") to MissingVersionException::class,
+            echo("""{"version": ""}""")         to MissingVersionException::class,
             echo("""v0.0.1""")                  to JsonEncodingException::class,
             echo("""{"version: """)             to JsonEncodingException::class,
             echo("""{"version": "invalid"}""")  to InvalidVersionException::class,
@@ -409,6 +410,7 @@ internal class CoderCLIManagerTest {
         val test = listOf(
             Triple(null, "v1.0.0", null),
             Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0", true),
+            Triple(echo("""{"version": "v1.0.0", "foo": "bar"}"""), "v1.0.0", true),
             Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0-devel+b5b5b5b5", true),
             Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
             Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0", true),
@@ -466,7 +468,7 @@ internal class CoderCLIManagerTest {
             return
         }
 
-        val tests = listOf(
+        @Suppress("BooleanLiteralArgument") val tests = listOf(
             // CLI is writable.
             EnsureCLITest(null,    null,    "1.0.0", true,  true,  true,  Result.DL_BIN),  // Download.
             EnsureCLITest(null,    null,    "1.0.0", true,  false, true,  Result.NONE),    // No download, error when used.
