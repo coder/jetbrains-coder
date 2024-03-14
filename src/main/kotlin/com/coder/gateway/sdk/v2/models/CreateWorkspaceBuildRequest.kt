@@ -1,16 +1,16 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 import java.util.UUID
 
 data class CreateWorkspaceBuildRequest(
-    @SerializedName("template_version_id") val templateVersionID: UUID?,
-    @SerializedName("transition") val transition: WorkspaceTransition,
-    @SerializedName("dry_run") val dryRun: Boolean?,
-    @SerializedName("state") val provisionerState: Array<Byte>?,
+    @Json(name = "template_version_id") val templateVersionID: UUID?,
+    @Json(name = "transition") val transition: WorkspaceTransition,
+    @Json(name = "dry_run") val dryRun: Boolean?,
+    @Json(name = "state") val provisionerState: Array<Byte>?,
     // Orphan may be set for the Destroy transition.
-    @SerializedName("orphan") val orphan: Boolean?,
-    @SerializedName("parameter_values") val parameterValues: Array<CreateParameterRequest>?
+    @Json(name = "orphan") val orphan: Boolean?,
+    @Json(name = "parameter_values") val parameterValues: Array<CreateParameterRequest>?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

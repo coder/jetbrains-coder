@@ -1,14 +1,9 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 
 enum class WorkspaceTransition {
-    @SerializedName("start")
-    START,
-
-    @SerializedName("stop")
-    STOP,
-
-    @SerializedName("delete")
-    DELETE
+    @Json(name = "start") START,
+    @Json(name = "stop") STOP,
+    @Json(name = "delete") DELETE
 }

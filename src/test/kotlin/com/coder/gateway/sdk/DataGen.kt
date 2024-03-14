@@ -173,8 +173,8 @@ class DataGen {
                 Instant.now(),
                 Instant.now(),
                 UserStatus.ACTIVE,
-                listOf(),
-                listOf(),
+                emptyList(),
+                emptyList(),
                 "",
             )
         }

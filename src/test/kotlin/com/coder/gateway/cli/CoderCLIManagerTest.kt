@@ -12,7 +12,7 @@ import com.coder.gateway.util.escape
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.sha1
 import com.coder.gateway.util.toURL
-import com.google.gson.JsonSyntaxException
+import com.squareup.moshi.JsonEncodingException
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -377,7 +377,8 @@ internal class CoderCLIManagerTest {
         val tests = mapOf(
             null                                to ProcessInitException::class,
             echo("""{"foo": true, "baz": 1}""") to MissingVersionException::class,
-            echo("""{"version: """)             to JsonSyntaxException::class,
+            echo("""v0.0.1""")                  to JsonEncodingException::class,
+            echo("""{"version: """)             to JsonEncodingException::class,
             echo("""{"version": "invalid"}""")  to InvalidVersionException::class,
             exit(0)                             to MissingVersionException::class,
             exit(1)                             to InvalidExitValueException::class,

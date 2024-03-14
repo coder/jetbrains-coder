@@ -5,6 +5,7 @@ import com.coder.gateway.icons.toRetinaAwareIcon
 import com.coder.gateway.sdk.convertors.ArchConverter
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.convertors.OSConverter
+import com.coder.gateway.sdk.convertors.UUIDConverter
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
@@ -19,28 +20,24 @@ import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.util.Arch
 import com.coder.gateway.util.CoderHostnameVerifier
-import com.coder.gateway.util.OS
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
 import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.ImageLoader
 import com.intellij.util.ui.ImageUtil
+import com.squareup.moshi.Moshi
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.imgscalr.Scalr
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.HttpURLConnection
 import java.net.URL
-import java.time.Instant
 import java.util.UUID
 import javax.net.ssl.X509TrustManager
 import javax.swing.Icon
@@ -61,11 +58,12 @@ open class BaseCoderRestClient(
     lateinit var buildVersion: String
 
     init {
-        val gson: Gson = GsonBuilder()
-            .registerTypeAdapter(Instant::class.java, InstantConverter())
-            .registerTypeAdapter(Arch::class.java, ArchConverter())
-            .registerTypeAdapter(OS::class.java, OSConverter())
-            .setPrettyPrinting().create()
+        val moshi = Moshi.Builder()
+            .add(ArchConverter())
+            .add(InstantConverter())
+            .add(OSConverter())
+            .add(UUIDConverter())
+            .build()
 
         val socketFactory = coderSocketFactory(settings.tls)
         val trustManagers = coderTrustManagers(settings.tls.caPath)
@@ -104,7 +102,7 @@ open class BaseCoderRestClient(
             .build()
 
         retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build().create(CoderV2RestFacade::class.java)
     }
 
