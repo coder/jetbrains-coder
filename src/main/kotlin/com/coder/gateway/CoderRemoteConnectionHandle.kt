@@ -206,7 +206,7 @@ class CoderRemoteConnectionHandle {
                     BrowserUtil.browse(getTokenUrl)
                 } else {
                     val (u, t) = settings.readConfig(settings.coderConfigDir)
-                    if (url == u?.toURL() && !t.isNullOrBlank() && t != existingToken) {
+                    if (url.toString() == u && !t.isNullOrBlank() && t != existingToken) {
                         logger.info("Injecting token for $url from CLI config")
                         return Pair(t, TokenSource.CONFIG)
                     }
