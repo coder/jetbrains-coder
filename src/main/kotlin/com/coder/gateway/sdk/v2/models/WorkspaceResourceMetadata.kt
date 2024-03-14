@@ -1,9 +1,9 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 
 data class WorkspaceResourceMetadata(
-    @SerializedName("key") val key: String,
-    @SerializedName("value") val value: String,
-    @SerializedName("sensitive") val sensitive: Boolean
+    @Json(name = "key") val key: String,
+    @Json(name = "value") val value: String,
+    @Json(name = "sensitive") val sensitive: Boolean
 )

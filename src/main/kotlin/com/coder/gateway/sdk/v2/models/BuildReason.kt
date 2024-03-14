@@ -1,20 +1,15 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 
 enum class BuildReason {
     // "initiator" is used when a workspace build is triggered by a user.
     // Combined with the initiator id/username, it indicates which user initiated the build.
-    @SerializedName("initiator")
-    INITIATOR,
-
+    @Json(name = "initiator") INITIATOR,
     // "autostart" is used when a build to start a workspace is triggered by Autostart.
     // The initiator id/username in this case is the workspace owner and can be ignored.
-    @SerializedName("autostart")
-    AUTOSTART,
-
+    @Json(name = "autostart") AUTOSTART,
     // "autostop" is used when a build to stop a workspace is triggered by Autostop.
     // The initiator id/username in this case is the workspace owner and can be ignored.
-    @SerializedName("autostop")
-    AUTOSTOP
+    @Json(name = "autostop") AUTOSTOP
 }

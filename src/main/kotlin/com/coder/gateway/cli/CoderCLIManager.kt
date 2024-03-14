@@ -16,11 +16,12 @@ import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
-import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
+import com.squareup.moshi.Json
+import com.squareup.moshi.Moshi
 import org.zeroturnaround.exec.ProcessExecutor
+import java.io.EOFException
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.net.ConnectException
@@ -328,7 +329,7 @@ class CoderCLIManager(
      * Version output from the CLI's version command.
      */
     private data class Version(
-        val version: String,
+        @Json(name = "version") val version: String,
     )
 
     /**
@@ -338,11 +339,15 @@ class CoderCLIManager(
      */
     fun version(): SemVer {
         val raw = exec("version", "--output", "json")
-        val json = Gson().fromJson(raw, Version::class.java)
-        if (json?.version == null) {
+        try {
+            val json = Moshi.Builder().build().adapter(Version::class.java).fromJson(raw)
+            if (json?.version == null) {
+                throw MissingVersionException("No version found in output")
+            }
+            return SemVer.parse(json.version)
+        } catch (exception: EOFException) {
             throw MissingVersionException("No version found in output")
         }
-        return SemVer.parse(json.version)
     }
 
     /**
@@ -353,7 +358,6 @@ class CoderCLIManager(
             version()
         } catch (e: Exception) {
             when (e) {
-                is JsonSyntaxException,
                 is InvalidVersionException -> {
                     logger.info("Got invalid version from $localBinaryPath: ${e.message}")
                 }

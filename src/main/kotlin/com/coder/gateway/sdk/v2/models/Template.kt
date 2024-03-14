@@ -1,35 +1,32 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 import java.time.Instant
 import java.util.UUID
 
 data class Template(
-    @SerializedName("id") val id: UUID,
-    @SerializedName("created_at") val createdAt: Instant,
-    @SerializedName("updated_at") val updatedAt: Instant,
-    @SerializedName("organization_id") val organizationIterator: UUID,
-    @SerializedName("name") val name: String,
-    @SerializedName("display_name") val displayName: String,
-    @SerializedName("provisioner") val provisioner: ProvisionerType,
-    @SerializedName("active_version_id") val activeVersionID: UUID,
-    @SerializedName("workspace_owner_count") val workspaceOwnerCount: Int,
-    @SerializedName("active_user_count") val activeUserCount: Int,
-    @SerializedName("build_time_stats") val buildTimeStats: Map<WorkspaceTransition, TransitionStats>,
-    @SerializedName("description") val description: String,
-    @SerializedName("icon") val icon: String,
-    @SerializedName("default_ttl_ms") val defaultTTLMillis: Long,
-    @SerializedName("created_by_id") val createdByID: UUID,
-    @SerializedName("created_by_name") val createdByName: String,
-    @SerializedName("allow_user_cancel_workspace_jobs") val allowUserCancelWorkspaceJobs: Boolean,
+    @Json(name = "id") val id: UUID,
+    @Json(name = "created_at") val createdAt: Instant,
+    @Json(name = "updated_at") val updatedAt: Instant,
+    @Json(name = "organization_id") val organizationIterator: UUID,
+    @Json(name = "name") val name: String,
+    @Json(name = "display_name") val displayName: String,
+    @Json(name = "provisioner") val provisioner: ProvisionerType,
+    @Json(name = "active_version_id") val activeVersionID: UUID,
+    @Json(name = "workspace_owner_count") val workspaceOwnerCount: Int,
+    @Json(name = "active_user_count") val activeUserCount: Int,
+    @Json(name = "build_time_stats") val buildTimeStats: Map<WorkspaceTransition, TransitionStats>,
+    @Json(name = "description") val description: String,
+    @Json(name = "icon") val icon: String,
+    @Json(name = "default_ttl_ms") val defaultTTLMillis: Long,
+    @Json(name = "created_by_id") val createdByID: UUID,
+    @Json(name = "created_by_name") val createdByName: String,
+    @Json(name = "allow_user_cancel_workspace_jobs") val allowUserCancelWorkspaceJobs: Boolean,
 )
 
 enum class ProvisionerType {
-    @SerializedName("echo")
-    ECHO,
-
-    @SerializedName("terraform")
-    TERRAFORM
+    @Json(name = "echo") ECHO,
+    @Json(name = "terraform") TERRAFORM
 }
 
 data class TransitionStats(val p50: Long, val p95: Long)

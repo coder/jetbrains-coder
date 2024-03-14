@@ -1,6 +1,6 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 import java.time.Instant
 import java.util.UUID
 
@@ -9,54 +9,35 @@ import java.util.UUID
  * BuildNumbers start at 1 and increase by 1 for each subsequent build.
  */
 data class WorkspaceBuild(
-    @SerializedName("id") val id: UUID,
-    @SerializedName("created_at") val createdAt: Instant,
-    @SerializedName("updated_at") val updatedAt: Instant,
-    @SerializedName("workspace_id") val workspaceID: UUID,
-    @SerializedName("workspace_name") val workspaceName: String,
-    @SerializedName("workspace_owner_id") val workspaceOwnerID: UUID,
-    @SerializedName("workspace_owner_name") val workspaceOwnerName: String,
-    @SerializedName("template_version_id") val templateVersionID: UUID,
-    @SerializedName("build_number") val buildNumber: Int,
-    @SerializedName("transition") val transition: WorkspaceTransition,
-    @SerializedName("initiator_id") val initiatorID: UUID,
-    @SerializedName("initiator_name") val initiatorUsername: String,
-    @SerializedName("job") val job: ProvisionerJob,
-    @SerializedName("reason") val reason: BuildReason,
-    @SerializedName("resources") val resources: List<WorkspaceResource>,
-    @SerializedName("deadline") val deadline: Instant?,
-    @SerializedName("status") val status: WorkspaceStatus,
-    @SerializedName("daily_cost") val dailyCost: Int,
+    @Json(name = "id") val id: UUID,
+    @Json(name = "created_at") val createdAt: Instant,
+    @Json(name = "updated_at") val updatedAt: Instant,
+    @Json(name = "workspace_id") val workspaceID: UUID,
+    @Json(name = "workspace_name") val workspaceName: String,
+    @Json(name = "workspace_owner_id") val workspaceOwnerID: UUID,
+    @Json(name = "workspace_owner_name") val workspaceOwnerName: String,
+    @Json(name = "template_version_id") val templateVersionID: UUID,
+    @Json(name = "build_number") val buildNumber: Int,
+    @Json(name = "transition") val transition: WorkspaceTransition,
+    @Json(name = "initiator_id") val initiatorID: UUID,
+    @Json(name = "initiator_name") val initiatorUsername: String,
+    @Json(name = "job") val job: ProvisionerJob,
+    @Json(name = "reason") val reason: BuildReason,
+    @Json(name = "resources") val resources: List<WorkspaceResource>,
+    @Json(name = "deadline") val deadline: Instant?,
+    @Json(name = "status") val status: WorkspaceStatus,
+    @Json(name = "daily_cost") val dailyCost: Int,
 )
 
 enum class WorkspaceStatus {
-    @SerializedName("pending")
-    PENDING,
-
-    @SerializedName("starting")
-    STARTING,
-
-    @SerializedName("running")
-    RUNNING,
-
-    @SerializedName("stopping")
-    STOPPING,
-
-    @SerializedName("stopped")
-    STOPPED,
-
-    @SerializedName("failed")
-    FAILED,
-
-    @SerializedName("canceling")
-    CANCELING,
-
-    @SerializedName("canceled")
-    CANCELED,
-
-    @SerializedName("deleting")
-    DELETING,
-
-    @SerializedName("deleted")
-    DELETED
+    @Json(name = "pending") PENDING,
+    @Json(name = "starting") STARTING,
+    @Json(name = "running") RUNNING,
+    @Json(name = "stopping") STOPPING,
+    @Json(name = "stopped") STOPPED,
+    @Json(name = "failed") FAILED,
+    @Json(name = "canceling") CANCELING,
+    @Json(name = "canceled") CANCELED,
+    @Json(name = "deleting") DELETING,
+    @Json(name = "deleted") DELETED
 }

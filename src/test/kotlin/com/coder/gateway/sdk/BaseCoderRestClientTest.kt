@@ -1,23 +1,29 @@
 package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
+import com.coder.gateway.sdk.convertors.UUIDConverter
 import com.coder.gateway.sdk.ex.WorkspaceResponseException
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.Response
+import com.coder.gateway.sdk.v2.models.Template
+import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
 import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
+import okio.buffer
+import okio.source
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -28,7 +34,6 @@ import java.net.SocketAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Path
-import java.time.Instant
 import java.util.*
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -37,29 +42,30 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-internal fun toJson(src: Any?): String {
-    return GsonBuilder().registerTypeAdapter(Instant::class.java, InstantConverter()).create().toJson(src)
-}
-
 internal class BaseHttpHandler(private val method: String,
                       private val handler: (exchange: HttpExchange) -> Unit): HttpHandler {
+
+    private val moshi = Moshi.Builder().build()
+
     override fun handle(exchange: HttpExchange) {
         try {
             if (exchange.requestMethod != method) {
-                val body = toJson(Response("Not allowed", "Expected $method but got ${exchange.requestMethod}")).toByteArray()
+                val response = Response("Not allowed", "Expected $method but got ${exchange.requestMethod}")
+                val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, body.size.toLong())
                 exchange.responseBody.write(body)
             } else {
                 handler(exchange)
                 if (exchange.responseCode == -1) {
-                    val body = toJson(Response("Not found", "The requested resource could not be found")).toByteArray()
+                    val response = Response("Not found", "The requested resource could not be found")
+                    val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
                     exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, body.size.toLong())
                     exchange.responseBody.write(body)
                 }
             }
         } catch (ex: Exception) {
-            // If we get here it is because of developer error.
-            val body = toJson(Response("Developer error", ex.message ?: "unknown error")).toByteArray()
+            val response = Response("Handler threw an exception", ex.message ?: "unknown error")
+            val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, body.size.toLong())
             exchange.responseBody.write(body)
         }
@@ -68,6 +74,11 @@ internal class BaseHttpHandler(private val method: String,
 }
 
 class BaseCoderRestClientTest {
+    private val moshi = Moshi.Builder()
+        .add(InstantConverter())
+        .add(UUIDConverter())
+        .build()
+
     data class TestWorkspace(var workspace: Workspace, var resources: List<WorkspaceResource>? = emptyList())
 
     /**
@@ -120,7 +131,8 @@ class BaseCoderRestClientTest {
             val (srv, url) = mockServer()
             val client = BaseCoderRestClient(URL(url), "token")
             srv.createContext("/api/v2/workspaces", BaseHttpHandler("GET") { exchange ->
-                val body = toJson(WorkspacesResponse(workspaces, workspaces.size)).toByteArray()
+                val response = WorkspacesResponse(workspaces, workspaces.size)
+                val body = moshi.adapter(WorkspacesResponse::class.java).toJson(response).toByteArray()
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
                 exchange.responseBody.write(body)
             })
@@ -164,7 +176,8 @@ class BaseCoderRestClientTest {
                     val templateVersionId = UUID.fromString(matches.destructured.toList()[0])
                     val ws = workspaces.firstOrNull { it.workspace.latestBuild.templateVersionID == templateVersionId }
                     if (ws != null) {
-                        val body = toJson(ws.resources).toByteArray()
+                        val body = moshi.adapter<List<WorkspaceResource>>(Types.newParameterizedType(List::class.java, WorkspaceResource::class.java))
+                            .toJson(ws.resources).toByteArray()
                         exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
                         exchange.responseBody.write(body)
                     }
@@ -197,7 +210,7 @@ class BaseCoderRestClientTest {
                 actions.add(Pair("get_template", templateId))
                 val template = templates.firstOrNull { it.id == templateId }
                 if (template != null) {
-                    val body = toJson(template).toByteArray()
+                    val body = moshi.adapter(Template::class.java).toJson(template).toByteArray()
                     exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
                     exchange.responseBody.write(body)
                 }
@@ -208,7 +221,14 @@ class BaseCoderRestClientTest {
             val buildMatch = buildEndpoint.find(exchange.requestURI.path)
             if (buildMatch != null) {
                 val workspaceId = UUID.fromString(buildMatch.destructured.toList()[0])
-                val json = Gson().fromJson(InputStreamReader(exchange.requestBody), CreateWorkspaceBuildRequest::class.java)
+                val json = moshi.adapter(CreateWorkspaceBuildRequest::class.java).fromJson(exchange.requestBody.source().buffer())
+                if (json == null) {
+                    val response = Response("No body", "No body for create workspace build request")
+                    val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
+                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, body.size.toLong())
+                    exchange.responseBody.write(body)
+                    return@BaseHttpHandler
+                }
                 val ws = workspaces.firstOrNull { it.id == workspaceId }
                 val templateVersionID = json.templateVersionID ?: ws?.latestBuild?.templateVersionID
                 if (json.templateVersionID != null) {
@@ -221,7 +241,7 @@ class BaseCoderRestClientTest {
                     }
                 }
                 if (ws != null && templateVersionID != null) {
-                    val body = toJson(DataGen.build(
+                    val body = moshi.adapter(WorkspaceBuild::class.java).toJson(DataGen.build(
                         workspaceID = ws.id,
                         workspaceName = ws.name,
                         ownerID = ws.ownerID,
@@ -275,7 +295,7 @@ class BaseCoderRestClientTest {
         val (srv, url) = mockTLSServer("self-signed")
         val client = BaseCoderRestClient(URL(url), "token", settings)
         srv.createContext("/api/v2/users/me", BaseHttpHandler("GET") { exchange ->
-            val body = toJson(user).toByteArray()
+            val body = moshi.adapter(User::class.java).toJson(user).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
             exchange.responseBody.write(body)
         })
@@ -322,7 +342,7 @@ class BaseCoderRestClientTest {
         val (srv, url) = mockTLSServer("chain")
         val client = BaseCoderRestClient(URL(url), "token", settings)
         srv.createContext("/api/v2/users/me", BaseHttpHandler("GET") { exchange ->
-            val body = toJson(user).toByteArray()
+            val body = moshi.adapter(User::class.java).toJson(user).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
             exchange.responseBody.write(body)
         })
@@ -338,7 +358,8 @@ class BaseCoderRestClientTest {
         val workspaces = listOf(DataGen.workspace("ws1"))
         val (srv1, url1) = mockServer()
         srv1.createContext("/api/v2/workspaces", BaseHttpHandler("GET") { exchange ->
-            val body = toJson(WorkspacesResponse(workspaces, workspaces.size)).toByteArray()
+            val response = WorkspacesResponse(workspaces, workspaces.size)
+            val body = moshi.adapter(WorkspacesResponse::class.java).toJson(response).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
             exchange.responseBody.write(body)
         })

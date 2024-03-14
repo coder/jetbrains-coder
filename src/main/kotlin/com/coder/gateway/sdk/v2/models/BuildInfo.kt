@@ -1,6 +1,6 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.google.gson.annotations.SerializedName
+import com.squareup.moshi.Json
 
 /**
  * Contains build information for a Coder instance.
@@ -12,6 +12,6 @@ import com.google.gson.annotations.SerializedName
  * @param version the semantic version of the build.
  */
 data class BuildInfo(
-    @SerializedName("external_url") val externalUrl: String,
-    @SerializedName("version") val version: String
+    @Json(name = "external_url") val externalUrl: String,
+    @Json(name = "version") val version: String
 )
