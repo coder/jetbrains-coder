@@ -4,5 +4,4 @@ import com.squareup.moshi.Json
 
 data class WorkspacesResponse(
     @Json(name = "workspaces") val workspaces: List<Workspace>,
-    @Json(name = "count") val count: Int
 )
