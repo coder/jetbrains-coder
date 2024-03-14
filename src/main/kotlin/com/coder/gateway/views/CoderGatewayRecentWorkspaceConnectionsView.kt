@@ -54,7 +54,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.Dimension
 import java.nio.file.Path
-import java.util.*
+import java.util.Locale
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.event.DocumentEvent

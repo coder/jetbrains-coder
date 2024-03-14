@@ -34,7 +34,7 @@ import java.net.SocketAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Path
-import java.util.*
+import java.util.UUID
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
 import kotlin.test.Test
