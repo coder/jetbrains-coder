@@ -16,22 +16,25 @@ plugins {
     id("org.jetbrains.changelog") version "2.2.0"
     // Gradle Qodana Plugin
     id("org.jetbrains.qodana") version "0.1.13"
+    // Generate Moshi adapters.
+    id("com.google.devtools.ksp") version "1.9.23-1.0.19"
 }
 
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
 dependencies {
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    // define a BOM and its version
     implementation(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
-    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
     implementation("com.squareup.okhttp3:okhttp")
     implementation("com.squareup.okhttp3:logging-interceptor")
 
-    implementation("org.zeroturnaround:zt-exec:1.12") {
-        exclude("org.slf4j")
-    }
+    implementation("com.squareup.moshi:moshi:1.15.1")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+
+    implementation("org.zeroturnaround:zt-exec:1.12")
 
     testImplementation(kotlin("test"))
 }

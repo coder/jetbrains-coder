@@ -3,8 +3,10 @@ package com.coder.gateway.sdk.v2.models
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.squareup.moshi.Json
-import java.util.*
+import com.squareup.moshi.JsonClass
+import java.util.UUID
 
+@JsonClass(generateAdapter = true)
 data class WorkspaceAgent(
     @Json(name = "id") val id: UUID,
     @Json(name = "status") val status: WorkspaceAgentStatus,

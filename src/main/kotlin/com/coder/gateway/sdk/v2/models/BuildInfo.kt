@@ -1,6 +1,7 @@
 package com.coder.gateway.sdk.v2.models
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 
 /**
  * Contains build information for a Coder instance.
@@ -11,6 +12,7 @@ import com.squareup.moshi.Json
  *
  * @param version the semantic version of the build.
  */
+@JsonClass(generateAdapter = true)
 data class BuildInfo(
     @Json(name = "external_url") val externalUrl: String,
     @Json(name = "version") val version: String

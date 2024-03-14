@@ -1,12 +1,14 @@
 package com.coder.gateway.sdk.v2.models
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.UUID
 
 /**
  * WorkspaceBuild is an at-point representation of a workspace state.
  * BuildNumbers start at 1 and increase by 1 for each subsequent build.
  */
+@JsonClass(generateAdapter = true)
 data class WorkspaceBuild(
     @Json(name = "template_version_id") val templateVersionID: UUID,
     @Json(name = "resources") val resources: List<WorkspaceResource>,

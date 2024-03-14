@@ -1,8 +1,10 @@
 package com.coder.gateway.sdk.v2.models
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.UUID
 
+@JsonClass(generateAdapter = true)
 data class CreateWorkspaceBuildRequest(
     // Use to update the workspace to a new template version.
     @Json(name = "template_version_id") val templateVersionID: UUID?,

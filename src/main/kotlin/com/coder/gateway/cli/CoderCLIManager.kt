@@ -19,6 +19,8 @@ import com.coder.gateway.util.sha1
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 import org.zeroturnaround.exec.ProcessExecutor
 import java.io.EOFException
@@ -32,6 +34,14 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.zip.GZIPInputStream
 import javax.net.ssl.HttpsURLConnection
+
+/**
+ * Version output from the CLI's version command.
+ */
+@JsonClass(generateAdapter = true)
+internal data class Version(
+    @Json(name = "version") val version: String,
+)
 
 /**
  * Do as much as possible to get a valid, up-to-date CLI.
@@ -326,13 +336,6 @@ class CoderCLIManager(
     }
 
     /**
-     * Version output from the CLI's version command.
-     */
-    private data class Version(
-        @Json(name = "version") val version: String,
-    )
-
-    /**
      * Return the binary version.
      *
      * Throws if it could not be determined.
@@ -341,10 +344,12 @@ class CoderCLIManager(
         val raw = exec("version", "--output", "json")
         try {
             val json = Moshi.Builder().build().adapter(Version::class.java).fromJson(raw)
-            if (json?.version == null) {
+            if (json?.version == null || json.version.isBlank()) {
                 throw MissingVersionException("No version found in output")
             }
             return SemVer.parse(json.version)
+        } catch (exception: JsonDataException) {
+            throw MissingVersionException("No version found in output")
         } catch (exception: EOFException) {
             throw MissingVersionException("No version found in output")
         }
