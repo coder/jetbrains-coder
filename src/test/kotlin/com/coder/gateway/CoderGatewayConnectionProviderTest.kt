@@ -1,7 +1,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.sdk.DataGen
-import java.util.*
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

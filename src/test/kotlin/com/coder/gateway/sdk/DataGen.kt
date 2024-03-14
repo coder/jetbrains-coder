@@ -13,7 +13,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
-import java.util.*
+import java.util.UUID
 
 class DataGen {
     companion object {
