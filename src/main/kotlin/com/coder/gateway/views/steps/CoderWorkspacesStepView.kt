@@ -462,7 +462,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             newURL,
             // If this is a new URL there is no point in trying to use the same
             // token.
-            if (oldURL == newURL) fields.token else null,
+            if (oldURL.toString() == newURL.toString()) fields.token else null,
             isRetry,
             fields.useExistingToken,
             settings,
