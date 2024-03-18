@@ -33,7 +33,7 @@ dependencies {
         exclude("org.slf4j")
     }
 
-    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.19"))
+    testImplementation(platform("org.apache.groovy:groovy-bom:4.0.20"))
     testImplementation("org.apache.groovy:groovy")
     testImplementation(platform("org.spockframework:spock-bom:2.3-groovy-4.0"))
     testImplementation("org.spockframework:spock-core")
