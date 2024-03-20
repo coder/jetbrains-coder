@@ -50,6 +50,7 @@ open class BaseCoderRestClient(
     private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
     private val proxyValues: ProxyValues? = null,
     private val pluginVersion: String = "development",
+    existingHttpClient: OkHttpClient? = null,
 ) {
     private val httpClient: OkHttpClient
     private val retroRestClient: CoderV2RestFacade
@@ -67,7 +68,7 @@ open class BaseCoderRestClient(
 
         val socketFactory = coderSocketFactory(settings.tls)
         val trustManagers = coderTrustManagers(settings.tls.caPath)
-        var builder = OkHttpClient.Builder()
+        var builder = existingHttpClient?.newBuilder() ?: OkHttpClient.Builder()
 
         if (proxyValues != null) {
             builder = builder
