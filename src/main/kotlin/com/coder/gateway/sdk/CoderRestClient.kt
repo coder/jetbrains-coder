@@ -18,15 +18,16 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
-import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.coderSocketFactory
 import com.coder.gateway.util.coderTrustManagers
+import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getHeaders
+import com.coder.gateway.util.getOS
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.ImageLoader
 import com.intellij.util.ui.ImageUtil
 import com.squareup.moshi.Moshi
@@ -98,7 +99,7 @@ open class CoderRestClient(
             .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
             .hostnameVerifier(CoderHostnameVerifier(settings.tls.altHostname))
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
-            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${SystemInfo.getOsNameAndVersion()}; ${SystemInfo.OS_ARCH})").build()) }
+            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${getOS()}; ${getArch()})").build()) }
             .addInterceptor {
                 var request = it.request()
                 val headers = getHeaders(url, settings.headerCommand)
