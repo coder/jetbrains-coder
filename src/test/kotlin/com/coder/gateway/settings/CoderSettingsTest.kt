@@ -1,6 +1,5 @@
 package com.coder.gateway.settings
 
-import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath

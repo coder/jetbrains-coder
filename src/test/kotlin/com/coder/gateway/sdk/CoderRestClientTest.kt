@@ -12,7 +12,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
-import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.sslContextFromPEMs
 import com.squareup.moshi.Moshi
@@ -73,7 +73,7 @@ internal class BaseHttpHandler(private val method: String,
     }
 }
 
-class BaseCoderRestClientTest {
+class CoderRestClientTest {
     private val moshi = Moshi.Builder()
         .add(InstantConverter())
         .add(UUIDConverter())
@@ -129,7 +129,7 @@ class BaseCoderRestClientTest {
         )
         tests.forEach { workspaces ->
             val (srv, url) = mockServer()
-            val client = BaseCoderRestClient(URL(url), "token")
+            val client = CoderRestClient(URL(url), "token")
             srv.createContext("/api/v2/workspaces", BaseHttpHandler("GET") { exchange ->
                 val response = WorkspacesResponse(workspaces)
                 val body = moshi.adapter(WorkspacesResponse::class.java).toJson(response).toByteArray()
@@ -169,7 +169,7 @@ class BaseCoderRestClientTest {
         val resourceEndpoint = "([^/]+)/resources".toRegex()
         tests.forEach { workspaces ->
             val (srv, url) = mockServer()
-            val client = BaseCoderRestClient(URL(url), "token")
+            val client = CoderRestClient(URL(url), "token")
             srv.createContext("/api/v2/templateversions", BaseHttpHandler("GET") { exchange ->
                 val matches = resourceEndpoint.find(exchange.requestURI.path)
                 if (matches != null) {
@@ -199,7 +199,7 @@ class BaseCoderRestClientTest {
 
         val actions = mutableListOf<Pair<String, UUID>>()
         val (srv, url) = mockServer()
-        val client = BaseCoderRestClient(URL(url), "token")
+        val client = CoderRestClient(URL(url), "token")
         val templateEndpoint = "/api/v2/templates/([^/]+)".toRegex()
         srv.createContext("/api/v2/templates", BaseHttpHandler("GET") { exchange ->
             val templateMatch = templateEndpoint.find(exchange.requestURI.path)
@@ -277,7 +277,7 @@ class BaseCoderRestClientTest {
             tlsAlternateHostname = "localhost"))
         val user = DataGen.user()
         val (srv, url) = mockTLSServer("self-signed")
-        val client = BaseCoderRestClient(URL(url), "token", settings)
+        val client = CoderRestClient(URL(url), "token", settings)
         srv.createContext("/api/v2/users/me", BaseHttpHandler("GET") { exchange ->
             val body = moshi.adapter(User::class.java).toJson(user).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
@@ -295,7 +295,7 @@ class BaseCoderRestClientTest {
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
             tlsAlternateHostname = "fake.example.com"))
         val (srv, url) = mockTLSServer("self-signed")
-        val client = BaseCoderRestClient(URL(url), "token", settings)
+        val client = CoderRestClient(URL(url), "token", settings)
 
         assertFailsWith(
             exceptionClass = SSLPeerUnverifiedException::class,
@@ -309,7 +309,7 @@ class BaseCoderRestClientTest {
         val settings = CoderSettings(CoderSettingsState(
             tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()))
         val (srv, url) = mockTLSServer("no-signing")
-        val client = BaseCoderRestClient(URL(url), "token", settings)
+        val client = CoderRestClient(URL(url), "token", settings)
 
         assertFailsWith(
             exceptionClass = SSLHandshakeException::class,
@@ -324,7 +324,7 @@ class BaseCoderRestClientTest {
             tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString()))
         val user = DataGen.user()
         val (srv, url) = mockTLSServer("chain")
-        val client = BaseCoderRestClient(URL(url), "token", settings)
+        val client = CoderRestClient(URL(url), "token", settings)
         srv.createContext("/api/v2/users/me", BaseHttpHandler("GET") { exchange ->
             val body = moshi.adapter(User::class.java).toJson(user).toByteArray()
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
@@ -348,7 +348,7 @@ class BaseCoderRestClientTest {
             exchange.responseBody.write(body)
         })
         val srv2 = mockProxy()
-        val client = BaseCoderRestClient(URL(url1), "token", settings, ProxyValues(
+        val client = CoderRestClient(URL(url1), "token", settings, ProxyValues(
             "foo",
             "bar",
             true,

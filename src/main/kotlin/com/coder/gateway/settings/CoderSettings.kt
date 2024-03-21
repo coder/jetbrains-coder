@@ -1,6 +1,5 @@
 package com.coder.gateway.settings
 
-import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.expand
@@ -15,10 +14,70 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+open class CoderSettingsState(
+    // Used to download the Coder CLI which is necessary to proxy SSH
+    // connections.  The If-None-Match header will be set to the SHA1 of the CLI
+    // and can be used for caching.  Absolute URLs will be used as-is; otherwise
+    // this value will be resolved against the deployment domain.  Defaults to
+    // the plugin's data directory.
+    open var binarySource: String = "",
+    // Directories are created here that store the CLI for each domain to which
+    // the plugin connects.   Defaults to the data directory.
+    open var binaryDirectory: String = "",
+    // Where to save plugin data like the Coder binary (if not configured with
+    // binaryDirectory) and the deployment URL and session token.
+    open var dataDirectory: String = "",
+    // Whether to allow the plugin to download the CLI if the current one is out
+    // of date or does not exist.
+    open var enableDownloads: Boolean = true,
+    // Whether to allow the plugin to fall back to the data directory when the
+    // CLI directory is not writable.
+    open var enableBinaryDirectoryFallback: Boolean = false,
+    // An external command that outputs additional HTTP headers added to all
+    // requests. The command must output each header as `key=value` on its own
+    // line. The following environment variables will be available to the
+    // process: CODER_URL.
+    open var headerCommand: String = "",
+    // Optionally set this to the path of a certificate to use for TLS
+    // connections. The certificate should be in X.509 PEM format.
+    open var tlsCertPath: String = "",
+    // Optionally set this to the path of the private key that corresponds to
+    // the above cert path to use for TLS connections. The key should be in
+    // X.509 PEM format.
+    open var tlsKeyPath: String = "",
+    // Optionally set this to the path of a file containing certificates for an
+    // alternate certificate authority used to verify TLS certs returned by the
+    // Coder service. The file should be in X.509 PEM format.
+    open var tlsCAPath: String = "",
+    // Optionally set this to an alternate hostname used for verifying TLS
+    // connections. This is useful when the hostname used to connect to the
+    // Coder service does not match the hostname in the TLS certificate.
+    open var tlsAlternateHostname: String = "",
+    // Whether to add --disable-autostart to the proxy command.  This works
+    // around issues on macOS where it periodically wakes and Gateway
+    // reconnects, keeping the workspace constantly up.
+    open var disableAutostart: Boolean = getOS() == OS.MAC,
+)
+
+/**
+ * Consolidated TLS settings.
+ */
+data class CoderTLSSettings (private val state: CoderSettingsState) {
+    val certPath: String
+        get() = state.tlsCertPath
+    val keyPath: String
+        get() = state.tlsKeyPath
+    val caPath: String
+        get() = state.tlsCAPath
+    val altHostname: String
+        get() = state.tlsAlternateHostname
+}
+
 /**
  * In non-test code use CoderSettingsService instead.
  */
 open class CoderSettings(
+    // Raw mutable setting state.
     private val state: CoderSettingsState,
     // The location of the SSH config.  Defaults to ~/.ssh/config.
     val sshConfigPath: Path = Path.of(System.getProperty("user.home")).resolve(".ssh/config"),
@@ -28,15 +87,29 @@ open class CoderSettings(
     private val binaryName: String? = null,
 ) {
     val tls = CoderTLSSettings(state)
+
+    /**
+     * Whether downloading the CLI is allowed.
+     */
     val enableDownloads: Boolean
         get() = state.enableDownloads
 
+    /**
+     * Whether falling back to the data directory is allowed if the binary
+     * directory is not writable.
+     */
     val enableBinaryDirectoryFallback: Boolean
         get() = state.enableBinaryDirectoryFallback
 
+    /**
+     * A command to run to set headers for API calls.
+     */
     val headerCommand: String
         get() = state.headerCommand
 
+    /**
+     * Whether to disable automatically starting a workspace when connecting.
+     */
     val disableAutostart: Boolean
         get() = state.disableAutostart
 
@@ -44,24 +117,28 @@ open class CoderSettings(
      * Where the specified deployment should put its data.
      */
     fun dataDir(url: URL): Path {
-        val dir = if (state.dataDirectory.isBlank()) dataDir
-        else Path.of(expand(state.dataDirectory))
-        return withHost(dir, url).toAbsolutePath()
+        state.dataDirectory.let {
+            val dir = if (it.isBlank()) dataDir
+            else Path.of(expand(it))
+            return withHost(dir, url).toAbsolutePath()
+        }
     }
 
     /**
      * From where the specified deployment should download the binary.
      */
     fun binSource(url: URL): URL {
-        val binaryName = getCoderCLIForOS(getOS(), getArch())
-        return if (state.binarySource.isBlank()) {
-            url.withPath("/bin/$binaryName")
-        } else {
-            logger.info("Using binary source override ${state.binarySource}")
-            try {
-                state.binarySource.toURL()
-            } catch (e: Exception) {
-                url.withPath(state.binarySource) // Assume a relative path.
+        state.binarySource.let {
+            val binaryName = getCoderCLIForOS(getOS(), getArch())
+            return if (it.isBlank()) {
+                url.withPath("/bin/$binaryName")
+            } else {
+                logger.info("Using binary source override $it")
+                try {
+                    it.toURL()
+                } catch (e: Exception) {
+                    url.withPath(it) // Assume a relative path.
+                }
             }
         }
     }
@@ -70,10 +147,12 @@ open class CoderSettings(
      * To where the specified deployment should download the binary.
      */
     fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
-        val name = binaryName ?: getCoderCLIForOS(getOS(), getArch())
-        val dir = if (forceDownloadToData || state.binaryDirectory.isBlank()) dataDir(url)
-        else withHost(Path.of(expand(state.binaryDirectory)), url)
-        return dir.resolve(name).toAbsolutePath()
+        state.binaryDirectory.let {
+            val name = binaryName ?: getCoderCLIForOS(getOS(), getArch())
+            val dir = if (forceDownloadToData || it.isBlank()) dataDir(url)
+            else withHost(Path.of(expand(it)), url)
+            return dir.resolve(name).toAbsolutePath()
+        }
     }
 
     /**

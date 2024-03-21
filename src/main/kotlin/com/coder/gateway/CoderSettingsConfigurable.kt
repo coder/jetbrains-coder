@@ -1,7 +1,7 @@
 package com.coder.gateway
 
 import com.coder.gateway.services.CoderSettingsService
-import com.coder.gateway.services.CoderSettingsState
+import com.coder.gateway.services.CoderSettingsStateService
 import com.coder.gateway.util.canCreateDirectory
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable
@@ -19,7 +19,7 @@ import java.nio.file.Path
 
 class CoderSettingsConfigurable : BoundConfigurable("Coder") {
     override fun createPanel(): DialogPanel {
-        val state: CoderSettingsState = service()
+        val state: CoderSettingsStateService = service()
         val settings: CoderSettingsService = service<CoderSettingsService>()
         return panel {
             row(CoderGatewayBundle.message("gateway.connector.settings.data-directory.title")) {

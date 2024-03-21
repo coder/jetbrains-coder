@@ -3,8 +3,8 @@ package com.coder.gateway.cli
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
-import com.coder.gateway.services.CoderSettingsState
 import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS

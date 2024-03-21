@@ -16,7 +16,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.coder.gateway.services.CoderRecentWorkspaceConnectionsService"/>
-        <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsState"/>
+        <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsStateService"/>
         <applicationService serviceImplementation="com.coder.gateway.services.CoderSettingsService"/>
         <applicationConfigurable parentId="tools" instance="com.coder.gateway.CoderSettingsConfigurable"/>
         <webHelpProvider implementation="com.coder.gateway.help.CoderWebHelp"/>

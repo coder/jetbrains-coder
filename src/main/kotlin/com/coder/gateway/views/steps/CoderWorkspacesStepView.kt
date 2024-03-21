@@ -9,7 +9,6 @@ import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentListModel
-import com.coder.gateway.sdk.BaseCoderRestClient
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.ex.TemplateResponseException
@@ -18,6 +17,7 @@ import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
+import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
@@ -105,7 +105,7 @@ data class CoderWorkspacesStepSelection(
     val workspace: Workspace,
     // This step needs the client and cliManager to configure SSH.
     val cliManager: CoderCLIManager,
-    val client: BaseCoderRestClient,
+    val client: CoderRestClient,
     // Pass along the latest workspaces so we can configure the CLI a bit
     // faster, otherwise this step would have to fetch the workspaces again.
     val workspaces: List<Workspace>)
@@ -615,7 +615,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      */
     private fun authenticate(url: URL, token: String): CoderRestClient {
         logger.info("Authenticating to $url...")
-        val tryClient = CoderRestClient(url, token)
+        val tryClient = CoderRestClientService(url, token)
         tryClient.authenticate()
 
         try {
