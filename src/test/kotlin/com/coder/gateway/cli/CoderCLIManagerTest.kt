@@ -3,8 +3,10 @@ package com.coder.gateway.cli
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
-import com.coder.gateway.settings.CoderSettingsState
+import com.coder.gateway.settings.CODER_SSH_CONFIG_OPTIONS
 import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.settings.CoderSettingsState
+import com.coder.gateway.settings.Environment
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
@@ -238,34 +240,43 @@ internal class CoderCLIManagerTest {
         val input: String?,
         val output: String,
         val remove: String,
-        val headerCommand: String?,
+        val headerCommand: String = "",
         val disableAutostart: Boolean = false,
-        val features: Features? = null,
+        val features: Features = Features(),
+        val extraConfig: String = "",
+        val env: Environment = Environment(),
     )
 
     @Test
     fun testConfigureSSH() {
+        val extraConfig = listOf(
+            "ServerAliveInterval 5",
+            "ServerAliveCountMax 3").joinToString(System.lineSeparator())
         val tests = listOf(
-            SSHTest(listOf("foo", "bar"), null,"multiple-workspaces", "blank", null),
-            SSHTest(listOf("foo", "bar"), null,"multiple-workspaces", "blank", null),
-            SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank", null),
-            SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank", null),
-            SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks", null),
-            SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks", null),
-            SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks", null),
-            SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks", null),
-            SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank", null),
-            SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks", null),
-            SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks", null),
-            SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks", null),
-            SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks", null),
+            SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+            SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+            SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank"),
+            SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank"),
+            SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks"),
+            SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks"),
+            SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks"),
+            SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks"),
+            SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank"),
+            SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks"),
+            SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks"),
+            SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks"),
+            SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks"),
             if (getOS() == OS.WINDOWS) {
                 SSHTest(listOf("header"), null, "header-command-windows", "blank", """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""")
             } else {
                 SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'")
             },
-            SSHTest(listOf("foo"), null, "disable-autostart", "blank", null, true, Features(true)),
-            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", null, true, Features(false)),
+            SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true)),
+            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false)),
+            SSHTest(listOf("extra"), null, "extra-config", "blank",
+                extraConfig = extraConfig),
+            SSHTest(listOf("extra"), null, "extra-config", "blank",
+                env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to extraConfig))),
         )
 
         val newlineRe = "\r?\n".toRegex()
@@ -274,8 +285,10 @@ internal class CoderCLIManagerTest {
             val settings = CoderSettings(CoderSettingsState(
                 disableAutostart = it.disableAutostart,
                 dataDirectory = tmpdir.resolve("configure-ssh").toString(),
-                headerCommand = it.headerCommand ?: ""),
-                sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"))
+                headerCommand = it.headerCommand,
+                sshConfigOptions = it.extraConfig),
+                sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"),
+                env = it.env)
 
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), settings)
 
@@ -295,12 +308,12 @@ internal class CoderCLIManagerTest {
                 .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
 
             // Add workspaces.
-            ccm.configSsh(it.workspaces.toSet(), it.features ?: Features())
+            ccm.configSsh(it.workspaces.toSet(), it.features)
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
 
             // Remove configuration.
-            ccm.configSsh(emptySet(), it.features ?: Features())
+            ccm.configSsh(emptySet(), it.features)
 
             // Remove is the configuration we expect after removing.
             assertEquals(

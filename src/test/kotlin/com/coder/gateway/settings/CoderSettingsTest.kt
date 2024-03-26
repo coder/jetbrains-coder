@@ -171,6 +171,16 @@ internal class CoderSettingsTest {
     }
 
     @Test
+    fun testSSHConfigOptions() {
+        var settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"))
+        assertEquals("ssh config options from state", settings.sshConfigOptions)
+
+        settings = CoderSettings(CoderSettingsState(),
+            env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
+        assertEquals("ssh config options from env", settings.sshConfigOptions)
+    }
+
+    @Test
     fun testSettings() {
         // Make sure the remaining settings are being conveyed.
         val settings = CoderSettings(
