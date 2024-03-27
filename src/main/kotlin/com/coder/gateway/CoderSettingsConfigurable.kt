@@ -2,6 +2,7 @@ package com.coder.gateway
 
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.services.CoderSettingsStateService
+import com.coder.gateway.settings.CODER_SSH_CONFIG_OPTIONS
 import com.coder.gateway.util.canCreateDirectory
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable
@@ -107,6 +108,13 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindSelected(state::disableAutostart)
                     .comment(
                         CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.title")) {
+                textArea().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::sshConfigOptions)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.comment", CODER_SSH_CONFIG_OPTIONS)
                     )
             }.layout(RowLayout.PARENT_GRID)
         }

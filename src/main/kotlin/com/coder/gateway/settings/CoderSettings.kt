@@ -14,6 +14,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+const val CODER_SSH_CONFIG_OPTIONS = "CODER_SSH_CONFIG_OPTIONS";
+
 open class CoderSettingsState(
     // Used to download the Coder CLI which is necessary to proxy SSH
     // connections.  The If-None-Match header will be set to the SHA1 of the CLI
@@ -57,6 +59,8 @@ open class CoderSettingsState(
     // around issues on macOS where it periodically wakes and Gateway
     // reconnects, keeping the workspace constantly up.
     open var disableAutostart: Boolean = getOS() == OS.MAC,
+    // Extra SSH config options.
+    open var sshConfigOptions: String = "",
 )
 
 /**
@@ -112,6 +116,12 @@ open class CoderSettings(
      */
     val disableAutostart: Boolean
         get() = state.disableAutostart
+
+    /**
+     * Extra SSH config to append to each host block.
+     */
+    val sshConfigOptions: String
+        get() = state.sshConfigOptions.ifBlank { env.get(CODER_SSH_CONFIG_OPTIONS) }
 
     /**
      * Where the specified deployment should put its data.

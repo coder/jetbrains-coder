@@ -255,6 +255,9 @@ class CoderCLIManager(
             if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
            "ssh", "--stdio",
             if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null)
+        val extraConfig = if (settings.sshConfigOptions.isNotBlank()) {
+            "\n" + settings.sshConfigOptions.prependIndent("  ")
+        } else ""
         val blockContent = workspaceNames.joinToString(
             System.lineSeparator(),
             startBlock + System.lineSeparator(),
@@ -268,7 +271,9 @@ class CoderCLIManager(
                   UserKnownHostsFile /dev/null
                   LogLevel ERROR
                   SetEnv CODER_SSH_SESSION_TYPE=JetBrains
-                """.trimIndent().replace("\n", System.lineSeparator())
+                """.trimIndent()
+                    .plus(extraConfig)
+                    .replace("\n", System.lineSeparator())
             })
 
         if (contents == null) {
