@@ -178,6 +178,11 @@ internal class CoderSettingsTest {
         settings = CoderSettings(CoderSettingsState(),
             env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
         assertEquals("ssh config options from env", settings.sshConfigOptions)
+
+        // State has precedence.
+        settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"),
+            env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
+        assertEquals("ssh config options from state", settings.sshConfigOptions)
     }
 
     @Test
