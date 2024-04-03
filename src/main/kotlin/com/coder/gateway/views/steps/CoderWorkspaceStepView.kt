@@ -319,8 +319,8 @@ class CoderWorkspaceStepView(
                 .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
         }
 
-        val installedIdes = installedIdesJob.await()
-        val idesWithStatus = idesWithStatusJob.await()
+        val installedIdes = installedIdesJob.await().sorted()
+        val idesWithStatus = idesWithStatusJob.await().sorted()
         if (installedIdes.isEmpty()) {
             logger.info("No IDE is installed in $name")
         }
