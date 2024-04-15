@@ -31,7 +31,7 @@ jobs:
           java-version: 17
           cache: gradle
 
-      - uses: gradle/wrapper-validation-action@v2.1.1
+      - uses: gradle/wrapper-validation-action@v3.3.0
 
       # Run tests
       - run: ./gradlew test --info
