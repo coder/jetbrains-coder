@@ -3,14 +3,14 @@
 package com.coder.gateway
 
 import com.coder.gateway.models.TokenSource
+import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
-import com.coder.gateway.settings.CoderSettings
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -46,7 +46,7 @@ import javax.net.ssl.SSLHandshakeException
 class CoderRemoteConnectionHandle {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
 
-    fun connect(getParameters: (indicator: ProgressIndicator) -> Map<String, String>) {
+    fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {

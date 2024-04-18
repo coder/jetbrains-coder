@@ -8,13 +8,12 @@ import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.RecentWorkspaceConnection
 import com.coder.gateway.models.WorkspaceAgentListModel
+import com.coder.gateway.models.toWorkspaceProjectIDE
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderRestClientService
-import com.coder.gateway.services.CoderSettingsService
-import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.util.toURL
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
@@ -74,7 +73,6 @@ data class DeploymentInfo(
 )
 
 class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
-    private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
 
@@ -148,7 +146,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
 
     private fun updateContentView() {
         val connections = recentConnectionsService.getAllRecentConnections()
-            .filter { it.coderWorkspaceHostname != null }
+            .filter { !it.coderWorkspaceHostname.isNullOrBlank() }
             .filter { matchesFilter(it) }
             .groupBy { it.coderWorkspaceHostname!! }
         recentWorkspacesContentPanel.viewport.view = panel {
@@ -220,7 +218,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     row {
                         icon(product.icon)
                         cell(ActionLink(connectionDetails.projectPath!!) {
-                            CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceParams() }
+                            CoderRemoteConnectionHandle().connect{ connectionDetails.toWorkspaceProjectIDE() }
                             GatewayUI.getInstance().reset()
                         })
                         label("").resizableColumn().align(AlignX.FILL)

@@ -110,7 +110,7 @@ fun ensureCLI(
 /**
  * The supported features of the CLI.
  */
-data class Features (
+data class Features(
     val disableAutostart: Boolean = false,
 )
 

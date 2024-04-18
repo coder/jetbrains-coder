@@ -4,8 +4,25 @@ package com.coder.gateway
 
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
+import com.coder.gateway.models.AGENT_ID
+import com.coder.gateway.models.AGENT_NAME
+import com.coder.gateway.models.TOKEN
 import com.coder.gateway.models.TokenSource
+import com.coder.gateway.models.URL
+import com.coder.gateway.models.WORKSPACE
 import com.coder.gateway.models.WorkspaceAndAgentStatus
+import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.agentID
+import com.coder.gateway.models.agentName
+import com.coder.gateway.models.folder
+import com.coder.gateway.models.ideBuildNumber
+import com.coder.gateway.models.ideDownloadLink
+import com.coder.gateway.models.idePathOnHost
+import com.coder.gateway.models.ideProductCode
+import com.coder.gateway.models.isCoder
+import com.coder.gateway.models.token
+import com.coder.gateway.models.url
+import com.coder.gateway.models.workspace
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -15,7 +32,7 @@ import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.coder.gateway.views.steps.CoderWorkspaceStepView
+import com.coder.gateway.views.steps.CoderWorkspaceProjectIDEStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepSelection
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
@@ -26,22 +43,8 @@ import com.intellij.util.ui.JBUI
 import com.jetbrains.gateway.api.ConnectionRequestor
 import com.jetbrains.gateway.api.GatewayConnectionHandle
 import com.jetbrains.gateway.api.GatewayConnectionProvider
-import java.net.URL
 import javax.swing.JComponent
 import javax.swing.border.Border
-
-// In addition to `type`, these are the keys that we support in our Gateway
-// links.
-private const val URL = "url"
-private const val TOKEN = "token"
-private const val WORKSPACE = "workspace"
-private const val AGENT_NAME = "agent"
-private const val AGENT_ID = "agent_id"
-private const val FOLDER = "folder"
-private const val IDE_DOWNLOAD_LINK = "ide_download_link"
-private const val IDE_PRODUCT_CODE = "ide_product_code"
-private const val IDE_BUILD_NUMBER = "ide_build_number"
-private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 
 /**
  * A dialog wrapper around CoderWorkspaceStepView.
@@ -50,7 +53,7 @@ class CoderWorkspaceStepDialog(
     name: String,
     private val state: CoderWorkspacesStepSelection,
 ) : DialogWrapper(true) {
-    private val view = CoderWorkspaceStepView(showTitle = false)
+    private val view = CoderWorkspaceProjectIDEStepView(showTitle = false)
 
     init {
         init()
@@ -65,7 +68,7 @@ class CoderWorkspaceStepDialog(
         view.dispose()
     }
 
-    fun showAndGetData(): Map<String, String>? {
+    fun showAndGetData(): WorkspaceProjectIDE? {
         if (showAndGet()) {
             return view.data()
         }
@@ -98,16 +101,16 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         CoderRemoteConnectionHandle().connect{ indicator ->
             logger.debug("Launched Coder connection provider", parameters)
 
-            val deploymentURL = parameters[URL]
+            val deploymentURL = parameters.url()
                 ?: CoderRemoteConnectionHandle.ask("Enter the full URL of your Coder deployment")
             if (deploymentURL.isNullOrBlank()) {
                 throw IllegalArgumentException("Query parameter \"$URL\" is missing")
             }
 
-            val (client, username) = authenticate(deploymentURL.toURL(), parameters[TOKEN])
+            val (client, username) = authenticate(deploymentURL, parameters.token())
 
             // TODO: If the workspace is missing we could launch the wizard.
-            val workspaceName = parameters[WORKSPACE] ?: throw IllegalArgumentException("Query parameter \"$WORKSPACE\" is missing")
+            val workspaceName = parameters.workspace() ?: throw IllegalArgumentException("Query parameter \"$WORKSPACE\" is missing")
 
             val workspaces = client.workspaces()
             val workspace = workspaces.firstOrNull{ it.name == workspaceName } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
@@ -150,13 +153,13 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
             cli.configSsh(client.agentNames(workspaces))
 
             val name = "${workspace.name}.${agent.name}"
-            val openDialog = parameters[IDE_PRODUCT_CODE].isNullOrBlank() ||
-                    parameters[IDE_BUILD_NUMBER].isNullOrBlank() ||
-                    (parameters[IDE_PATH_ON_HOST].isNullOrBlank() && parameters[IDE_DOWNLOAD_LINK].isNullOrBlank()) ||
-                    parameters[FOLDER].isNullOrBlank()
+            val openDialog = parameters.ideProductCode().isNullOrBlank() ||
+                    parameters.ideBuildNumber().isNullOrBlank() ||
+                    (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
+                    parameters.folder().isNullOrBlank()
 
             if (openDialog) {
-                var data: Map<String, String>? = null
+                var data: WorkspaceProjectIDE? = null
                 ApplicationManager.getApplication().invokeAndWait {
                     val dialog = CoderWorkspaceStepDialog(name,
                         CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces))
@@ -167,13 +170,18 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 // Check that both the domain and the redirected domain are
                 // allowlisted.  If not, check with the user whether to proceed.
                 verifyDownloadLink(parameters)
-
-                parameters
-                    .withWorkspaceHostname(CoderCLIManager.getHostName(deploymentURL.toURL(), name))
-                    .withProjectPath(parameters[FOLDER]!!)
-                    .withWebTerminalLink(client.url.withPath("/@$username/$workspace.name/terminal").toString())
-                    .withConfigDirectory(cli.coderConfigPath.toString())
-                    .withName(name)
+                WorkspaceProjectIDE.fromInputs(
+                    name = name,
+                    hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), name),
+                    projectPath = parameters.folder(),
+                    ideProductCode = parameters.ideProductCode(),
+                    ideBuildNumber = parameters.ideBuildNumber(),
+                    webTerminalLink = client.url.withPath("/@$username/$workspace.name/terminal").toString(),
+                    configDirectory = cli.coderConfigPath.toString(),
+                    idePathOnHost = parameters.idePathOnHost(),
+                    downloadSource = parameters.ideDownloadLink(),
+                    lastOpened = null, // Have not opened yet.
+                )
             }
         }
         return null
@@ -183,22 +191,22 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * Return an authenticated Coder CLI and the user's name, asking for the
      * token as long as it continues to result in an authentication failure.
      */
-    private fun authenticate(deploymentURL: URL, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
+    private fun authenticate(deploymentURL: String, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
         // Use the token from the query, unless we already tried that.
         val isRetry = lastToken != null
         val token = if (!queryToken.isNullOrBlank() && !isRetry)
             Pair(queryToken, TokenSource.QUERY)
         else CoderRemoteConnectionHandle.askToken(
-            deploymentURL,
+            deploymentURL.toURL(),
             lastToken,
             isRetry,
             useExisting = true,
             settings,
         )
         if (token == null) { // User aborted.
-            throw IllegalArgumentException("Unable to connect to $deploymentURL, $TOKEN is missing")
+            throw IllegalArgumentException("Unable to connect to $deploymentURL, query parameter \"$TOKEN\" is missing")
         }
-        val client = CoderRestClientService(deploymentURL, token.first)
+        val client = CoderRestClientService(deploymentURL.toURL(), token.first)
         return try {
             Pair(client, client.me().username)
         } catch (ex: AuthenticationResponseException) {
@@ -210,7 +218,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * Check that the link is allowlisted.  If not, confirm with the user.
      */
     private fun verifyDownloadLink(parameters: Map<String, String>) {
-        val link = parameters[IDE_DOWNLOAD_LINK]
+        val link = parameters.ideDownloadLink()
         if (link.isNullOrBlank()) {
             return // Nothing to verify
         }
@@ -244,7 +252,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     }
 
     override fun isApplicable(parameters: Map<String, String>): Boolean {
-        return parameters.areCoderType()
+        return parameters.isCoder()
     }
 
     companion object {
@@ -267,18 +275,18 @@ fun getMatchingAgent(parameters: Map<String, String?>, workspace: Workspace): Wo
 
     // If the agent is missing and the workspace has only one, use that.
     // Prefer the ID over the name if both are set.
-    val agent = if (!parameters[AGENT_ID].isNullOrBlank())
-        agents.firstOrNull { it.id.toString() == parameters[AGENT_ID] }
-    else if (!parameters[AGENT_NAME].isNullOrBlank())
-        agents.firstOrNull { it.name == parameters[AGENT_NAME]}
+    val agent = if (!parameters.agentID().isNullOrBlank())
+        agents.firstOrNull { it.id.toString() == parameters.agentID() }
+    else if (!parameters.agentName().isNullOrBlank())
+        agents.firstOrNull { it.name == parameters.agentName()}
     else if (agents.size == 1) agents.first()
     else null
 
     if (agent == null) {
-        if (!parameters[AGENT_ID].isNullOrBlank()) {
-            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters[AGENT_ID]}\"")
-        } else if (!parameters[AGENT_NAME].isNullOrBlank()){
-            throw IllegalArgumentException("The workspace \"${workspace.name}\"does not have an agent named \"${parameters[AGENT_NAME]}\"")
+        if (!parameters.agentID().isNullOrBlank()) {
+            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters.agentID()}\"")
+        } else if (!parameters.agentName().isNullOrBlank()){
+            throw IllegalArgumentException("The workspace \"${workspace.name}\"does not have an agent named \"${parameters.agentName()}\"")
         } else {
             throw MissingArgumentException("Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because the workspace \"${workspace.name}\" has more than one agent")
         }

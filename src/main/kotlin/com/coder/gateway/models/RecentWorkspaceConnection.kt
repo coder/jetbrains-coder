@@ -3,6 +3,12 @@ package com.coder.gateway.models
 import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.Attribute
 
+/**
+ * A workspace, project, and IDE.
+ *
+ * This is read from a file so values could be missing, and names must not be
+ * changed to maintain backwards compatibility.
+ */
 class RecentWorkspaceConnection(
     coderWorkspaceHostname: String? = null,
     projectPath: String? = null,
@@ -60,9 +66,6 @@ class RecentWorkspaceConnection(
         if (projectPath != other.projectPath) return false
         if (ideProductCode != other.ideProductCode) return false
         if (ideBuildNumber != other.ideBuildNumber) return false
-        if (downloadSource != other.downloadSource) return false
-        if (idePathOnHost != other.idePathOnHost) return false
-        if (webTerminalLink != other.webTerminalLink) return false
 
         return true
     }
@@ -73,9 +76,6 @@ class RecentWorkspaceConnection(
         result = 31 * result + (projectPath?.hashCode() ?: 0)
         result = 31 * result + (ideProductCode?.hashCode() ?: 0)
         result = 31 * result + (ideBuildNumber?.hashCode() ?: 0)
-        result = 31 * result + (downloadSource?.hashCode() ?: 0)
-        result = 31 * result + (idePathOnHost?.hashCode() ?: 0)
-        result = 31 * result + (webTerminalLink?.hashCode() ?: 0)
 
         return result
     }
@@ -92,15 +92,6 @@ class RecentWorkspaceConnection(
 
         val l = other.ideBuildNumber?.let { ideBuildNumber?.compareTo(it) }
         if (l != null && l != 0) return l
-
-        val m = other.downloadSource?.let { downloadSource?.compareTo(it) }
-        if (m != null && m != 0) return m
-
-        val n = other.idePathOnHost?.let { idePathOnHost?.compareTo(it) }
-        if (n != null && n != 0) return n
-
-        val o = other.webTerminalLink?.let { webTerminalLink?.compareTo(it) }
-        if (o != null && o != 0) return o
 
         return 0
     }

@@ -47,7 +47,7 @@ import javax.swing.Icon
 /**
  * Holds proxy information.
  */
-data class ProxyValues (
+data class ProxyValues(
     val username: String?,
     val password: String?,
     val useAuth: Boolean,

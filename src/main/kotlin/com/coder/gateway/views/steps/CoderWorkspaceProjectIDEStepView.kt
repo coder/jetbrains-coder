@@ -3,9 +3,10 @@ package com.coder.gateway.views.steps
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
+import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
-import com.coder.gateway.toWorkspaceParams
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.humanizeDuration
@@ -14,11 +15,6 @@ import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
 import com.coder.gateway.util.withPath
 import com.coder.gateway.views.LazyBrowserLink
-import com.coder.gateway.withConfigDirectory
-import com.coder.gateway.withName
-import com.coder.gateway.withProjectPath
-import com.coder.gateway.withWebTerminalLink
-import com.coder.gateway.withWorkspaceHostname
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
@@ -83,11 +79,11 @@ import javax.swing.event.DocumentEvent
 
 /**
  * View for a single workspace.  In particular, show available IDEs and a button
- * to connect to the workspace
+ * to select an IDE and project to run on the workspace.
  */
-class CoderWorkspaceStepView(
+class CoderWorkspaceProjectIDEStepView(
     private val showTitle: Boolean = true,
-) : CoderWizardStep<Map<String, String>>(
+) : CoderWizardStep<WorkspaceProjectIDE>(
     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
 ) {
     private val cs = CoroutineScope(Dispatchers.IO)
@@ -252,7 +248,7 @@ class CoderWorkspaceStepView(
      * Validate the remote path whenever it changes.
      */
     private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
-        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceStepView::class.java.name)
+        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceProjectIDEStepView::class.java.name)
         ComponentValidator(disposable).installOn(tfProject)
 
         tfProject.document.addDocumentListener(object : DocumentAdapter() {
@@ -355,16 +351,16 @@ class CoderWorkspaceStepView(
     /**
      * Return the selected parameters.  Throw if not configured.
      */
-    override fun data(): Map<String, String> {
+    override fun data(): WorkspaceProjectIDE {
         return withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
             val name = "${state.workspace.name}.${state.agent.name}"
-            selectedIDE
-                .toWorkspaceParams()
-                .withWorkspaceHostname(CoderCLIManager.getHostName(state.client.url, name))
-                .withProjectPath(tfProject.text)
-                .withWebTerminalLink("${terminalLink.url}")
-                .withConfigDirectory(state.cliManager.coderConfigPath.toString())
-                .withName(name)
+            selectedIDE.withWorkspaceProject(
+                name = name,
+                hostname = CoderCLIManager.getHostName(state.client.url, name),
+                projectPath = tfProject.text,
+                webTerminalLink = terminalLink.url.toString(),
+                configDirectory = state.cliManager.coderConfigPath.toString(),
+            )
         }
     }
 
@@ -416,6 +412,6 @@ class CoderWorkspaceStepView(
     }
 
     companion object {
-        val logger = Logger.getInstance(CoderWorkspaceStepView::class.java.simpleName)
+        val logger = Logger.getInstance(CoderWorkspaceProjectIDEStepView::class.java.simpleName)
     }
 }

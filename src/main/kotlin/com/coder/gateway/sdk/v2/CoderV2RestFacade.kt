@@ -16,7 +16,6 @@ import retrofit2.http.Query
 import java.util.UUID
 
 interface CoderV2RestFacade {
-
     /**
      * Retrieves details about the authenticated user.
      */

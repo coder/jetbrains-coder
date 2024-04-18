@@ -3,6 +3,9 @@ package com.coder.gateway.models
 import com.intellij.openapi.components.BaseState
 import com.intellij.util.xmlb.annotations.XCollection
 
+/**
+ * Store recent workspace connections.
+ */
 class RecentWorkspaceConnectionState : BaseState() {
     @get:XCollection
     var recentConnections by treeSet<RecentWorkspaceConnection>()

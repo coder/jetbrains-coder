@@ -66,7 +66,7 @@ open class CoderSettingsState(
 /**
  * Consolidated TLS settings.
  */
-data class CoderTLSSettings (private val state: CoderSettingsState) {
+data class CoderTLSSettings(private val state: CoderSettingsState) {
     val certPath: String
         get() = state.tlsCertPath
     val keyPath: String
