@@ -31,7 +31,6 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.toURL
-import com.coder.gateway.util.withPath
 import com.coder.gateway.views.steps.CoderWorkspaceProjectIDEStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepSelection
 import com.intellij.openapi.application.ApplicationManager
@@ -179,10 +178,9 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                     projectPath = parameters.folder(),
                     ideProductCode = parameters.ideProductCode(),
                     ideBuildNumber = parameters.ideBuildNumber(),
-                    webTerminalLink = client.url.withPath("/@$username/$workspace.name/terminal").toString(),
-                    configDirectory = cli.coderConfigPath.toString(),
                     idePathOnHost = parameters.idePathOnHost(),
                     downloadSource = parameters.ideDownloadLink(),
+                    deploymentURL = deploymentURL,
                     lastOpened = null, // Have not opened yet.
                 )
             }

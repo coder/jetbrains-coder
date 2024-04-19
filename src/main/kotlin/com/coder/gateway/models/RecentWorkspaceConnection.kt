@@ -17,9 +17,11 @@ class RecentWorkspaceConnection(
     ideBuildNumber: String? = null,
     downloadSource: String? = null,
     idePathOnHost: String? = null,
+    // webTerminalLink and configDirectory are deprecated by deploymentURL.
     webTerminalLink: String? = null,
     configDirectory: String? = null,
     name: String? = null,
+    deploymentURL: String? = null,
 ) : BaseState(), Comparable<RecentWorkspaceConnection> {
     @get:Attribute
     var coderWorkspaceHostname by string()
@@ -35,12 +37,16 @@ class RecentWorkspaceConnection(
     var downloadSource by string()
     @get:Attribute
     var idePathOnHost by string()
+    @Deprecated("Derive from deploymentURL instead.")
     @get:Attribute
     var webTerminalLink by string()
+    @Deprecated("Derive from deploymentURL instead.")
     @get:Attribute
     var configDirectory by string()
     @get:Attribute
     var name by string()
+    @get:Attribute
+    var deploymentURL by string()
 
     init {
         this.coderWorkspaceHostname = coderWorkspaceHostname
@@ -50,8 +56,11 @@ class RecentWorkspaceConnection(
         this.ideBuildNumber = ideBuildNumber
         this.downloadSource = downloadSource
         this.idePathOnHost = idePathOnHost
+        @Suppress("DEPRECATION")
         this.webTerminalLink = webTerminalLink
+        @Suppress("DEPRECATION")
         this.configDirectory = configDirectory
+        this.deploymentURL = deploymentURL
         this.name = name
     }
 

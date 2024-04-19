@@ -80,11 +80,12 @@ class CoderRemoteConnectionHandle {
                         indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.failed.retry", humanizeDuration(remainingMs))
                     },
                 )
-                logger.info("Deploying and starting IDE with $context")
+                logger.info("Starting and connecting to ${parameters.ideName} with $context")
                 // At this point JetBrains takes over with their own UI.
                 @Suppress("UnstableApiUsage") SshDeployFlowUtil.fullDeployCycle(
                     clientLifetime, context, Duration.ofMinutes(10)
                 )
+                logger.info("Adding ${parameters.ideName} for ${parameters.hostname}:${parameters.projectPath} to recent connections")
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
             } catch (e: Exception) {
                 if (isCancellation(e)) {

@@ -16,9 +16,11 @@ import com.jetbrains.gateway.ssh.deploy.TransferProgressTracker
 import com.jetbrains.gateway.ssh.util.validateIDEInstallPath
 import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URI
+import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.io.path.name
 
 private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
 
@@ -266,15 +268,37 @@ class WorkspaceProjectIDE(
  * on a workspace.  Throw if invalid.
  */
 fun RecentWorkspaceConnection.toWorkspaceProjectIDE(): WorkspaceProjectIDE {
+    val hostname = coderWorkspaceHostname
+    @Suppress("DEPRECATION")
+    val dir = configDirectory
     return WorkspaceProjectIDE.fromInputs(
-        name = name,
-        hostname = coderWorkspaceHostname,
+        // The name was added to query the workspace status on the recent
+        // connections page, so it could be missing.  Try to get it from the
+        // host name.
+        name = if (name.isNullOrBlank() && !hostname.isNullOrBlank()) {
+            hostname
+                .removePrefix("coder-jetbrains--")
+                .removeSuffix("--${hostname.split("--").last()}")
+        } else name,
+        hostname = hostname,
         projectPath = projectPath,
         ideProductCode = ideProductCode,
         ideBuildNumber = ideBuildNumber,
         idePathOnHost = idePathOnHost,
         downloadSource = downloadSource,
-        deploymentURL = deploymentURL,
+        // The deployment URL was added to replace storing the web terminal link
+        // and config directory, as we can construct both from the URL and the
+        // config directory might not always exist (for example, authentication
+        // might happen with mTLS, and we can skip login which normally creates
+        // the config directory).  For backwards compatibility with existing
+        // entries, extract the URL from the config directory or host name.
+        deploymentURL = if (deploymentURL.isNullOrBlank()) {
+            if (!dir.isNullOrBlank()) {
+                "https://${Path.of(dir).parent.name}"
+            } else if (!hostname.isNullOrBlank()) {
+                "https://${hostname.split("--").last()}"
+            } else deploymentURL
+        } else deploymentURL,
         lastOpened = lastOpened,
     )
 }
