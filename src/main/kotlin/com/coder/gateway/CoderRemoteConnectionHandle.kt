@@ -5,6 +5,7 @@ package com.coder.gateway
 import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
+import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
@@ -45,6 +46,7 @@ import javax.net.ssl.SSLHandshakeException
 // connections.
 class CoderRemoteConnectionHandle {
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
+    private val settings = service<CoderSettingsService>()
 
     fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
         val clientLifetime = LifetimeDefinition()
@@ -55,12 +57,13 @@ class CoderRemoteConnectionHandle {
                 indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting")
                 val context = suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
-                        logger.info("Connecting... (attempt $attempt")
+                        logger.info("Connecting... (attempt $attempt)")
                         if (attempt > 1) {
                             // indicator.text is the text above the progress bar.
                             indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.retry", attempt)
                         }
-                        SshMultistagePanelContext(parameters.toHostDeployInputs())
+                        val deployInputs = parameters.deploy(indicator, Duration.ofMinutes(10), settings.setupCommand)
+                        SshMultistagePanelContext(deployInputs)
                     },
                     retryIf = {
                         it is ConnectionException || it is TimeoutException

@@ -198,6 +198,7 @@ internal class CoderSettingsTest {
                 tlsCAPath = "tls ca path",
                 tlsAlternateHostname = "tls alt hostname",
                 disableAutostart = true,
+                setupCommand = "test setup",
             )
         )
 
@@ -209,5 +210,6 @@ internal class CoderSettingsTest {
         assertEquals("tls ca path", settings.tls.caPath)
         assertEquals("tls alt hostname", settings.tls.altHostname)
         assertEquals(true, settings.disableAutostart)
+        assertEquals("test setup", settings.setupCommand)
     }
 }

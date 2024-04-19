@@ -61,6 +61,9 @@ open class CoderSettingsState(
     open var disableAutostart: Boolean = getOS() == OS.MAC,
     // Extra SSH config options.
     open var sshConfigOptions: String = "",
+    // An external command that is ran in the directory of the IDE before
+    // connecting to it.
+    open var setupCommand: String = "",
 )
 
 /**
@@ -122,6 +125,12 @@ open class CoderSettings(
      */
     val sshConfigOptions: String
         get() = state.sshConfigOptions.ifBlank { env.get(CODER_SSH_CONFIG_OPTIONS) }
+
+    /**
+     * A command to run extra IDE setup.
+     */
+    val setupCommand: String
+        get() = state.setupCommand
 
     /**
      * Where the specified deployment should put its data.

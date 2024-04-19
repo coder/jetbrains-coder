@@ -117,6 +117,13 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.comment", CODER_SSH_CONFIG_OPTIONS)
                     )
             }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.setup-command.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::setupCommand)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 
