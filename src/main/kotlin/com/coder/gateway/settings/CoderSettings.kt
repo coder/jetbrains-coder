@@ -182,7 +182,7 @@ open class CoderSettings(
         return try {
             Files.readString(dir.resolve("url")) to Files.readString(dir.resolve("session"))
         } catch (e: Exception) {
-            // SSH has not been configured yet.
+            // SSH has not been configured yet, or using some other authorization mechanism.
             null to null
         }
     }

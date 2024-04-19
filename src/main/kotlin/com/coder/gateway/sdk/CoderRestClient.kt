@@ -56,9 +56,11 @@ data class ProxyValues(
 
 /**
  * An HTTP client that can make requests to the Coder API.
+ *
+ * The token can be omitted if some other authentication mechanism is in use.
  */
 open class CoderRestClient(
-    var url: URL, var token: String,
+    val url: URL, val token: String?,
     private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
     private val proxyValues: ProxyValues? = null,
     private val pluginVersion: String = "development",
@@ -95,10 +97,13 @@ open class CoderRestClient(
                 }
         }
 
+        if (token != null) {
+            builder = builder.addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
+        }
+
         httpClient = builder
             .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
             .hostnameVerifier(CoderHostnameVerifier(settings.tls.altHostname))
-            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
             .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${getOS()}; ${getArch()})").build()) }
             .addInterceptor {
                 var request = it.request()

@@ -146,8 +146,11 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 indicator,
             )
 
-            indicator.text = "Authenticating Coder CLI..."
-            cli.login(client.token)
+            // We only need to log in if we are using token-based auth.
+            if (client.token !== null) {
+                indicator.text = "Authenticating Coder CLI..."
+                cli.login(client.token)
+            }
 
             indicator.text = "Configuring Coder CLI..."
             cli.configSsh(client.agentNames(workspaces))

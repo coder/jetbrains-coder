@@ -13,7 +13,7 @@ import java.net.URL
  * A client instance that hooks into global JetBrains services for default
  * settings.
  */
-class CoderRestClientService(url: URL, token: String, httpClient:OkHttpClient? = null) : CoderRestClient(url, token,
+class CoderRestClientService(url: URL, token: String?, httpClient:OkHttpClient? = null) : CoderRestClient(url, token,
     service<CoderSettingsService>(),
     ProxyValues(HttpConfigurable.getInstance().proxyLogin,
         HttpConfigurable.getInstance().plainProxyPassword,
