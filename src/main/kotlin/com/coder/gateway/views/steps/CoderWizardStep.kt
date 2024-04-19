@@ -69,7 +69,7 @@ sealed class CoderWizardStep<T>(
  */
 fun <A, Z> withoutNull(a: A?, block: (a: A) -> Z): Z {
     if (a == null) {
-        throw Error("Unexpected null value")
+        throw Exception("Unexpected null value")
     }
     return block(a)
 }
@@ -80,7 +80,7 @@ fun <A, Z> withoutNull(a: A?, block: (a: A) -> Z): Z {
  */
 fun <A, B, Z> withoutNull(a: A?, b: B?, block: (a: A, b: B) -> Z): Z {
     if (a == null || b == null) {
-        throw Error("Unexpected null value")
+        throw Exception("Unexpected null value")
     }
     return block(a, b)
 }
@@ -91,7 +91,7 @@ fun <A, B, Z> withoutNull(a: A?, b: B?, block: (a: A, b: B) -> Z): Z {
  */
 fun <A, B, C, D, Z> withoutNull(a: A?, b: B?, c: C?, d: D?, block: (a: A, b: B, c: C, d: D) -> Z): Z {
     if (a == null || b == null || c == null || d == null) {
-        throw Error("Unexpected null value")
+        throw Exception("Unexpected null value")
     }
     return block(a, b, c, d)
 }
