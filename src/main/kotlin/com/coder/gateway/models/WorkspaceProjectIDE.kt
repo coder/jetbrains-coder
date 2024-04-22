@@ -188,11 +188,11 @@ class WorkspaceProjectIDE(
     }
 
     /**
-     * Execute a command in the IDE directory.
+     * Execute a command in the IDE's bin directory.
      */
     private fun exec(command: String): String {
         return ProcessExecutor()
-            .command("ssh", "-t", hostname, "cd '$idePathOnHost' ; $command")
+            .command("ssh", "-t", hostname, "cd '$idePathOnHost' ; cd bin ; $command")
             .exitValues(0)
             .readOutput(true)
             .execute()
