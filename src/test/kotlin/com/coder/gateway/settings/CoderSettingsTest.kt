@@ -199,6 +199,7 @@ internal class CoderSettingsTest {
                 tlsAlternateHostname = "tls alt hostname",
                 disableAutostart = true,
                 setupCommand = "test setup",
+                ignoreSetupFailure = true,
             )
         )
 
@@ -211,5 +212,6 @@ internal class CoderSettingsTest {
         assertEquals("tls alt hostname", settings.tls.altHostname)
         assertEquals(true, settings.disableAutostart)
         assertEquals("test setup", settings.setupCommand)
+        assertEquals(true, settings.ignoreSetupFailure)
     }
 }

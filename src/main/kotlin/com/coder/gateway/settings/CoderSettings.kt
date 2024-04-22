@@ -61,9 +61,11 @@ open class CoderSettingsState(
     open var disableAutostart: Boolean = getOS() == OS.MAC,
     // Extra SSH config options.
     open var sshConfigOptions: String = "",
-    // An external command that is ran in the directory of the IDE before
-    // connecting to it.
+    // An external command to run in the directory of the IDE before connecting
+    // to it.
     open var setupCommand: String = "",
+    // Whether to ignore setup command failures.
+    open var ignoreSetupFailure: Boolean = false,
 )
 
 /**
@@ -131,6 +133,12 @@ open class CoderSettings(
      */
     val setupCommand: String
         get() = state.setupCommand
+
+    /**
+     * Whether to ignore a failed setup command.
+     */
+    val ignoreSetupFailure: Boolean
+        get() = state.ignoreSetupFailure
 
     /**
      * Where the specified deployment should put its data.

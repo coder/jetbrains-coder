@@ -65,7 +65,11 @@ class WorkspaceProjectIDE(
      * necessary.  If a deployment was necessary, the IDE path on the host will
      * be updated to reflect the location on disk.
      */
-    suspend fun deploy(indicator: ProgressIndicator, timeout: Duration, setupCommand: String): HostDeployInputs {
+    suspend fun deploy(
+        indicator: ProgressIndicator,
+        timeout: Duration,
+        setupCommand: String,
+        ignoreSetupFailure: Boolean): HostDeployInputs {
         this.lastOpened = localTimeFormatter.format(LocalDateTime.now())
         indicator.text = "Connecting to remote worker..."
         logger.info("Connecting to remote worker on $hostname")
@@ -108,7 +112,13 @@ class WorkspaceProjectIDE(
             // The accessor does not appear to provide a generic exec.
             indicator.text = "Running setup command..."
             logger.info("Running setup command `$setupCommand` in $path on $hostname...")
-            exec(setupCommand)
+            try {
+                exec(setupCommand)
+            } catch (ex: Exception) {
+                if (!ignoreSetupFailure) {
+                    throw ex
+                }
+            }
         } else {
             logger.info("No setup command to run on $hostname")
         }

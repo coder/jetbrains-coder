@@ -124,6 +124,14 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment")
                     )
             }.layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // For alignment.
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.title"))
+                    .bindSelected(state::ignoreSetupFailure)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 

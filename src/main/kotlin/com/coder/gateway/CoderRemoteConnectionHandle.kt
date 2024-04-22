@@ -62,7 +62,11 @@ class CoderRemoteConnectionHandle {
                             // indicator.text is the text above the progress bar.
                             indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.retry", attempt)
                         }
-                        val deployInputs = parameters.deploy(indicator, Duration.ofMinutes(10), settings.setupCommand)
+                        val deployInputs = parameters.deploy(
+                            indicator,
+                            Duration.ofMinutes(10),
+                            settings.setupCommand,
+                            settings.ignoreSetupFailure)
                         SshMultistagePanelContext(deployInputs)
                     },
                     retryIf = {
