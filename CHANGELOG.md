@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+### Fixed
+
+- Various recent connections fixes (details coming soon).
+- IDEs are now sorted by version.
+
+### Added
+
+- New setting for a setup command that will run in the directory of the IDE
+  before connecting to it.
+- New setting for extra SSH options.
+
 ## 2.10.0 - 2024-03-12
 
 ### Changed
