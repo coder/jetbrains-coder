@@ -24,6 +24,7 @@ import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
 import com.intellij.ide.BrowserUtil
@@ -262,11 +263,8 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class GoToTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client) {
-                if (tableOfWorkspaces.selectedObject != null) {
-                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                    BrowserUtil.browse(it.url.toURI().resolve("/templates/${workspace.templateName}"))
-                }
+            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
+                BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
             }
         }
     }
@@ -274,18 +272,15 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class StartWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client) {
-                if (tableOfWorkspaces.selectedObject != null) {
-                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                    jobs[workspace.id]?.cancel()
-                    jobs[workspace.id] = cs.launch {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                it.startWorkspace(workspace)
-                                loadWorkspaces()
-                            } catch (e: WorkspaceResponseException) {
-                                logger.error("Could not start workspace ${workspace.name}, reason: $e")
-                            }
+            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            c.startWorkspace(workspace)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.error("Could not start workspace ${workspace.name}, reason: $e")
                         }
                     }
                 }
@@ -296,59 +291,56 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class UpdateWorkspaceTemplateAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client) {
-                if (tableOfWorkspaces.selectedObject != null) {
-                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                    jobs[workspace.id]?.cancel()
-                    jobs[workspace.id] = cs.launch {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                // Stop the workspace first if it is running.
-                                if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
-                                    logger.info("Waiting for ${workspace.name} to stop before updating")
-                                    it.stopWorkspace(workspace)
-                                    loadWorkspaces()
-                                    var elapsed = Duration.ofSeconds(0)
-                                    val timeout = Duration.ofSeconds(5)
-                                    val maxWait = Duration.ofMinutes(10)
-                                    while (isActive) { // Wait for the workspace to fully stop.
-                                        delay(timeout.toMillis())
-                                        val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
-                                        when (val status = found?.workspace?.latestBuild?.status) {
-                                            WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
-                                                logger.info("Still waiting for ${workspace.name} to stop before updating")
-                                            }
-                                            WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
-                                            WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-                                            WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
-                                                logger.warn("Canceled ${workspace.name} update due to status change to $status")
-                                                break
-                                            }
-                                            null -> {
-                                                logger.warn("Canceled ${workspace.name} update because it no longer exists")
-                                                break
-                                            }
-                                            WorkspaceStatus.STOPPED -> {
-                                                logger.info("${workspace.name} has stopped; updating now")
-                                                it.updateWorkspace(workspace)
-                                                break
-                                            }
+            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            // Stop the workspace first if it is running.
+                            if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
+                                logger.info("Waiting for ${workspace.name} to stop before updating")
+                                c.stopWorkspace(workspace)
+                                loadWorkspaces()
+                                var elapsed = Duration.ofSeconds(0)
+                                val timeout = Duration.ofSeconds(5)
+                                val maxWait = Duration.ofMinutes(10)
+                                while (isActive) { // Wait for the workspace to fully stop.
+                                    delay(timeout.toMillis())
+                                    val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
+                                    when (val status = found?.workspace?.latestBuild?.status) {
+                                        WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
+                                            logger.info("Still waiting for ${workspace.name} to stop before updating")
                                         }
-                                        elapsed += timeout
-                                        if (elapsed > maxWait) {
-                                            logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
+                                        WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
+                                        WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+                                        WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
+                                            logger.warn("Canceled ${workspace.name} update due to status change to $status")
+                                            break
+                                        }
+                                        null -> {
+                                            logger.warn("Canceled ${workspace.name} update because it no longer exists")
+                                            break
+                                        }
+                                        WorkspaceStatus.STOPPED -> {
+                                            logger.info("${workspace.name} has stopped; updating now")
+                                            c.updateWorkspace(workspace)
                                             break
                                         }
                                     }
-                                } else {
-                                    it.updateWorkspace(workspace)
-                                    loadWorkspaces()
+                                    elapsed += timeout
+                                    if (elapsed > maxWait) {
+                                        logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
+                                        break
+                                    }
                                 }
-                            } catch (e: WorkspaceResponseException) {
-                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
-                            } catch (e: TemplateResponseException) {
-                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
+                            } else {
+                                c.updateWorkspace(workspace)
+                                loadWorkspaces()
                             }
+                        } catch (e: WorkspaceResponseException) {
+                            logger.error("Could not update workspace ${workspace.name}, reason: $e")
+                        } catch (e: TemplateResponseException) {
+                            logger.error("Could not update workspace ${workspace.name}, reason: $e")
                         }
                     }
                 }
@@ -359,18 +351,16 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class StopWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client) {
-                if (tableOfWorkspaces.selectedObject != null) {
-                    val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
-                    jobs[workspace.id]?.cancel()
-                    jobs[workspace.id] = cs.launch {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                it.stopWorkspace(workspace)
-                                loadWorkspaces()
-                            } catch (e: WorkspaceResponseException) {
-                                logger.error("Could not stop workspace ${workspace.name}, reason: $e")
-                            }
+            withoutNull(client, tableOfWorkspaces.selectedObject) { c, workspace ->
+                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+                jobs[workspace.id]?.cancel()
+                jobs[workspace.id] = cs.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            c.stopWorkspace(workspace)
+                            loadWorkspaces()
+                        } catch (e: WorkspaceResponseException) {
+                            logger.error("Could not stop workspace ${workspace.name}, reason: $e")
                         }
                     }
                 }

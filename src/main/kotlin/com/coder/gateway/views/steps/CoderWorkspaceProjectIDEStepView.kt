@@ -13,6 +13,7 @@ import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
+import com.coder.gateway.util.withoutNull
 import com.coder.gateway.util.withPath
 import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.openapi.application.ApplicationManager

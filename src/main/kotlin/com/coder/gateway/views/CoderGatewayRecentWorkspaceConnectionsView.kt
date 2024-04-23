@@ -17,6 +17,7 @@ import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.toURL
+import com.coder.gateway.util.withoutNull
 import com.coder.gateway.util.withPath
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
@@ -219,8 +220,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         label("").resizableColumn().align(AlignX.FILL)
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.start.button.tooltip"), "", CoderIcons.RUN) {
                             override fun actionPerformed(e: AnActionEvent) {
-                                if (workspaceWithAgent != null) {
-                                    deployment?.client?.startWorkspace(workspaceWithAgent.workspace)
+                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                    client.startWorkspace(ws.workspace)
                                     cs.launch { fetchWorkspaces() }
                                 }
                             }
@@ -228,8 +229,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             .gap(RightGap.SMALL)
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.stop.button.tooltip"), "", CoderIcons.STOP) {
                             override fun actionPerformed(e: AnActionEvent) {
-                                if (workspaceWithAgent != null) {
-                                    deployment?.client?.stopWorkspace(workspaceWithAgent.workspace)
+                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                    client.stopWorkspace(ws.workspace)
                                     cs.launch { fetchWorkspaces() }
                                 }
                             }
@@ -237,9 +238,9 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             .gap(RightGap.SMALL)
                         actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
                             override fun actionPerformed(e: AnActionEvent) {
-                                if (workspaceWithAgent != null) {
-                                    val link = deployment?.client?.url?.withPath("/me/${workspaceWithAgent.name}/terminal")
-                                    BrowserUtil.browse(link?.toString() ?: "")
+                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                    val link = client.url.withPath("/me/${ws.name}/terminal")
+                                    BrowserUtil.browse(link.toString())
                                 }
                             }
                         })
