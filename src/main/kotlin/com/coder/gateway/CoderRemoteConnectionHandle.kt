@@ -100,7 +100,7 @@ class CoderRemoteConnectionHandle {
                     // out into a new dialog.
                     ApplicationManager.getApplication().invokeAndWait {
                         Messages.showMessageDialog(
-                            e.message ?: e.javaClass.simpleName,
+                            e.message ?: e.javaClass.simpleName ?: "Aborted",
                             CoderGatewayBundle.message("gateway.connector.coder.connection.failed"),
                             Messages.getErrorIcon())
                     }

@@ -83,29 +83,7 @@ class WorkspaceProjectIDE(
             true
         )
 
-        // Ensure the IDE exists.  If not, download it if we have a download
-        // URL.  We do this ourselves instead of just giving JetBrains the
-        // download source or path and letting them handle it:
-        // 1. To get the actual directory into which the IDE is extracted (the
-        //    postDeployCallback does not give us this information).  We want
-        //    this directory to run a setup script inside it.
-        // 2. To provide a better error message when the IDE is gone (JetBrains
-        //    by default will just hang trying to connect to it).
-        // 3. So if the IDE was deleted, we can download it again assuming we
-        //    stored the original download URL.
-        val path: String
-        if (idePathOnHost.isNullOrBlank()) {
-            logger.info("No install found for $ideName on $hostname")
-            path = this.doDeploy(accessor, indicator, timeout)
-        } else {
-            indicator.text = "Verifying remote IDE exists..."
-            logger.info("Verifying $ideName exists at $idePathOnHost on $hostname")
-            val validatedPath = validateIDEInstallPath(idePathOnHost, accessor).pathOrNull
-            path = if (validatedPath != null) {
-                logger.info("$ideName already exists at ${validatedPath.toRawString()} on $hostname")
-                validatedPath.toRawString()
-            } else this.doDeploy(accessor, indicator, timeout)
-        }
+        val path = this.doDeploy(accessor, indicator, timeout)
         idePathOnHost = path
 
         if (setupCommand.isNotBlank()) {
@@ -148,13 +126,38 @@ class WorkspaceProjectIDE(
     }
 
     /**
-     * Deploy the IDE and return the path to its location on disk.
+     * Deploy the IDE if necessary and return the path to its location on disk.
      */
     private suspend fun doDeploy(accessor: HighLevelHostAccessor, indicator: ProgressIndicator, timeout: Duration): String {
+        // The backend might already exist at the provided path.
+        if (!idePathOnHost.isNullOrBlank()) {
+            indicator.text = "Verifying $ideName installation..."
+            logger.info("Verifying $ideName exists at $idePathOnHost on $hostname")
+            val validatedPath = validateIDEInstallPath(idePathOnHost, accessor).pathOrNull
+            if (validatedPath != null) {
+                logger.info("$ideName exists at ${validatedPath.toRawString()} on $hostname")
+                return validatedPath.toRawString()
+            }
+        }
+
+        // The backend might already be installed somewhere on the system.
+        indicator.text = "Searching for $ideName installation..."
+        logger.info("Searching for $ideName on $hostname")
+        val installed = accessor.getInstalledIDEs().find {
+            it.product == ideProductCode && it.buildNumber == ideBuildNumber }
+        if (installed != null) {
+            logger.info("$ideName found at ${installed.pathToIde} on $hostname")
+            return installed.pathToIde
+        }
+
+        // Otherwise we have to download it.
         if (downloadSource.isNullOrBlank()) {
             throw Exception("The IDE could not be found on the remote and no download source was provided")
         }
 
+        // TODO: Should we download to idePathOnHost if set?  That would require
+        //       symlinking instead of creating the sentinel file if the path is
+        //       outside the default dist directory.
         val distDir = accessor.getDefaultDistDir()
 
         // HighLevelHostAccessor.downloadFile does NOT create the directory.
