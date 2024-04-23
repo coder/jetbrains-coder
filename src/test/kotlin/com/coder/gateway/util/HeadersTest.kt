@@ -1,10 +1,10 @@
 package com.coder.gateway.util
 
+import java.net.URL
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-
-import java.net.URL
 
 internal class HeadersTest {
     @Test
@@ -19,6 +19,11 @@ internal class HeadersTest {
             "printf 'foo=bar='"             to mapOf("foo" to "bar="),
             "printf 'foo=bar=baz'"          to mapOf("foo" to "bar=baz"),
             "printf 'foo='"                 to mapOf("foo" to ""),
+            "printf 'foo=bar   '"           to mapOf("foo" to "bar   "),
+            "exit 0"                        to mapOf(),
+            "printf ''"                     to mapOf(),
+            "printf 'ignore me' >&2"        to mapOf(),
+            "printf 'foo=bar' && printf 'ignore me' >&2" to mapOf("foo" to "bar"),
         )
         tests.forEach{
             assertEquals(
@@ -30,22 +35,25 @@ internal class HeadersTest {
 
     @Test
     fun testGetHeadersFail() {
-        val tests = listOf(
-            "printf 'foo=bar\\r\\n\\r\\n'",
-            "printf '\\r\\nfoo=bar'",
-            "printf '=foo'",
-            "printf 'foo'",
-            "printf '  =foo'",
-            "printf 'foo  =bar'",
-            "printf 'foo  foo=bar'",
-            "printf ''",
-            "exit 0",
-            "exit 1",
+        val tests = mapOf(
+            "printf '=foo'"                 to "Header name is missing in \"=foo\"",
+            "printf 'foo'"                  to "Header \"foo\" does not have two parts",
+            "printf '  =foo'"               to "Header name is missing in \"  =foo\"",
+            "printf 'foo  =bar'"            to "Header name cannot contain spaces, got \"foo  \"",
+            "printf 'foo  foo=bar'"         to "Header name cannot contain spaces, got \"foo  foo\"",
+            "printf '  foo=bar  '"          to "Header name cannot contain spaces, got \"  foo\"",
+            "exit 1"                        to "Unexpected exit value: 1",
+            "printf 'foobar' >&2 && exit 1" to "foobar",
+            "printf 'foo=bar\\r\\n\\r\\n'"  to "Blank lines are not allowed",
+            "printf '\\r\\nfoo=bar'"        to "Blank lines are not allowed",
+            "printf '\\r\\n'"               to "Blank lines are not allowed",
+            "printf 'f=b\\r\\n\\r\\nb=q'"   to "Blank lines are not allowed"
         )
         tests.forEach{
-            assertFailsWith(
+            val ex = assertFailsWith(
                 exceptionClass = Exception::class,
-                block = { getHeaders(URL("http://localhost"), it) })
+                block = { getHeaders(URL("http://localhost"), it.key) })
+            assertContains(ex.message.toString(), it.value)
         }
     }
 
