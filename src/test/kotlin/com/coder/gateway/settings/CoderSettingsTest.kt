@@ -166,8 +166,17 @@ internal class CoderSettingsTest {
         expected.resolve("url").toFile().writeText("http://test.gateway.coder.com$expected")
         expected.resolve("session").toFile().writeText("fake-token")
 
-        val got = CoderSettings(CoderSettingsState()).readConfig(expected)
+        var got = CoderSettings(CoderSettingsState()).readConfig(expected)
         assertEquals(Pair("http://test.gateway.coder.com$expected", "fake-token"), got)
+
+        // Ignore token if not using token auth.
+        got = CoderSettings(CoderSettingsState(tlsCertPath = "cert path", tlsKeyPath = "key path")).readConfig(expected)
+        assertEquals(Pair("http://test.gateway.coder.com$expected", null), got)
+
+        // Should be fine even if the token file does not exist.
+        expected.resolve("session").toFile().delete()
+        got = CoderSettings(CoderSettingsState(tlsCertPath = "cert path", tlsKeyPath = "key path")).readConfig(expected)
+        assertEquals(Pair("http://test.gateway.coder.com$expected", null), got)
     }
 
     @Test
@@ -183,6 +192,21 @@ internal class CoderSettingsTest {
         settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"),
             env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
         assertEquals("ssh config options from state", settings.sshConfigOptions)
+    }
+
+    @Test
+    fun testRequireTokenAuth() {
+        var settings = CoderSettings(CoderSettingsState())
+        assertEquals(true, settings.requireTokenAuth)
+
+        settings = CoderSettings(CoderSettingsState(tlsCertPath = "cert path"))
+        assertEquals(true, settings.requireTokenAuth)
+
+        settings = CoderSettings(CoderSettingsState(tlsKeyPath = "key path"))
+        assertEquals(true, settings.requireTokenAuth)
+
+        settings = CoderSettings(CoderSettingsState(tlsCertPath = "cert path", tlsKeyPath = "key path"))
+        assertEquals(false, settings.requireTokenAuth)
     }
 
     @Test

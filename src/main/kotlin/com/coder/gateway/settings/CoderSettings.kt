@@ -183,12 +183,15 @@ open class CoderSettings(
     }
 
     /**
-     * Return the URL and token from the config, if it exists.
+     * Return the URL and token from the config, if it exists.  Both the url and
+     * session files must exist if using token auth, otherwise only url must
+     * exist.
      */
     fun readConfig(dir: Path): Pair<String?, String?> {
         logger.info("Reading config from $dir")
         return try {
-            Files.readString(dir.resolve("url")) to Files.readString(dir.resolve("session"))
+            val token = if (requireTokenAuth) Files.readString(dir.resolve("session")) else null
+            Files.readString(dir.resolve("url")) to token
         } catch (e: Exception) {
             // SSH has not been configured yet, or using some other authorization mechanism.
             null to null
@@ -244,6 +247,11 @@ open class CoderSettings(
                     return Paths.get(env.get("HOME"), ".local/share/coder-gateway")
                 }
             }
+        }
+
+    val requireTokenAuth: Boolean
+        get() {
+            return tls.certPath.isBlank() || tls.keyPath.isBlank()
         }
 
     /**

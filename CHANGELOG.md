@@ -9,6 +9,11 @@
 - Various recent connections fixes (details coming soon).
 - IDEs are now sorted by version.
 
+### Changed
+
+- If using a certificate and key, it is assumed that token authentication is not
+  required, and all token prompts are skipped.
+
 ### Added
 
 - New setting for a setup command that will run in the directory of the IDE

@@ -83,9 +83,9 @@ import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
-// Used to store the most recently used URL and token.
+// Used to store the most recently used URL and token (if any).
 private const val CODER_URL_KEY = "coder-url"
-private const val SESSION_TOKEN = "session-token"
+private const val SESSION_TOKEN_KEY = "session-token"
 
 /**
  * Form fields used in the step for the user to fill out.
@@ -201,12 +201,12 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 .bindText(fields::coderURL).applyToComponent {
                 addActionListener {
                     // Reconnect when the enter key is pressed.
-                    askTokenAndConnect()
+                    maybeAskTokenThenConnect()
                 }
             }.component
             button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                 // Reconnect when the connect button is pressed.
-                askTokenAndConnect()
+                maybeAskTokenThenConnect()
             }.applyToComponent {
                 background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
             }
@@ -221,25 +221,27 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 )
             ).resizableColumn().align(AlignX.FILL).component
         }.layout(RowLayout.PARENT_GRID)
-        row {
-            cell() // Empty cell for alignment.
-            cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
-                .bindSelected(fields::useExistingToken)
-                .component
-        }.layout(RowLayout.PARENT_GRID)
-        row {
-            cell() // Empty cell for alignment.
-            cell(
-                ComponentPanelBuilder.createCommentComponent(
-                    CoderGatewayBundle.message(
-                        "gateway.connector.view.login.existing-token.tooltip",
-                        CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"),
-                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
-                    ),
-                    false, -1, true
+        if (settings.requireTokenAuth) {
+            row {
+                cell() // Empty cell for alignment.
+                cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
+                    .bindSelected(fields::useExistingToken)
+                    .component
+            }.layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // Empty cell for alignment.
+                cell(
+                    ComponentPanelBuilder.createCommentComponent(
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.login.existing-token.tooltip",
+                            CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"),
+                            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
+                        ),
+                        false, -1, true
+                    )
                 )
-            )
-        }.layout(RowLayout.PARENT_GRID)
+            }.layout(RowLayout.PARENT_GRID)
+        }
         row {
             scrollCell(toolbar.createPanel().apply {
                 add(notificationBanner.component.apply { isVisible = false }, "South")
@@ -391,36 +393,51 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * Authorize the client and start polling for workspaces if we can.
      */
     fun init() {
-        if (fields.coderURL.isNotBlank() && fields.token != null) {
+        // If we already have a client, start polling.  Otherwise try to set one
+        // up from storage or config and automatically connect.  Place the
+        // values in the fields, so they can be seen and edited if necessary.
+        if (client != null && cliManager != null) {
+            // If there is a client then the fields are already filled.
             triggerWorkspacePolling(true)
         } else {
-            val (url, token) = readStorageOrConfig()
-            if (!url.isNullOrBlank()) {
-                fields.coderURL = url
-                tfUrl?.text = url
+            val (rawURL, rawToken, source) = readStorageOrConfig()
+            if (!rawURL.isNullOrBlank()) {
+                fields.coderURL = rawURL
+                tfUrl?.text = rawURL
             }
-            if (!token.isNullOrBlank()) {
-                fields.token = Pair(token, TokenSource.CONFIG)
+            if (!rawToken.isNullOrBlank()) {
+                fields.token = Pair(rawToken, source)
             }
-            if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-                connect(url.toURL(), Pair(token, TokenSource.CONFIG))
+            if (!rawURL.isNullOrBlank()
+                && (!settings.requireTokenAuth || !rawToken.isNullOrBlank())) {
+                when(source) {
+                    TokenSource.LAST_USED -> logger.info("Using last connected deployment")
+                    else -> logger.info("Using deployment found in ${settings.coderConfigDir}")
+                }
+                connect(rawURL.toURL(), rawToken)
             }
         }
-        updateWorkspaceActions()
     }
 
     /**
      * Return the URL and token from storage or the CLI config.
      */
-    private fun readStorageOrConfig(): Pair<String?, String?> {
+    private fun readStorageOrConfig(): Triple<String?, String?, TokenSource> {
         val url = appPropertiesService.getValue(CODER_URL_KEY)
-        val token = appPropertiesService.getValue(SESSION_TOKEN)
-        if (!url.isNullOrBlank() && !token.isNullOrBlank()) {
-            return url to token
+        val token = if (settings.requireTokenAuth)
+            appPropertiesService.getValue(SESSION_TOKEN_KEY)
+        else null
+        if (!url.isNullOrBlank()) {
+            return Triple(url, token, TokenSource.LAST_USED)
         }
-        return settings.readConfig(settings.coderConfigDir)
+        val (configUrl, configToken) = settings.readConfig(settings.coderConfigDir)
+        return Triple(configUrl, configToken, TokenSource.CONFIG)
     }
 
+    /**
+     * Enable/disable action buttons based on whether we have a client and the
+     * status of the selected workspace (if any).
+     */
     private fun updateWorkspaceActions() {
         goToDashboardAction.isEnabled = client != null
         createWorkspaceAction.isEnabled = client != null
@@ -448,44 +465,52 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 
     /**
-     * Ask for a new token (regardless of whether we already have a token),
-     * place it in the local model, then connect.
+     * Ask for a new token if token auth is required (regardless of whether we
+     * already have a token), place it in the local fields model, then connect.
      *
      * If the token is invalid abort and start over from askTokenAndConnect()
      * unless retry is false.
      */
-    private fun askTokenAndConnect(isRetry: Boolean = false) {
+    private fun maybeAskTokenThenConnect(isRetry: Boolean = false) {
         val oldURL = fields.coderURL.toURL()
         component.apply() // Force bindings to be filled.
         val newURL = fields.coderURL.toURL()
-        val pastedToken = CoderRemoteConnectionHandle.askToken(
-            newURL,
-            // If this is a new URL there is no point in trying to use the same
-            // token.
-            if (oldURL.toString() == newURL.toString()) fields.token else null,
-            isRetry,
-            fields.useExistingToken,
-            settings,
-        ) ?: return // User aborted.
-        fields.token = pastedToken
-        connect(newURL, pastedToken) {
-            askTokenAndConnect(true)
+        if (settings.requireTokenAuth) {
+            val pastedToken = CoderRemoteConnectionHandle.askToken(
+                newURL,
+                // If this is a new URL there is no point in trying to use the same
+                // token.
+                if (oldURL.toString() == newURL.toString()) fields.token else null,
+                isRetry,
+                fields.useExistingToken,
+                settings,
+            ) ?: return // User aborted.
+            fields.token = pastedToken
+            connect(newURL, pastedToken.first) {
+                maybeAskTokenThenConnect(true)
+            }
+        } else {
+            connect(newURL, null)
         }
     }
 
     /**
-     * Connect to the deployment in the local model and if successful store the
-     * URL and token for use as the default in subsequent launches then load
-     * workspaces into the table and keep it updated with a poll.
+     * Connect to the provided deployment using the provided token (if required)
+     * and if successful store the deployment's URL and token (if provided) for
+     * use as the default in subsequent launches then load workspaces into the
+     * table and keep it updated with a poll.
      *
      * Existing workspaces will be immediately cleared before attempting to
      * connect to the new deployment.
      *
      * If the token is invalid invoke onAuthFailure.
+     *
+     * The main effect of this method is to provide a working `cliManager` and
+     * `client`.
      */
     private fun connect(
         deploymentURL: URL,
-        token: Pair<String, TokenSource>,
+        token: String?,
         onAuthFailure: (() -> Unit)? = null,
     ): Job {
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
@@ -502,12 +527,11 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         return LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title")) {
             try {
                 this.indicator.text = "Authenticating client..."
-                val authedClient = authenticate(deploymentURL, token.first)
-                client = authedClient
+                val authedClient = authenticate(deploymentURL, token)
 
                 // Remember these in order to default to them for future attempts.
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
-                appPropertiesService.setValue(SESSION_TOKEN, token.first)
+                appPropertiesService.setValue(SESSION_TOKEN_KEY, token ?: "")
 
                 val cli = ensureCLI(
                     deploymentURL,
@@ -516,18 +540,23 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     this.indicator,
                 )
 
-                this.indicator.text = "Authenticating Coder CLI..."
-                cli.login(token.first)
+                // We only need to log the cli in if we have token-based auth.
+                // Otherwise, we assume it is set up in the same way the plugin
+                // is with mTLS.
+                if (authedClient.token != null) {
+                    this.indicator.text = "Authenticating Coder CLI..."
+                    cli.login(authedClient.token)
+                }
+
+                cliManager = cli
+                client = authedClient
+
+                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
+                tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
-
-                updateWorkspaceActions()
                 triggerWorkspacePolling(false)
-
-                cliManager = cli
-                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
-                tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
             } catch (e: Exception) {
                 if (isCancellation(e)) {
                     tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.comment",
@@ -545,7 +574,8 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                         is InvalidExitValueException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unexpected-exit", e.exitValue)
                         is AuthenticationResponseException -> {
                             CoderGatewayBundle.message(
-                                "gateway.connector.view.workspaces.connect.unauthorized",
+                                if (settings.requireTokenAuth) "gateway.connector.view.workspaces.connect.unauthorized-token"
+                                else "gateway.connector.view.workspaces.connect.unauthorized-other",
                                 deploymentURL,
                             )
                         }
@@ -570,7 +600,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                         }
                         else -> reason
                     }
-                    // It would be nice to place messages directly into the table
+                    // It would be nice to place messages directly into the table,
                     // but it does not support wrapping or markup so place it in the
                     // comment field of the URL input instead.
                     tfUrlComment?.foreground = UIUtil.getErrorForeground()
@@ -581,8 +611,8 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     ))
                     logger.error(msg, e)
 
-                    if (e is AuthenticationResponseException) {
-                        cs.launch { onAuthFailure?.invoke() }
+                    if (e is AuthenticationResponseException && onAuthFailure != null) {
+                        cs.launch { onAuthFailure.invoke() }
                     }
                 }
             }
@@ -594,6 +624,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * poller and it has not been stopped.
      */
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
+        updateWorkspaceActions()
         if (poller != null && poller?.isCancelled != true) {
             throw Exception("Poller was not canceled before starting a new one")
         }
@@ -609,11 +640,11 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 
     /**
-     * Authenticate the Coder client with the provided token and URL.  On
-     * failure throw an error.  On success display warning banners if versions
-     * do not match.  Return the authenticated client.
+     * Authenticate the Coder client with the provided URL and token (if
+     * required).  On failure throw an error.  On success display warning
+     * banners if versions do not match.  Return the authenticated client.
      */
-    private fun authenticate(url: URL, token: String): CoderRestClient {
+    private fun authenticate(url: URL, token: String?): CoderRestClient {
         logger.info("Authenticating to $url...")
         val tryClient = CoderRestClientService(url, token)
         tryClient.authenticate()

@@ -106,7 +106,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
                 throw IllegalArgumentException("Query parameter \"$URL\" is missing")
             }
 
-            val (client, username) = authenticate(deploymentURL, parameters.token())
+            val client = authenticate(deploymentURL, parameters.token())
 
             // TODO: If the workspace is missing we could launch the wizard.
             val workspaceName = parameters.workspace() ?: throw IllegalArgumentException("Query parameter \"$WORKSPACE\" is missing")
@@ -189,29 +189,35 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
     }
 
     /**
-     * Return an authenticated Coder CLI and the user's name, asking for the
-     * token as long as it continues to result in an authentication failure.
+     * Return an authenticated Coder CLI, asking for the token as long as it
+     * continues to result in an authentication failure and token authentication
+     * is required.
      */
-    private fun authenticate(deploymentURL: String, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): Pair<CoderRestClient, String> {
-        // Use the token from the query, unless we already tried that.
-        val isRetry = lastToken != null
-        val token = if (!queryToken.isNullOrBlank() && !isRetry)
-            Pair(queryToken, TokenSource.QUERY)
-        else CoderRemoteConnectionHandle.askToken(
-            deploymentURL.toURL(),
-            lastToken,
-            isRetry,
-            useExisting = true,
-            settings,
-        )
-        if (token == null) { // User aborted.
+    private fun authenticate(deploymentURL: String, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): CoderRestClient {
+        val token = if (settings.requireTokenAuth) {
+            // Use the token from the query, unless we already tried that.
+            val isRetry = lastToken != null
+            if (!queryToken.isNullOrBlank() && !isRetry)
+                Pair(queryToken, TokenSource.QUERY)
+            else CoderRemoteConnectionHandle.askToken(
+                deploymentURL.toURL(),
+                lastToken,
+                isRetry,
+                useExisting = true,
+                settings)
+        } else null
+        if (settings.requireTokenAuth && token == null) { // User aborted.
             throw IllegalArgumentException("Unable to connect to $deploymentURL, query parameter \"$TOKEN\" is missing")
         }
-        val client = CoderRestClientService(deploymentURL.toURL(), token.first)
+        val client = CoderRestClientService(deploymentURL.toURL(), token?.first)
         return try {
-            Pair(client, client.me().username)
+            client.authenticate()
+            client
         } catch (ex: AuthenticationResponseException) {
-            authenticate(deploymentURL, queryToken, token)
+            // If doing token auth we can ask and try again.
+            if (settings.requireTokenAuth) {
+                authenticate(deploymentURL, queryToken, token)
+            } else throw ex
         }
     }
 

@@ -228,6 +228,7 @@ class CoderRemoteConnectionHandle {
                     if (isRetry) "gateway.connector.view.workspaces.token.rejected"
                     else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
                     else if (tokenSource == TokenSource.QUERY) "gateway.connector.view.workspaces.token.query"
+                    else if (tokenSource == TokenSource.LAST_USED) "gateway.connector.view.workspaces.token.last-used"
                     else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
                     else "gateway.connector.view.workspaces.token.none",
                     url.host,
