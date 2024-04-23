@@ -95,7 +95,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      * API clients and workspaces grouped by deployment and keyed by their
      * config directory.
      */
-    private var deployments: Map<String, DeploymentInfo> = emptyMap()
+    private var deployments: MutableMap<String, DeploymentInfo> = mutableMapOf()
     private var poller: Job? = null
 
     override fun createRecentsView(lifetime: Lifetime): JComponent {
@@ -167,8 +167,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
             // Group by the deployment.
             .groupBy { it.deploymentURL }
             // Group the connections in each deployment by workspace.
-            .mapValues { (deploymentURL, connections) ->
-                connections
+            .mapValues { (deploymentURL, deploymentConnections) ->
+                deploymentConnections
                     .groupBy { it.name.split(".", limit = 2).first() }
                     // Find the matching workspace in the query response.
                     .mapValues { (workspaceName, connections) ->
@@ -178,9 +178,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     }
                     // Remove connections to workspaces that no longer exist.
                     .filter {
-                        if (it.value.first == null && deployments[deploymentURL]?.didFetch() == true) {
-                            logger.info("Removing recent connections for deleted workspace ${it.key} (found ${it.value.second.size})")
-                            it.value.second.forEach { conn ->
+                        val (workspaceWithAgent, workspaceConnections) = it.value
+                        if (workspaceWithAgent == null && deployments[deploymentURL]?.didFetch() == true) {
+                            logger.info("Removing recent connections for deleted workspace ${it.key} (found ${workspaceConnections.size})")
+                            workspaceConnections.forEach { conn ->
                                 recentConnectionsService.removeConnection(conn.toRecentWorkspaceConnection())
                             }
                             false
@@ -195,10 +196,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 val deploymentError = deployment?.error
                 connectionsByWorkspace.forEach { (workspaceName, value) ->
                     val (workspaceWithAgent, connections) = value
-                    val status = if (workspaceWithAgent != null) {
-                        Triple(workspaceWithAgent.status.icon, workspaceWithAgent.status.statusColor(), workspaceWithAgent.status.description)
-                    } else if (deploymentError != null) {
+                    val status = if (deploymentError != null) {
                         Triple(UIUtil.getBalloonErrorIcon(), UIUtil.getErrorForeground(), deploymentError)
+                    } else if (workspaceWithAgent != null) {
+                        Triple(workspaceWithAgent.status.icon, workspaceWithAgent.status.statusColor(), workspaceWithAgent.status.description)
                     } else {
                         Triple(AnimatedIcon.Default.INSTANCE, UIUtil.getContextHelpForeground(), "Querying workspace status...")
                     }
@@ -293,20 +294,6 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      * Start polling for workspaces if not already started.
      */
     private fun triggerWorkspacePolling() {
-        deployments = recentConnectionsService.getAllRecentConnections()
-            .mapNotNull { it.deploymentURL }.toSet()
-            .associateWith { deploymentURL ->
-                deployments[deploymentURL] ?: try {
-                    val cli = CoderCLIManager(deploymentURL.toURL())
-                    val (url, token) = settings.readConfig(cli.coderConfigPath)
-                    val client = CoderRestClientService(url?.toURL() ?: deploymentURL.toURL(), token)
-                    DeploymentInfo(client)
-                } catch (e: Exception) {
-                    logger.error("Unable to create client for $deploymentURL", e)
-                    DeploymentInfo(error = "Error connecting to $deploymentURL: ${e.message}")
-                }
-            }
-
         if (poller?.isActive == true) {
             logger.info("Refusing to start already-started poller")
             return
@@ -331,16 +318,33 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      */
     private suspend fun fetchWorkspaces() {
         withContext(Dispatchers.IO) {
-            deployments.values
-                .filter { it.error == null && it.client != null}
-                .forEach { deployment ->
-                    val url = deployment.client!!.url
-                    try {
-                        deployment.items = deployment.client!!
-                            .workspaces().flatMap { it.toAgentList() }
+            recentConnectionsService.getAllRecentConnections()
+                .mapNotNull { it.deploymentURL }
+                .toSet()
+                .map { Pair(it, deployments.getOrPut(it) { DeploymentInfo() }) }
+                .forEach { (deploymentURL, deployment) ->
+                    val client = deployment.client ?: try {
+                        val cli = CoderCLIManager(deploymentURL.toURL())
+                        val (_, token) = settings.readConfig(cli.coderConfigPath)
+                        deployment.client = CoderRestClientService(deploymentURL.toURL(), token)
+                        deployment.error = null
+                        deployment.client
                     } catch (e: Exception) {
-                        logger.error("Failed to fetch workspaces from $url", e)
-                        deployment.error = e.message ?: "Request failed without further details"
+                        logger.error("Unable to create client for $deploymentURL", e)
+                        deployment.error = "Error connecting to $deploymentURL: ${e.message}"
+                        null
+                    }
+                    if (client != null) {
+                        try {
+                            deployment.items = client.workspaces()
+                                .flatMap { it.toAgentList() }
+                            deployment.error = null
+                        } catch (e: Exception) {
+                            // TODO: If this is an auth error, ask for a new token.
+                            logger.error("Failed to fetch workspaces from ${client.url}", e)
+                            deployment.items = null
+                            deployment.error = e.message ?: "Request failed without further details"
+                        }
                     }
                 }
         }
