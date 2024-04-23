@@ -210,6 +210,21 @@ internal class CoderSettingsTest {
     }
 
     @Test
+    fun testDefaults() {
+        val settings = CoderSettings(CoderSettingsState())
+        assertEquals(true, settings.enableDownloads)
+        assertEquals(false, settings.enableBinaryDirectoryFallback)
+        assertEquals("", settings.headerCommand)
+        assertEquals("", settings.tls.certPath)
+        assertEquals("", settings.tls.keyPath)
+        assertEquals("", settings.tls.caPath)
+        assertEquals("", settings.tls.altHostname)
+        assertEquals(getOS() == OS.MAC, settings.disableAutostart)
+        assertEquals("", settings.setupCommand)
+        assertEquals(false, settings.ignoreSetupFailure)
+    }
+
+    @Test
     fun testSettings() {
         // Make sure the remaining settings are being conveyed.
         val settings = CoderSettings(
@@ -221,7 +236,7 @@ internal class CoderSettingsTest {
                 tlsKeyPath = "tls key path",
                 tlsCAPath = "tls ca path",
                 tlsAlternateHostname = "tls alt hostname",
-                disableAutostart = true,
+                disableAutostart = getOS() != OS.MAC,
                 setupCommand = "test setup",
                 ignoreSetupFailure = true,
             )
@@ -234,7 +249,7 @@ internal class CoderSettingsTest {
         assertEquals("tls key path", settings.tls.keyPath)
         assertEquals("tls ca path", settings.tls.caPath)
         assertEquals("tls alt hostname", settings.tls.altHostname)
-        assertEquals(true, settings.disableAutostart)
+        assertEquals(getOS() != OS.MAC, settings.disableAutostart)
         assertEquals("test setup", settings.setupCommand)
         assertEquals(true, settings.ignoreSetupFailure)
     }
