@@ -6,19 +6,37 @@
 
 ### Fixed
 
-- Various recent connections fixes (details coming soon).
-- IDEs are now sorted by version.
+- Sort IDEs by version (latest first).
+- Recent connections window will try to recover after encountering an error.
+  There is still a known issue where if a token expires there is no way to enter
+  a new one except to go back through the "Connect with Coder" flow.
+- Header command ignores stderr and does not error if nothing is output.  It
+  will still error if any blank lines are output.
+- Remove "from jetbrains.com" from the download text since the download source
+  can be configured.
 
 ### Changed
 
 - If using a certificate and key, it is assumed that token authentication is not
-  required, and all token prompts are skipped.
+  required, all token prompts are skipped, and the token header is not sent.
+- Recent connections to deleted workspaces are automatically deleted.
+- Display workspace name instead of the generated host name in the recents
+  window.
+- Add deployment URL, IDE product, and build to the recents window.
+- Display status and error in the recents window under the workspace name
+  instead of hiding them in tooltips.
+- Truncate the path in the recents window if it is too long to prevent
+  needing to scroll to press the workspace actions.
 
 ### Added
 
 - New setting for a setup command that will run in the directory of the IDE
-  before connecting to it.
-- New setting for extra SSH options.
+  before connecting to it.  By default if this command fails the plugin will
+  display the command's exit code and output then abort the connection, but
+  there is an additional setting to ignore failures.
+- New setting for extra SSH options.  This is arbitrary text and is not
+  validated in any way.  If this setting is left empty, the environment variable
+  CODER_SSH_CONFIG_OPTIONS will be used if set.
 
 ## 2.10.0 - 2024-03-12
 
