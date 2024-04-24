@@ -131,7 +131,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             }
                         }
                     }
-                }.bottomGap(BottomGap.MEDIUM)
+                }.bottomGap(BottomGap.SMALL)
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
                     resizableRow()
@@ -158,6 +158,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      * Render the most recent connections, matching with fetched workspaces.
      */
     private fun updateContentView() {
+        var top = true
         val connections = getConnectionsByDeployment(true)
         recentWorkspacesContentPanel.viewport.view = panel {
             connections.forEach { (deploymentURL, connectionsByWorkspace) ->
@@ -172,6 +173,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     } else {
                         Triple(AnimatedIcon.Default.INSTANCE, UIUtil.getContextHelpForeground(), "Querying workspace status...")
                     }
+                    val gap = if (top) {
+                        top = false
+                        TopGap.NONE
+                    } else TopGap.MEDIUM
                     row {
                         icon(status.first).applyToComponent {
                             foreground = status.second
@@ -212,7 +217,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 }
                             }
                         })
-                    }.topGap(TopGap.MEDIUM)
+                    }.topGap(gap)
                     row {
                         label(status.third).applyToComponent { foreground = status.second }
                     }
