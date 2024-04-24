@@ -14,7 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-const val CODER_SSH_CONFIG_OPTIONS = "CODER_SSH_CONFIG_OPTIONS";
+const val CODER_SSH_CONFIG_OPTIONS = "CODER_SSH_CONFIG_OPTIONS"
 
 open class CoderSettingsState(
     // Used to download the Coder CLI which is necessary to proxy SSH

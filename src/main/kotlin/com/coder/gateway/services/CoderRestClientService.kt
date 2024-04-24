@@ -6,7 +6,7 @@ import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.components.service
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.util.net.HttpConfigurable
-import okhttp3.OkHttpClient;
+import okhttp3.OkHttpClient
 import java.net.URL
 
 /**
