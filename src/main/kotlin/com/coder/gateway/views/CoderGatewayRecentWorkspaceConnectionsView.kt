@@ -65,18 +65,14 @@ import javax.swing.event.DocumentEvent
  * DeploymentInfo contains everything needed to query the API for a deployment
  * along with the latest workspace responses.
  */
-class DeploymentInfo(
+data class DeploymentInfo(
     // Null if unable to create the client.
     var client: CoderRestClient? = null,
     // Null if we have not fetched workspaces yet.
     var items: List<WorkspaceAgentListModel>? = null,
     // Null if there have not been any errors yet.
     var error: String? = null,
-) {
-    fun didFetch(): Boolean {
-        return items != null
-    }
-}
+)
 
 class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
     private val settings = service<CoderSettingsService>()
