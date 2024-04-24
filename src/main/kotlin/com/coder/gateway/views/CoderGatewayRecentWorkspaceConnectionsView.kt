@@ -333,9 +333,9 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         deployment.items = items
                         deployment.error = null
                         // Delete connections that have no workspace.
-                        workspaces.forEach { name, connections ->
+                        workspaces.forEach { (name, connections) ->
                             if (items.firstOrNull { it.workspace.name == name } == null) {
-                                logger.info("Removing recent connections for deleted workspace ${name} (found ${connections.size})")
+                                logger.info("Removing recent connections for deleted workspace $name (found ${connections.size})")
                                 connections.forEach { recentConnectionsService.removeConnection(it.toRecentWorkspaceConnection()) }
                             }
                         }
