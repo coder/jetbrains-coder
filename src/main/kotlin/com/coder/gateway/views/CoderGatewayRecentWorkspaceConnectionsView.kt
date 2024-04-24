@@ -147,56 +147,24 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     override fun getRecentsTitle() = CoderGatewayBundle.message("gateway.connector.title")
 
     override fun updateRecentView() {
-        triggerWorkspacePolling()
+        // Render immediately so we can display spinners for each connection
+        // that we have not fetched a workspace for yet.
         updateContentView()
+        // After each poll, the content view will be updated again.
+        triggerWorkspacePolling()
     }
 
+    /**
+     * Render the most recent connections, matching with fetched workspaces.
+     */
     private fun updateContentView() {
-        val connectionsByDeployment = recentConnectionsService.getAllRecentConnections()
-            // Validate and parse connections.
-            .mapNotNull {
-                try {
-                    it.toWorkspaceProjectIDE()
-                } catch (e: Exception) {
-                    logger.warn("Removing invalid recent connection $it", e)
-                    recentConnectionsService.removeConnection(it)
-                    null
-                }
-            }
-            // Filter by the search.
-            .filter { matchesFilter(it) }
-            // Group by the deployment.
-            .groupBy { it.deploymentURL }
-            // Group the connections in each deployment by workspace.
-            .mapValues { (deploymentURL, deploymentConnections) ->
-                deploymentConnections
-                    .groupBy { it.name.split(".", limit = 2).first() }
-                    // Find the matching workspace in the query response.
-                    .mapValues { (workspaceName, connections) ->
-                        val deployment = deployments[deploymentURL]
-                        val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
-                        Pair(workspaceWithAgent, connections)
-                    }
-                    // Remove connections to workspaces that no longer exist.
-                    .filter {
-                        val (workspaceWithAgent, workspaceConnections) = it.value
-                        if (workspaceWithAgent == null && deployments[deploymentURL]?.didFetch() == true) {
-                            logger.info("Removing recent connections for deleted workspace ${it.key} (found ${workspaceConnections.size})")
-                            workspaceConnections.forEach { conn ->
-                                recentConnectionsService.removeConnection(conn.toRecentWorkspaceConnection())
-                            }
-                            false
-                        } else {
-                            true
-                        }
-                    }
-            }
+        val connections = getConnectionsByDeployment(true)
         recentWorkspacesContentPanel.viewport.view = panel {
-            connectionsByDeployment.forEach { (deploymentURL, connectionsByWorkspace) ->
+            connections.forEach { (deploymentURL, connectionsByWorkspace) ->
                 val deployment = deployments[deploymentURL]
                 val deploymentError = deployment?.error
-                connectionsByWorkspace.forEach { (workspaceName, value) ->
-                    val (workspaceWithAgent, connections) = value
+                connectionsByWorkspace.forEach { (workspaceName, connections) ->
+                    val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
                     val status = if (deploymentError != null) {
                         Triple(UIUtil.getBalloonErrorIcon(), UIUtil.getErrorForeground(), deploymentError)
                     } else if (workspaceWithAgent != null) {
@@ -281,6 +249,31 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     }
 
     /**
+     * Get valid connections grouped by deployment and workspace.
+     */
+    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> {
+       return recentConnectionsService.getAllRecentConnections()
+            // Validate and parse connections.
+            .mapNotNull {
+                try {
+                    it.toWorkspaceProjectIDE()
+                } catch (e: Exception) {
+                    logger.warn("Removing invalid recent connection $it", e)
+                    recentConnectionsService.removeConnection(it)
+                    null
+                }
+            }
+            .filter { !filter || matchesFilter(it) }
+            // Group by the deployment.
+            .groupBy { it.deploymentURL }
+            // Group the connections in each deployment by workspace.
+            .mapValues { (_, connections) ->
+                connections
+                    .groupBy { it.name.split(".", limit = 2).first() }
+            }
+    }
+
+    /**
      * Return true if the connection matches the current filter.
      */
     private fun matchesFilter(connection: WorkspaceProjectIDE): Boolean {
@@ -319,35 +312,40 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      */
     private suspend fun fetchWorkspaces() {
         withContext(Dispatchers.IO) {
-            recentConnectionsService.getAllRecentConnections()
-                .mapNotNull { it.deploymentURL }
-                .toSet()
-                .map { Pair(it, deployments.getOrPut(it) { DeploymentInfo() }) }
-                .forEach { (deploymentURL, deployment) ->
-                    val client = deployment.client ?: try {
-                        val cli = CoderCLIManager(deploymentURL.toURL())
-                        val (_, token) = settings.readConfig(cli.coderConfigPath)
-                        deployment.client = CoderRestClientService(deploymentURL.toURL(), token)
+            val connections = getConnectionsByDeployment(false)
+                .map { Triple(it.key, deployments.getOrPut(it.key) { DeploymentInfo() }, it.value) }
+            connections.forEach { (deploymentURL, deployment, workspaces) ->
+                val client = deployment.client ?: try {
+                    val cli = CoderCLIManager(deploymentURL.toURL())
+                    val (_, token) = settings.readConfig(cli.coderConfigPath)
+                    deployment.client = CoderRestClientService(deploymentURL.toURL(), token)
+                    deployment.error = null
+                    deployment.client
+                } catch (e: Exception) {
+                    logger.error("Unable to create client for $deploymentURL", e)
+                    deployment.error = "Error connecting to $deploymentURL: ${e.message}"
+                    null
+                }
+                if (client != null) {
+                    try {
+                        val items = client.workspaces().flatMap { it.toAgentList() }
+                        deployment.items = items
                         deployment.error = null
-                        deployment.client
-                    } catch (e: Exception) {
-                        logger.error("Unable to create client for $deploymentURL", e)
-                        deployment.error = "Error connecting to $deploymentURL: ${e.message}"
-                        null
-                    }
-                    if (client != null) {
-                        try {
-                            deployment.items = client.workspaces()
-                                .flatMap { it.toAgentList() }
-                            deployment.error = null
-                        } catch (e: Exception) {
-                            // TODO: If this is an auth error, ask for a new token.
-                            logger.error("Failed to fetch workspaces from ${client.url}", e)
-                            deployment.items = null
-                            deployment.error = e.message ?: "Request failed without further details"
+                        // Delete connections that have no workspace.
+                        workspaces.forEach { name, connections ->
+                            if (items.firstOrNull { it.workspace.name == name } == null) {
+                                logger.info("Removing recent connections for deleted workspace ${name} (found ${connections.size})")
+                                connections.forEach { recentConnectionsService.removeConnection(it.toRecentWorkspaceConnection()) }
+                            }
                         }
+                    } catch (e: Exception) {
+                        // TODO: If this is an auth error, ask for a new token.
+                        logger.error("Failed to fetch workspaces from ${client.url}", e)
+                        deployment.items = null
+                        deployment.error = e.message ?: "Request failed without further details"
                     }
                 }
+            }
         }
         withContext(Dispatchers.Main) {
             updateContentView()
