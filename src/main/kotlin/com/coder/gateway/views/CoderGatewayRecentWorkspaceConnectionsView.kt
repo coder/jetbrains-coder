@@ -57,7 +57,6 @@ import java.awt.Component
 import java.awt.Dimension
 import java.util.Locale
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.event.DocumentEvent
 
 /**
@@ -101,38 +100,30 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     label(CoderGatewayBundle.message("gateway.connector.recent-connections.title")).applyToComponent {
                         font = JBFont.h3().asBold()
                     }
-                    panel {
-                        indent {
-                            row {
-                                cell(JLabel()).resizableColumn().align(AlignX.FILL)
-                                searchBar =
-                                    cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
-                                        minimumSize = Dimension(350, -1)
-                                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                                        addDocumentListener(
-                                            object : DocumentAdapter() {
-                                                override fun textChanged(e: DocumentEvent) {
-                                                    filterString = this@applyToComponent.text.trim()
-                                                    updateContentView()
-                                                }
-                                            },
-                                        )
-                                    }.component
-
-                                actionButton(
-                                    object : DumbAwareAction(
-                                        CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"),
-                                        null,
-                                        AllIcons.General.Add,
-                                    ) {
-                                        override fun actionPerformed(e: AnActionEvent) {
-                                            setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
-                                        }
-                                    },
-                                ).gap(RightGap.SMALL)
+                    searchBar =
+                        cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
+                            minimumSize = Dimension(350, -1)
+                            textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                            addDocumentListener(
+                                object : DocumentAdapter() {
+                                    override fun textChanged(e: DocumentEvent) {
+                                        filterString = this@applyToComponent.text.trim()
+                                        updateContentView()
+                                    }
+                                },
+                            )
+                        }.component
+                    actionButton(
+                        object : DumbAwareAction(
+                            CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"),
+                            null,
+                            AllIcons.General.Add,
+                        ) {
+                            override fun actionPerformed(e: AnActionEvent) {
+                                setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
                             }
-                        }
-                    }
+                        },
+                    ).gap(RightGap.SMALL)
                 }.bottomGap(BottomGap.SMALL)
                 separator(background = WelcomeScreenUIManager.getSeparatorColor())
                 row {
