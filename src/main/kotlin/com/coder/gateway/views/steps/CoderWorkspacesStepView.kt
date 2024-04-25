@@ -7,7 +7,6 @@ import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
-import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.AuthenticationResponseException
@@ -19,6 +18,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.settings.Source
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
@@ -92,8 +92,8 @@ private const val SESSION_TOKEN_KEY = "session-token"
  * Form fields used in the step for the user to fill out.
  */
 private data class CoderWorkspacesFormFields(
-    var coderURL: String = "https://coder.example.com",
-    var token: Pair<String, TokenSource>? = null,
+    var coderURL: String = "",
+    var token: Pair<String, Source>? = null,
     var useExistingToken: Boolean = false)
 
 
@@ -351,8 +351,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class StopWorkspaceAction :
         AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client, tableOfWorkspaces.selectedObject) { c, workspace ->
-                val workspace = (tableOfWorkspaces.selectedObject as WorkspaceAgentListModel).workspace
+            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] = cs.launch {
                     withContext(Dispatchers.IO) {
@@ -390,38 +389,30 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             // If there is a client then the fields are already filled.
             triggerWorkspacePolling(true)
         } else {
-            val (rawURL, rawToken, source) = readStorageOrConfig()
-            if (!rawURL.isNullOrBlank()) {
-                fields.coderURL = rawURL
-                tfUrl?.text = rawURL
+            // Try finding a URL and matching token to use.
+            val lastUrl = appPropertiesService.getValue(CODER_URL_KEY)
+            val lastToken = appPropertiesService.getValue(SESSION_TOKEN_KEY)
+            val url = if (!lastUrl.isNullOrBlank()) {
+                lastUrl to Source.LAST_USED
+            } else settings.defaultURL()
+            val token = if (!lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
+                lastToken to Source.LAST_USED
+            } else if (url != null) settings.token(url.first) else null
+            // Set them into the fields.
+            if (url != null) {
+                fields.coderURL = url.first
+                tfUrl?.text = url.first
+                logger.info("Using deployment found in ${url.second}")
             }
-            if (!rawToken.isNullOrBlank()) {
-                fields.token = Pair(rawToken, source)
+            if (token != null) {
+                fields.token = token
+                logger.info("Using token found in ${token.second}")
             }
-            if (!rawURL.isNullOrBlank()
-                && (!settings.requireTokenAuth || !rawToken.isNullOrBlank())) {
-                when(source) {
-                    TokenSource.LAST_USED -> logger.info("Using last connected deployment")
-                    else -> logger.info("Using deployment found in ${settings.coderConfigDir}")
-                }
-                connect(rawURL.toURL(), rawToken)
+            // Maybe connect.
+            if (url != null && (!settings.requireTokenAuth || token != null)) {
+                connect(url.first.toURL(), token?.first)
             }
         }
-    }
-
-    /**
-     * Return the URL and token from storage or the CLI config.
-     */
-    private fun readStorageOrConfig(): Triple<String?, String?, TokenSource> {
-        val url = appPropertiesService.getValue(CODER_URL_KEY)
-        val token = if (settings.requireTokenAuth)
-            appPropertiesService.getValue(SESSION_TOKEN_KEY)
-        else null
-        if (!url.isNullOrBlank()) {
-            return Triple(url, token, TokenSource.LAST_USED)
-        }
-        val (configUrl, configToken) = settings.readConfig(settings.coderConfigDir)
-        return Triple(configUrl, configToken, TokenSource.CONFIG)
     }
 
     /**

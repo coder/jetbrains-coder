@@ -9,7 +9,7 @@
 - Sort IDEs by version (latest first).
 - Recent connections window will try to recover after encountering an error.
   There is still a known issue where if a token expires there is no way to enter
-  a new one except to go back through the "Connect with Coder" flow.
+  a new one except to go back through the "Connect to Coder" flow.
 - Header command ignores stderr and does not error if nothing is output.  It
   will still error if any blank lines are output.
 - Remove "from jetbrains.com" from the download text since the download source
@@ -27,6 +27,8 @@
   instead of hiding them in tooltips.
 - Truncate the path in the recents window if it is too long to prevent
   needing to scroll to press the workspace actions.
+- If there is no default URL, coder.example.com will no longer be used. The
+  field will just be blank, to remove the need to first delete the example URL.
 
 ### Added
 
@@ -37,6 +39,9 @@
 - New setting for extra SSH options.  This is arbitrary text and is not
   validated in any way.  If this setting is left empty, the environment variable
   CODER_SSH_CONFIG_OPTIONS will be used if set.
+- New setting for the default URL. If this setting is left empty, the
+  environment variable CODER_URL will be used. If CODER_URL is also empty, the
+  URL in the global CLI config directory will be used, if it exists.
 
 ## 2.10.0 - 2024-03-12
 

@@ -107,7 +107,7 @@ internal class CoderSettingsTest {
         val state = CoderSettingsState()
         var settings = CoderSettings(state,
             env = Environment(mapOf(
-                "APPDATA"        to "/tmp/coder-gateway-test/cli-appdata",
+                "APPDATA"          to "/tmp/coder-gateway-test/cli-appdata",
                 "HOME"             to "/tmp/coder-gateway-test/cli-home",
                 "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config")))
         var expected = when(getOS()) {
@@ -169,13 +169,9 @@ internal class CoderSettingsTest {
         var got = CoderSettings(CoderSettingsState()).readConfig(expected)
         assertEquals(Pair("http://test.gateway.coder.com$expected", "fake-token"), got)
 
-        // Ignore token if not using token auth.
-        got = CoderSettings(CoderSettingsState(tlsCertPath = "cert path", tlsKeyPath = "key path")).readConfig(expected)
-        assertEquals(Pair("http://test.gateway.coder.com$expected", null), got)
-
-        // Should be fine even if the token file does not exist.
+        // Ignore token if missing.
         expected.resolve("session").toFile().delete()
-        got = CoderSettings(CoderSettingsState(tlsCertPath = "cert path", tlsKeyPath = "key path")).readConfig(expected)
+        got = CoderSettings(CoderSettingsState()).readConfig(expected)
         assertEquals(Pair("http://test.gateway.coder.com$expected", null), got)
     }
 
@@ -210,7 +206,88 @@ internal class CoderSettingsTest {
     }
 
     @Test
+    fun testDefaultURL() {
+        val tmp = Path.of(System.getProperty("java.io.tmpdir"))
+        val dir = tmp.resolve("coder-gateway-test/test-default-url")
+        var env = Environment(mapOf("CODER_CONFIG_DIR" to dir.toString()))
+        dir.toFile().deleteRecursively()
+
+        // No config.
+        var settings = CoderSettings(CoderSettingsState(), env = env)
+        assertEquals(null, settings.defaultURL())
+
+        // Read from global config.
+        val globalConfigPath = settings.coderConfigDir
+        globalConfigPath.toFile().mkdirs()
+        globalConfigPath.resolve("url").toFile().writeText("url-from-global-config")
+        settings = CoderSettings(CoderSettingsState(), env = env)
+        assertEquals("url-from-global-config" to Source.CONFIG, settings.defaultURL())
+
+        // Read from environment.
+        env = Environment(mapOf(
+            "CODER_URL"        to "url-from-env",
+            "CODER_CONFIG_DIR" to dir.toString()))
+        settings = CoderSettings(CoderSettingsState(), env = env)
+        assertEquals("url-from-env" to Source.ENVIRONMENT, settings.defaultURL())
+
+        // Read from settings.
+        settings = CoderSettings(CoderSettingsState(
+            defaultURL = "url-from-settings"),
+            env = env)
+        assertEquals("url-from-settings" to Source.SETTINGS, settings.defaultURL())
+    }
+
+    @Test
+    fun testToken() {
+        val tmp = Path.of(System.getProperty("java.io.tmpdir"))
+        val url = "http://test.deployment.coder.com"
+        val dir = tmp.resolve("coder-gateway-test/test-default-token")
+        var env = Environment(mapOf("CODER_CONFIG_DIR" to dir.toString(),
+                                    "LOCALAPPDATA" to dir.toString(),
+                                    "XDG_DATA_HOME" to dir.toString(),
+                                    "HOME" to dir.toString()))
+        dir.toFile().deleteRecursively()
+
+        // No config.
+        var settings = CoderSettings(CoderSettingsState(), env = env)
+        assertEquals(null, settings.token(url))
+
+        // Ignore global config if it does not match.
+        val globalConfigPath = settings.coderConfigDir
+        globalConfigPath.toFile().mkdirs()
+        globalConfigPath.resolve("url").toFile().writeText(url)
+        globalConfigPath.resolve("session").toFile().writeText("token-from-global-config")
+        assertEquals(null, settings.token("http://some.random.url"))
+
+        // Missing protocol.
+        assertEquals(null, settings.token("test.deployment.coder.com"))
+
+        // Read from global config.
+        assertEquals("token-from-global-config" to Source.CONFIG, settings.token(url))
+
+        // Read from deployment config.
+        val deploymentConfigPath = settings.dataDir(URL(url)).resolve("config")
+        deploymentConfigPath.toFile().mkdirs()
+        deploymentConfigPath.resolve("url").toFile().writeText("url-from-deployment-config")
+        deploymentConfigPath.resolve("session").toFile().writeText("token-from-deployment-config")
+        assertEquals("token-from-deployment-config" to Source.DEPLOYMENT_CONFIG, settings.token(url))
+
+        // Missing protocol; will still match global if also missing there.
+        globalConfigPath.resolve("url").toFile().writeText("test.deployment.coder.com")
+        assertEquals("token-from-global-config" to Source.CONFIG,
+                     settings.token("test.deployment.coder.com"))
+
+        // Ignore if using mTLS.
+        settings = CoderSettings(CoderSettingsState(
+            tlsKeyPath = "key",
+            tlsCertPath = "cert"),
+            env = env)
+        assertEquals(null, settings.token(url))
+    }
+
+    @Test
     fun testDefaults() {
+        // Test defaults for the remaining settings.
         val settings = CoderSettings(CoderSettingsState())
         assertEquals(true, settings.enableDownloads)
         assertEquals(false, settings.enableBinaryDirectoryFallback)

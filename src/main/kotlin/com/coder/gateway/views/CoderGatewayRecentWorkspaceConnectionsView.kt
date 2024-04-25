@@ -5,7 +5,6 @@ package com.coder.gateway.views
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
-import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.models.WorkspaceProjectIDE
@@ -317,9 +316,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                 .map { Triple(it.key, deployments.getOrPut(it.key) { DeploymentInfo() }, it.value) }
             connections.forEach { (deploymentURL, deployment, workspaces) ->
                 val client = deployment.client ?: try {
-                    val cli = CoderCLIManager(deploymentURL.toURL())
-                    val (_, token) = settings.readConfig(cli.coderConfigPath)
-                    deployment.client = CoderRestClientService(deploymentURL.toURL(), token)
+                    val token = settings.token(deploymentURL)
+                    deployment.client = CoderRestClientService(deploymentURL.toURL(), token?.first)
                     deployment.error = null
                     deployment.client
                 } catch (e: Exception) {

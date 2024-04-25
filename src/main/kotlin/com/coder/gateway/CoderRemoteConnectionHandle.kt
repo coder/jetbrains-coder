@@ -2,11 +2,11 @@
 
 package com.coder.gateway
 
-import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.settings.CoderSettings
+import com.coder.gateway.settings.Source
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
@@ -197,12 +197,12 @@ class CoderRemoteConnectionHandle {
         @JvmStatic
         fun askToken(
             url: URL,
-            token: Pair<String, TokenSource>?,
+            token: Pair<String, Source>?,
             isRetry: Boolean,
             useExisting: Boolean,
             settings: CoderSettings,
-        ): Pair<String, TokenSource>? {
-            var (existingToken, tokenSource) = token ?: Pair("", TokenSource.USER)
+        ): Pair<String, Source>? {
+            var (existingToken, tokenSource) = token ?: Pair("", Source.USER)
             val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
 
             // On the first run either open a browser to generate a new token
@@ -213,10 +213,12 @@ class CoderRemoteConnectionHandle {
                 if (!useExisting) {
                     BrowserUtil.browse(getTokenUrl)
                 } else {
-                    val (u, t) = settings.readConfig(settings.coderConfigDir)
-                    if (url.toString() == u && !t.isNullOrBlank() && t != existingToken) {
-                        logger.info("Injecting token for $url from CLI config")
-                        return Pair(t, TokenSource.CONFIG)
+                    // Look on disk in case we already have a token, either in
+                    // the deployment's config or the global config.
+                    val token = settings.token(url.toString())
+                    if (token != null && token.first != existingToken) {
+                        logger.info("Injecting token for $url from ${token.second}")
+                        return token
                     }
                 }
             }
@@ -226,9 +228,10 @@ class CoderRemoteConnectionHandle {
             val tokenFromUser = ask(
                 CoderGatewayBundle.message(
                     if (isRetry) "gateway.connector.view.workspaces.token.rejected"
-                    else if (tokenSource == TokenSource.CONFIG) "gateway.connector.view.workspaces.token.injected"
-                    else if (tokenSource == TokenSource.QUERY) "gateway.connector.view.workspaces.token.query"
-                    else if (tokenSource == TokenSource.LAST_USED) "gateway.connector.view.workspaces.token.last-used"
+                    else if (tokenSource == Source.CONFIG) "gateway.connector.view.workspaces.token.injected-global"
+                    else if (tokenSource == Source.DEPLOYMENT_CONFIG) "gateway.connector.view.workspaces.token.injected"
+                    else if (tokenSource == Source.LAST_USED) "gateway.connector.view.workspaces.token.last-used"
+                    else if (tokenSource == Source.QUERY) "gateway.connector.view.workspaces.token.query"
                     else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
                     else "gateway.connector.view.workspaces.token.none",
                     url.host,
@@ -244,7 +247,7 @@ class CoderRemoteConnectionHandle {
                 return null
             }
             if (tokenFromUser != existingToken) {
-                tokenSource = TokenSource.USER
+                tokenSource = Source.USER
             }
             return Pair(tokenFromUser, tokenSource)
         }

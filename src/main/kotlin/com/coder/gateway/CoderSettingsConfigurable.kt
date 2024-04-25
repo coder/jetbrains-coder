@@ -132,6 +132,13 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.comment")
                     )
             }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.default-url.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::defaultURL)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment")
+                    )
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 

@@ -7,7 +7,6 @@ import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.models.AGENT_ID
 import com.coder.gateway.models.AGENT_NAME
 import com.coder.gateway.models.TOKEN
-import com.coder.gateway.models.TokenSource
 import com.coder.gateway.models.URL
 import com.coder.gateway.models.WORKSPACE
 import com.coder.gateway.models.WorkspaceAndAgentStatus
@@ -30,6 +29,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.settings.Source
 import com.coder.gateway.util.toURL
 import com.coder.gateway.views.steps.CoderWorkspaceProjectIDEStepView
 import com.coder.gateway.views.steps.CoderWorkspacesStepSelection
@@ -193,12 +193,12 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
      * continues to result in an authentication failure and token authentication
      * is required.
      */
-    private fun authenticate(deploymentURL: String, queryToken: String?, lastToken: Pair<String, TokenSource>? = null): CoderRestClient {
+    private fun authenticate(deploymentURL: String, queryToken: String?, lastToken: Pair<String, Source>? = null): CoderRestClient {
         val token = if (settings.requireTokenAuth) {
             // Use the token from the query, unless we already tried that.
             val isRetry = lastToken != null
             if (!queryToken.isNullOrBlank() && !isRetry)
-                Pair(queryToken, TokenSource.QUERY)
+                Pair(queryToken, Source.QUERY)
             else CoderRemoteConnectionHandle.askToken(
                 deploymentURL.toURL(),
                 lastToken,

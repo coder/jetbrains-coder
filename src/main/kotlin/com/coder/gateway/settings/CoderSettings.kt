@@ -15,6 +15,20 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 const val CODER_SSH_CONFIG_OPTIONS = "CODER_SSH_CONFIG_OPTIONS"
+const val CODER_URL = "CODER_URL"
+
+/**
+ * Describes where a setting came from.
+ */
+enum class Source {
+    CONFIG,            // Pulled from the global Coder CLI config.
+    DEPLOYMENT_CONFIG, // Pulled from the config for a deployment.
+    ENVIRONMENT,       // Pulled from environment variables.
+    LAST_USED,         // Last used token.
+    QUERY,             // From the Gateway link as a query parameter.
+    SETTINGS,          // Pulled from settings.
+    USER,              // Input by the user.
+}
 
 open class CoderSettingsState(
     // Used to download the Coder CLI which is necessary to proxy SSH
@@ -66,6 +80,8 @@ open class CoderSettingsState(
     open var setupCommand: String = "",
     // Whether to ignore setup command failures.
     open var ignoreSetupFailure: Boolean = false,
+    // Default URL to show in the connection window.
+    open var defaultURL: String = "",
 )
 
 /**
@@ -141,6 +157,53 @@ open class CoderSettings(
         get() = state.ignoreSetupFailure
 
     /**
+     * The default URL to show in the connection window.
+     */
+    fun defaultURL(): Pair<String, Source>? {
+        val defaultURL = state.defaultURL
+        val envURL = env.get(CODER_URL)
+        if (!defaultURL.isBlank()) {
+            return defaultURL to Source.SETTINGS
+        } else if (!envURL.isBlank()) {
+            return envURL to Source.ENVIRONMENT
+        } else {
+            val (configUrl, _) = readConfig(coderConfigDir)
+            if (!configUrl.isNullOrBlank()) {
+                return configUrl to Source.CONFIG
+            }
+        }
+        return null
+    }
+
+    /**
+     * Given a deployment URL, try to find a token for it if required.
+     */
+    fun token(url: String): Pair<String, Source>? {
+        // No need to bother if we do not need token auth anyway.
+        if (!requireTokenAuth) {
+            return null
+        }
+        // Try the deployment's config directory.  This could exist if someone
+        // has entered a URL that they are not currently connected to, but have
+        // connected to in the past.
+        try {
+            val (_, deploymentToken) = readConfig(dataDir(url.toURL()).resolve("config"))
+            if (!deploymentToken.isNullOrBlank()) {
+                return deploymentToken to Source.DEPLOYMENT_CONFIG
+            }
+        } catch (ex: Exception) {
+            // URL is invalid.
+        }
+        // Try the global config directory, in case they previously set up the
+        // CLI with this URL.
+        val (configUrl, configToken) = readConfig(coderConfigDir)
+        if (configUrl == url && !configToken.isNullOrBlank()) {
+            return configToken to Source.CONFIG
+        }
+        return null
+    }
+
+    /**
      * Where the specified deployment should put its data.
      */
     fun dataDir(url: URL): Path {
@@ -183,18 +246,20 @@ open class CoderSettings(
     }
 
     /**
-     * Return the URL and token from the config, if it exists.  Both the url and
-     * session files must exist if using token auth, otherwise only url must
-     * exist.
+     * Return the URL and token from the config, if they exist.
      */
     fun readConfig(dir: Path): Pair<String?, String?> {
         logger.info("Reading config from $dir")
         return try {
-            val token = if (requireTokenAuth) Files.readString(dir.resolve("session")) else null
-            Files.readString(dir.resolve("url")) to token
+            Files.readString(dir.resolve("url"))
         } catch (e: Exception) {
             // SSH has not been configured yet, or using some other authorization mechanism.
-            null to null
+            null
+        } to try {
+            Files.readString(dir.resolve("session"))
+        } catch (e: Exception) {
+            // SSH has not been configured yet, or using some other authorization mechanism.
+            null
         }
     }
 
