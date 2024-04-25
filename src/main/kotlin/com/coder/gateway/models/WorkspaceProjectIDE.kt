@@ -35,11 +35,9 @@ class WorkspaceProjectIDE(
     val projectPath: String,
     val ideProductCode: IntelliJPlatformProduct,
     val ideBuildNumber: String,
-
     // One of these must exist; enforced by the constructor.
     var idePathOnHost: String?,
     val downloadSource: String?,
-
     // These are used in the recent connections window.
     val deploymentURL: String,
     var lastOpened: String?, // Null if never opened.
@@ -51,8 +49,12 @@ class WorkspaceProjectIDE(
     /**
      * A shortened path for displaying where space is tight.
      */
-    val projectPathDisplay = if (projectPath.length <= maxDisplayLength) projectPath
-    else "…"+projectPath.substring(projectPath.length - maxDisplayLength, projectPath.length)
+    val projectPathDisplay =
+        if (projectPath.length <= maxDisplayLength) {
+            projectPath
+        } else {
+            "…" + projectPath.substring(projectPath.length - maxDisplayLength, projectPath.length)
+        }
 
     init {
         if (idePathOnHost.isNullOrBlank() && downloadSource.isNullOrBlank()) {
@@ -69,19 +71,21 @@ class WorkspaceProjectIDE(
         indicator: ProgressIndicator,
         timeout: Duration,
         setupCommand: String,
-        ignoreSetupFailure: Boolean): HostDeployInputs {
+        ignoreSetupFailure: Boolean,
+    ): HostDeployInputs {
         this.lastOpened = localTimeFormatter.format(LocalDateTime.now())
         indicator.text = "Connecting to remote worker..."
         logger.info("Connecting to remote worker on $hostname")
-        val accessor = HighLevelHostAccessor.create(
-            RemoteCredentialsHolder().apply {
-                setHost(hostname)
-                userName = "coder"
-                port = 22
-                authType = AuthType.OPEN_SSH
-            },
-            true
-        )
+        val accessor =
+            HighLevelHostAccessor.create(
+                RemoteCredentialsHolder().apply {
+                    setHost(hostname)
+                    userName = "coder"
+                    port = 22
+                    authType = AuthType.OPEN_SSH
+                },
+                true,
+            )
 
         val path = this.doDeploy(accessor, indicator, timeout)
         idePathOnHost = path
@@ -101,12 +105,13 @@ class WorkspaceProjectIDE(
             logger.info("No setup command to run on $hostname")
         }
 
-        val sshConfig = SshConfig(true).apply {
-            setHost(hostname)
-            setUsername("coder")
-            port = 22
-            authType = AuthType.OPEN_SSH
-        }
+        val sshConfig =
+            SshConfig(true).apply {
+                setHost(hostname)
+                setUsername("coder")
+                port = 22
+                authType = AuthType.OPEN_SSH
+            }
 
         // This is the configuration that tells JetBrains to connect to the IDE
         // stored at this path.  It will spawn the IDE and handle reconnections,
@@ -114,21 +119,30 @@ class WorkspaceProjectIDE(
         // TODO: We will need to handle the respawn ourselves.
         return HostDeployInputs.FullySpecified(
             remoteProjectPath = projectPath,
-            deployTarget = DeployTargetInfo.NoDeploy(path, IdeInfo(
-                product = this.ideProductCode,
-                buildNumber = this.ideBuildNumber,
-            )),
-            remoteInfo = HostDeployInputs.WithDeployedWorker(
+            deployTarget =
+            DeployTargetInfo.NoDeploy(
+                path,
+                IdeInfo(
+                    product = this.ideProductCode,
+                    buildNumber = this.ideBuildNumber,
+                ),
+            ),
+            remoteInfo =
+            HostDeployInputs.WithDeployedWorker(
                 accessor,
-                HostDeployInputs.WithHostInfo(sshConfig)
-            )
+                HostDeployInputs.WithHostInfo(sshConfig),
+            ),
         )
     }
 
     /**
      * Deploy the IDE if necessary and return the path to its location on disk.
      */
-    private suspend fun doDeploy(accessor: HighLevelHostAccessor, indicator: ProgressIndicator, timeout: Duration): String {
+    private suspend fun doDeploy(
+        accessor: HighLevelHostAccessor,
+        indicator: ProgressIndicator,
+        timeout: Duration,
+    ): String {
         // The backend might already exist at the provided path.
         if (!idePathOnHost.isNullOrBlank()) {
             indicator.text = "Verifying $ideName installation..."
@@ -143,8 +157,10 @@ class WorkspaceProjectIDE(
         // The backend might already be installed somewhere on the system.
         indicator.text = "Searching for $ideName installation..."
         logger.info("Searching for $ideName on $hostname")
-        val installed = accessor.getInstalledIDEs().find {
-            it.product == ideProductCode && it.buildNumber == ideBuildNumber }
+        val installed =
+            accessor.getInstalledIDEs().find {
+                it.product == ideProductCode && it.buildNumber == ideBuildNumber
+            }
         if (installed != null) {
             logger.info("$ideName found at ${installed.pathToIde} on $hostname")
             return installed.pathToIde
@@ -170,12 +186,21 @@ class WorkspaceProjectIDE(
         indicator.text = "Downloading $ideName..."
         indicator.text2 = downloadSource
         logger.info("Downloading $ideName to ${downloadPath.toRawString()} from $downloadSource on $hostname")
-        accessor.downloadFile(indicator, URI(downloadSource), downloadPath, object : TransferProgressTracker {
-            override var isCancelled: Boolean = false
-            override fun updateProgress(transferred: Long, speed: Long?) {
-                // Since there is no total size, this is useless.
-            }
-        })
+        accessor.downloadFile(
+            indicator,
+            URI(downloadSource),
+            downloadPath,
+            object : TransferProgressTracker {
+                override var isCancelled: Boolean = false
+
+                override fun updateProgress(
+                    transferred: Long,
+                    speed: Long?,
+                ) {
+                    // Since there is no total size, this is useless.
+                }
+            },
+        )
 
         // Extract the IDE to its final resting place.
         val ideDir = distDir.join(listOf(ShellArgument.PlainText(ideName)))
@@ -191,7 +216,8 @@ class WorkspaceProjectIDE(
         accessor.fileAccessor.uploadFileFromLocalStream(
             sentinelFile,
             "".byteInputStream(),
-            null)
+            null,
+        )
 
         logger.info("Successfully installed ${ideProductCode.productCode}-$ideBuildNumber on $hostname")
         indicator.text = "Connecting..."
@@ -223,7 +249,7 @@ class WorkspaceProjectIDE(
             ideProductCode = ideProductCode.productCode,
             ideBuildNumber = ideBuildNumber,
             downloadSource = downloadSource,
-            idePathOnHost =  idePathOnHost,
+            idePathOnHost = idePathOnHost,
             deploymentURL = deploymentURL,
             lastOpened = lastOpened,
         )
@@ -282,17 +308,21 @@ class WorkspaceProjectIDE(
  */
 fun RecentWorkspaceConnection.toWorkspaceProjectIDE(): WorkspaceProjectIDE {
     val hostname = coderWorkspaceHostname
+
     @Suppress("DEPRECATION")
     val dir = configDirectory
     return WorkspaceProjectIDE.fromInputs(
         // The name was added to query the workspace status on the recent
         // connections page, so it could be missing.  Try to get it from the
         // host name.
-        name = if (name.isNullOrBlank() && !hostname.isNullOrBlank()) {
+        name =
+        if (name.isNullOrBlank() && !hostname.isNullOrBlank()) {
             hostname
                 .removePrefix("coder-jetbrains--")
                 .removeSuffix("--${hostname.split("--").last()}")
-        } else name,
+        } else {
+            name
+        },
         hostname = hostname,
         projectPath = projectPath,
         ideProductCode = ideProductCode,
@@ -305,13 +335,18 @@ fun RecentWorkspaceConnection.toWorkspaceProjectIDE(): WorkspaceProjectIDE {
         // might happen with mTLS, and we can skip login which normally creates
         // the config directory).  For backwards compatibility with existing
         // entries, extract the URL from the config directory or host name.
-        deploymentURL = if (deploymentURL.isNullOrBlank()) {
+        deploymentURL =
+        if (deploymentURL.isNullOrBlank()) {
             if (!dir.isNullOrBlank()) {
                 "https://${Path.of(dir).parent.name}"
             } else if (!hostname.isNullOrBlank()) {
                 "https://${hostname.split("--").last()}"
-            } else deploymentURL
-        } else deploymentURL,
+            } else {
+                deploymentURL
+            }
+        } else {
+            deploymentURL
+        },
         lastOpened = lastOpened,
     )
 }
@@ -340,6 +375,7 @@ fun IdeWithStatus.withWorkspaceProject(
 }
 
 val remotePathRe = Regex("^[^(]+\\((.+)\\)$")
+
 fun ShellArgument.RemotePath.toRawString(): String {
     // TODO: Surely there is an actual way to do this.
     val remotePath = flatten().toString()

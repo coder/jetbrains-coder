@@ -53,9 +53,12 @@ internal class CoderCLIManagerTest {
         return mkbin(echo("""{"version": "$version"}"""))
     }
 
-    private fun mockServer(errorCode: Int = 0, version: String? = null): Pair<HttpServer, URL> {
+    private fun mockServer(
+        errorCode: Int = 0,
+        version: String? = null,
+    ): Pair<HttpServer, URL> {
         val srv = HttpServer.create(InetSocketAddress(0), 0)
-        srv.createContext("/") {exchange ->
+        srv.createContext("/") { exchange ->
             var code = HttpURLConnection.HTTP_OK
             var response = mkbinVersion(version ?: "${srv.address.port}.0.0")
             val eTags = exchange.requestHeaders["If-None-Match"]
@@ -87,9 +90,11 @@ internal class CoderCLIManagerTest {
         val (srv, url) = mockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
         val ccm = CoderCLIManager(url)
 
-        val ex = assertFailsWith(
-            exceptionClass = ResponseException::class,
-            block = { ccm.download() })
+        val ex =
+            assertFailsWith(
+                exceptionClass = ResponseException::class,
+                block = { ccm.download() },
+            )
         assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, ex.code)
 
         srv.stop(0)
@@ -97,9 +102,13 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testUsesSettings() {
-        val settings = CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("cli-data-dir").toString(),
-            binaryDirectory = tmpdir.resolve("cli-bin-dir").toString()))
+        val settings =
+            CoderSettings(
+                CoderSettingsState(
+                    dataDirectory = tmpdir.resolve("cli-data-dir").toString(),
+                    binaryDirectory = tmpdir.resolve("cli-bin-dir").toString(),
+                ),
+            )
         val url = URL("http://localhost")
 
         val ccm1 = CoderCLIManager(url, settings)
@@ -121,19 +130,26 @@ internal class CoderCLIManagerTest {
         }
 
         val (srv, url) = mockServer()
-        val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString())))
+        val ccm =
+            CoderCLIManager(
+                url,
+                CoderSettings(
+                    CoderSettingsState(
+                        dataDirectory = tmpdir.resolve("cli-dir-fail-to-write").toString(),
+                    ),
+                ),
+            )
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.parent.toFile().setWritable(false)
 
         assertFailsWith(
             exceptionClass = AccessDeniedException::class,
-            block = { ccm.download() })
+            block = { ccm.download() },
+        )
 
         srv.stop(0)
     }
-
 
     // This test uses a real deployment if possible to make sure we really
     // download a working CLI and that it runs on each platform.
@@ -146,8 +162,15 @@ internal class CoderCLIManagerTest {
             url = "https://dev.coder.com"
         }
 
-        val ccm = CoderCLIManager(url.toURL(), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("real-cli").toString())))
+        val ccm =
+            CoderCLIManager(
+                url.toURL(),
+                CoderSettings(
+                    CoderSettingsState(
+                        dataDirectory = tmpdir.resolve("real-cli").toString(),
+                    ),
+                ),
+            )
 
         assertTrue(ccm.download())
         assertDoesNotThrow { ccm.version() }
@@ -158,15 +181,23 @@ internal class CoderCLIManagerTest {
         // Make sure login failures propagate.
         assertFailsWith(
             exceptionClass = InvalidExitValueException::class,
-            block = { ccm.login("jetbrains-ci-test") })
+            block = { ccm.login("jetbrains-ci-test") },
+        )
     }
 
     @Test
     fun testDownloadMockCLI() {
         val (srv, url) = mockServer()
-        var ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("mock-cli").toString()),
-            binaryName = "coder.bat"))
+        var ccm =
+            CoderCLIManager(
+                url,
+                CoderSettings(
+                    CoderSettingsState(
+                        dataDirectory = tmpdir.resolve("mock-cli").toString(),
+                    ),
+                    binaryName = "coder.bat",
+                ),
+            )
 
         assertEquals(true, ccm.download())
         assertEquals(SemVer(url.port.toLong(), 0, 0), ccm.version())
@@ -175,9 +206,16 @@ internal class CoderCLIManagerTest {
         assertEquals(false, ccm.download())
 
         // Should use the source override.
-        ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            binarySource = "/bin/override",
-            dataDirectory = tmpdir.resolve("mock-cli").toString())))
+        ccm =
+            CoderCLIManager(
+                url,
+                CoderSettings(
+                    CoderSettingsState(
+                        binarySource = "/bin/override",
+                        dataDirectory = tmpdir.resolve("mock-cli").toString(),
+                    ),
+                ),
+            )
 
         assertEquals(true, ccm.download())
         assertContains(ccm.localBinaryPath.toFile().readText(), "0.0.0")
@@ -187,19 +225,34 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testRunNonExistentBinary() {
-        val ccm = CoderCLIManager(URL("https://foo"), CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("does-not-exist").toString())))
+        val ccm =
+            CoderCLIManager(
+                URL("https://foo"),
+                CoderSettings(
+                    CoderSettingsState(
+                        dataDirectory = tmpdir.resolve("does-not-exist").toString(),
+                    ),
+                ),
+            )
 
         assertFailsWith(
             exceptionClass = ProcessInitException::class,
-            block = { ccm.login("fake-token") })
+            block = { ccm.login("fake-token") },
+        )
     }
 
     @Test
     fun testOverwitesWrongVersion() {
         val (srv, url) = mockServer()
-        val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("overwrite-cli").toString())))
+        val ccm =
+            CoderCLIManager(
+                url,
+                CoderSettings(
+                    CoderSettingsState(
+                        dataDirectory = tmpdir.resolve("overwrite-cli").toString(),
+                    ),
+                ),
+            )
 
         ccm.localBinaryPath.parent.toFile().mkdirs()
         ccm.localBinaryPath.toFile().writeText("cli")
@@ -222,8 +275,12 @@ internal class CoderCLIManagerTest {
         val (srv1, url1) = mockServer()
         val (srv2, url2) = mockServer()
 
-        val settings = CoderSettings(CoderSettingsState(
-            dataDirectory = tmpdir.resolve("clobber-cli").toString()))
+        val settings =
+            CoderSettings(
+                CoderSettingsState(
+                    dataDirectory = tmpdir.resolve("clobber-cli").toString(),
+                ),
+            )
 
         val ccm1 = CoderCLIManager(url1, settings)
         val ccm2 = CoderCLIManager(url2, settings)
@@ -249,63 +306,94 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testConfigureSSH() {
-        val extraConfig = listOf(
-            "ServerAliveInterval 5",
-            "ServerAliveCountMax 3").joinToString(System.lineSeparator())
-        val tests = listOf(
-            SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
-            SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
-            SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank"),
-            SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank"),
-            SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks"),
-            SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks"),
-            SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks"),
-            SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks"),
-            SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank"),
-            SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks"),
-            SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks"),
-            SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks"),
-            SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks"),
-            if (getOS() == OS.WINDOWS) {
-                SSHTest(listOf("header"), null, "header-command-windows", "blank", """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""")
-            } else {
-                SSHTest(listOf("header"), null, "header-command", "blank", "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'")
-            },
-            SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true)),
-            SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false)),
-            SSHTest(listOf("extra"), null, "extra-config", "blank",
-                extraConfig = extraConfig),
-            SSHTest(listOf("extra"), null, "extra-config", "blank",
-                env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to extraConfig))),
-        )
+        val extraConfig =
+            listOf(
+                "ServerAliveInterval 5",
+                "ServerAliveCountMax 3",
+            ).joinToString(System.lineSeparator())
+        val tests =
+            listOf(
+                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+                SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank"),
+                SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank"),
+                SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank"),
+                SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks"),
+                SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks"),
+                if (getOS() == OS.WINDOWS) {
+                    SSHTest(
+                        listOf("header"),
+                        null,
+                        "header-command-windows",
+                        "blank",
+                        """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""",
+                    )
+                } else {
+                    SSHTest(
+                        listOf("header"),
+                        null,
+                        "header-command",
+                        "blank",
+                        "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'",
+                    )
+                },
+                SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true)),
+                SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false)),
+                SSHTest(
+                    listOf("extra"),
+                    null,
+                    "extra-config",
+                    "blank",
+                    extraConfig = extraConfig,
+                ),
+                SSHTest(
+                    listOf("extra"),
+                    null,
+                    "extra-config",
+                    "blank",
+                    env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to extraConfig)),
+                ),
+            )
 
         val newlineRe = "\r?\n".toRegex()
 
         tests.forEach {
-            val settings = CoderSettings(CoderSettingsState(
-                disableAutostart = it.disableAutostart,
-                dataDirectory = tmpdir.resolve("configure-ssh").toString(),
-                headerCommand = it.headerCommand,
-                sshConfigOptions = it.extraConfig),
-                sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"),
-                env = it.env)
+            val settings =
+                CoderSettings(
+                    CoderSettingsState(
+                        disableAutostart = it.disableAutostart,
+                        dataDirectory = tmpdir.resolve("configure-ssh").toString(),
+                        headerCommand = it.headerCommand,
+                        sshConfigOptions = it.extraConfig,
+                    ),
+                    sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"),
+                    env = it.env,
+                )
 
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), settings)
 
             // Input is the configuration that we start with, if any.
             if (it.input != null) {
                 settings.sshConfigPath.parent.toFile().mkdirs()
-                val originalConf = Path.of("src/test/fixtures/inputs").resolve(it.input + ".conf").toFile().readText()
-                    .replace(newlineRe, System.lineSeparator())
+                val originalConf =
+                    Path.of("src/test/fixtures/inputs").resolve(it.input + ".conf").toFile().readText()
+                        .replace(newlineRe, System.lineSeparator())
                 settings.sshConfigPath.toFile().writeText(originalConf)
             }
 
             // Output is the configuration we expect to have after configuring.
             val coderConfigPath = ccm.localBinaryPath.parent.resolve("config")
-            val expectedConf = Path.of("src/test/fixtures/outputs/").resolve(it.output + ".conf").toFile().readText()
-                .replace(newlineRe, System.lineSeparator())
-                .replace("/tmp/coder-gateway/test.coder.invalid/config", escape(coderConfigPath.toString()))
-                .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
+            val expectedConf =
+                Path.of("src/test/fixtures/outputs/").resolve(it.output + ".conf").toFile().readText()
+                    .replace(newlineRe, System.lineSeparator())
+                    .replace("/tmp/coder-gateway/test.coder.invalid/config", escape(coderConfigPath.toString()))
+                    .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
 
             // Add workspaces.
             ccm.configSsh(it.workspaces.toSet(), it.features)
@@ -319,47 +407,64 @@ internal class CoderCLIManagerTest {
             assertEquals(
                 settings.sshConfigPath.toFile().readText(),
                 Path.of("src/test/fixtures/inputs").resolve(it.remove + ".conf").toFile()
-                    .readText().replace(newlineRe, System.lineSeparator()))
+                    .readText().replace(newlineRe, System.lineSeparator()),
+            )
         }
     }
 
     @Test
     fun testMalformedConfig() {
-        val tests = listOf(
-            "malformed-mismatched-start",
-            "malformed-no-end",
-            "malformed-no-start",
-            "malformed-start-after-end",
-        )
+        val tests =
+            listOf(
+                "malformed-mismatched-start",
+                "malformed-no-end",
+                "malformed-no-start",
+                "malformed-start-after-end",
+            )
 
         tests.forEach {
-            val settings = CoderSettings(CoderSettingsState(),
-                sshConfigPath = tmpdir.resolve("configured$it.conf"))
+            val settings =
+                CoderSettings(
+                    CoderSettingsState(),
+                    sshConfigPath = tmpdir.resolve("configured$it.conf"),
+                )
             settings.sshConfigPath.parent.toFile().mkdirs()
             Path.of("src/test/fixtures/inputs").resolve("$it.conf").toFile().copyTo(
-                settings.sshConfigPath.toFile(), true)
+                settings.sshConfigPath.toFile(),
+                true,
+            )
 
             val ccm = CoderCLIManager(URL("https://test.coder.invalid"), settings)
 
             assertFailsWith(
                 exceptionClass = SSHConfigFormatException::class,
-                block = { ccm.configSsh(emptySet()) })
+                block = { ccm.configSsh(emptySet()) },
+            )
         }
     }
 
     @Test
     fun testMalformedHeader() {
-        val tests = listOf(
-            "new\nline",
-        )
+        val tests =
+            listOf(
+                "new\nline",
+            )
 
         tests.forEach {
-            val ccm = CoderCLIManager(URL("https://test.coder.invalid"), CoderSettings(CoderSettingsState(
-                headerCommand = it)))
+            val ccm =
+                CoderCLIManager(
+                    URL("https://test.coder.invalid"),
+                    CoderSettings(
+                        CoderSettingsState(
+                            headerCommand = it,
+                        ),
+                    ),
+                )
 
             assertFailsWith(
                 exceptionClass = Exception::class,
-                block = { ccm.configSsh(setOf("foo", "bar")) })
+                block = { ccm.configSsh(setOf("foo", "bar")) },
+            )
         }
     }
 
@@ -387,20 +492,28 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testFailVersionParse() {
-        val tests = mapOf(
-            null                                to ProcessInitException::class,
-            echo("""{"foo": true, "baz": 1}""") to MissingVersionException::class,
-            echo("""{"version": ""}""")         to MissingVersionException::class,
-            echo("""v0.0.1""")                  to JsonEncodingException::class,
-            echo("""{"version: """)             to JsonEncodingException::class,
-            echo("""{"version": "invalid"}""")  to InvalidVersionException::class,
-            exit(0)                             to MissingVersionException::class,
-            exit(1)                             to InvalidExitValueException::class,
-        )
+        val tests =
+            mapOf(
+                null to ProcessInitException::class,
+                echo("""{"foo": true, "baz": 1}""") to MissingVersionException::class,
+                echo("""{"version": ""}""") to MissingVersionException::class,
+                echo("""v0.0.1""") to JsonEncodingException::class,
+                echo("""{"version: """) to JsonEncodingException::class,
+                echo("""{"version": "invalid"}""") to InvalidVersionException::class,
+                exit(0) to MissingVersionException::class,
+                exit(1) to InvalidExitValueException::class,
+            )
 
-        val ccm = CoderCLIManager(URL("https://test.coder.parse-fail.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("bad-version").toString()),
-            binaryName = "coder.bat"))
+        val ccm =
+            CoderCLIManager(
+                URL("https://test.coder.parse-fail.invalid"),
+                CoderSettings(
+                    CoderSettingsState(
+                        binaryDirectory = tmpdir.resolve("bad-version").toString(),
+                    ),
+                    binaryName = "coder.bat",
+                ),
+            )
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         tests.forEach {
@@ -414,34 +527,44 @@ internal class CoderCLIManagerTest {
             }
             assertFailsWith(
                 exceptionClass = it.value,
-                block = { ccm.version() })
+                block = { ccm.version() },
+            )
         }
     }
 
     @Test
     fun testMatchesVersion() {
-        val test = listOf(
-            Triple(null, "v1.0.0", null),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0", true),
-            Triple(echo("""{"version": "v1.0.0", "foo": "bar"}"""), "v1.0.0", true),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0-devel+b5b5b5b5", true),
-            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
-            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0", true),
-            Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+c6c6c6c6", true),
-            Triple(echo("""{"version": "v1.0.0-prod+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.1", false),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v1.1.0", false),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v2.0.0", false),
-            Triple(echo("""{"version": "v1.0.0"}"""), "v0.0.0", false),
-            Triple(echo("""{"version": ""}"""), "v1.0.0", null),
-            Triple(echo("""{"version": "v1.0.0"}"""), "", null),
-            Triple(echo("""{"version"""), "v1.0.0", null),
-            Triple(exit(0), "v1.0.0", null),
-            Triple(exit(1), "v1.0.0", null))
+        val test =
+            listOf(
+                Triple(null, "v1.0.0", null),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0", true),
+                Triple(echo("""{"version": "v1.0.0", "foo": "bar"}"""), "v1.0.0", true),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.0-devel+b5b5b5b5", true),
+                Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
+                Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0", true),
+                Triple(echo("""{"version": "v1.0.0-devel+b5b5b5b5"}"""), "v1.0.0-devel+c6c6c6c6", true),
+                Triple(echo("""{"version": "v1.0.0-prod+b5b5b5b5"}"""), "v1.0.0-devel+b5b5b5b5", true),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v1.0.1", false),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v1.1.0", false),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v2.0.0", false),
+                Triple(echo("""{"version": "v1.0.0"}"""), "v0.0.0", false),
+                Triple(echo("""{"version": ""}"""), "v1.0.0", null),
+                Triple(echo("""{"version": "v1.0.0"}"""), "", null),
+                Triple(echo("""{"version"""), "v1.0.0", null),
+                Triple(exit(0), "v1.0.0", null),
+                Triple(exit(1), "v1.0.0", null),
+            )
 
-        val ccm = CoderCLIManager(URL("https://test.coder.matches-version.invalid"), CoderSettings(CoderSettingsState(
-            binaryDirectory = tmpdir.resolve("matches-version").toString()),
-            binaryName = "coder.bat"))
+        val ccm =
+            CoderCLIManager(
+                URL("https://test.coder.matches-version.invalid"),
+                CoderSettings(
+                    CoderSettingsState(
+                        binaryDirectory = tmpdir.resolve("matches-version").toString(),
+                    ),
+                    binaryName = "coder.bat",
+                ),
+            )
         ccm.localBinaryPath.parent.toFile().mkdirs()
 
         test.forEach {
@@ -459,18 +582,22 @@ internal class CoderCLIManagerTest {
     }
 
     enum class Result {
-        ERROR,    // Tried to download but got an error.
-        NONE,     // Skipped download; binary does not exist.
-        DL_BIN,   // Downloaded the binary to bin.
-        DL_DATA,  // Downloaded the binary to data.
-        USE_BIN,  // Used existing binary in bin.
+        ERROR, // Tried to download but got an error.
+        NONE, // Skipped download; binary does not exist.
+        DL_BIN, // Downloaded the binary to bin.
+        DL_DATA, // Downloaded the binary to data.
+        USE_BIN, // Used existing binary in bin.
         USE_DATA, // Used existing binary in data.
     }
 
     data class EnsureCLITest(
-        val version: String?, val fallbackVersion: String?, val buildVersion: String,
-        val writable: Boolean, val enableDownloads: Boolean, val enableFallback: Boolean,
-        val expect: Result
+        val version: String?,
+        val fallbackVersion: String?,
+        val buildVersion: String,
+        val writable: Boolean,
+        val enableDownloads: Boolean,
+        val enableFallback: Boolean,
+        val expect: Result,
     )
 
     @Test
@@ -481,39 +608,43 @@ internal class CoderCLIManagerTest {
             return
         }
 
-        @Suppress("BooleanLiteralArgument") val tests = listOf(
-            // CLI is writable.
-            EnsureCLITest(null,    null,    "1.0.0", true,  true,  true,  Result.DL_BIN),  // Download.
-            EnsureCLITest(null,    null,    "1.0.0", true,  false, true,  Result.NONE),    // No download, error when used.
-            EnsureCLITest("1.0.1", null,    "1.0.0", true,  true,  true,  Result.DL_BIN),  // Update.
-            EnsureCLITest("1.0.1", null,    "1.0.0", true,  false, true,  Result.USE_BIN), // No update, use outdated.
-            EnsureCLITest("1.0.0", null,    "1.0.0", true,  false, true,  Result.USE_BIN), // Use existing.
-
-            // CLI is *not* writable and fallback disabled.
-            EnsureCLITest(null,    null,    "1.0.0", false, true,  false, Result.ERROR),   // Fail to download.
-            EnsureCLITest(null,    null,    "1.0.0", false, false, false, Result.NONE),    // No download, error when used.
-            EnsureCLITest("1.0.1", null,    "1.0.0", false, true,  false, Result.ERROR),   // Fail to update.
-            EnsureCLITest("1.0.1", null,    "1.0.0", false, false, false, Result.USE_BIN), // No update, use outdated.
-            EnsureCLITest("1.0.0", null,    "1.0.0", false, false, false, Result.USE_BIN), // Use existing.
-
-            // CLI is *not* writable and fallback enabled.
-            EnsureCLITest(null,    null,    "1.0.0", false, true , true,  Result.DL_DATA),  // Download to fallback.
-            EnsureCLITest(null,    null,    "1.0.0", false, false, true,  Result.NONE),     // No download, error when used.
-            EnsureCLITest("1.0.1", "1.0.1", "1.0.0", false, true,  true,  Result.DL_DATA),  // Update fallback.
-            EnsureCLITest("1.0.1", "1.0.2", "1.0.0", false, false, true,  Result.USE_BIN),  // No update, use outdated.
-            EnsureCLITest(null,    "1.0.2", "1.0.0", false, false, true,  Result.USE_DATA), // No update, use outdated fallback.
-            EnsureCLITest("1.0.0", null,    "1.0.0", false, false, true,  Result.USE_BIN),  // Use existing.
-            EnsureCLITest("1.0.1", "1.0.0", "1.0.0", false, false, true,  Result.USE_DATA), // Use existing fallback.
-        )
+        @Suppress("BooleanLiteralArgument")
+        val tests =
+            listOf(
+                // CLI is writable.
+                EnsureCLITest(null, null, "1.0.0", true, true, true, Result.DL_BIN), // Download.
+                EnsureCLITest(null, null, "1.0.0", true, false, true, Result.NONE), // No download, error when used.
+                EnsureCLITest("1.0.1", null, "1.0.0", true, true, true, Result.DL_BIN), // Update.
+                EnsureCLITest("1.0.1", null, "1.0.0", true, false, true, Result.USE_BIN), // No update, use outdated.
+                EnsureCLITest("1.0.0", null, "1.0.0", true, false, true, Result.USE_BIN), // Use existing.
+                // CLI is *not* writable and fallback disabled.
+                EnsureCLITest(null, null, "1.0.0", false, true, false, Result.ERROR), // Fail to download.
+                EnsureCLITest(null, null, "1.0.0", false, false, false, Result.NONE), // No download, error when used.
+                EnsureCLITest("1.0.1", null, "1.0.0", false, true, false, Result.ERROR), // Fail to update.
+                EnsureCLITest("1.0.1", null, "1.0.0", false, false, false, Result.USE_BIN), // No update, use outdated.
+                EnsureCLITest("1.0.0", null, "1.0.0", false, false, false, Result.USE_BIN), // Use existing.
+                // CLI is *not* writable and fallback enabled.
+                EnsureCLITest(null, null, "1.0.0", false, true, true, Result.DL_DATA), // Download to fallback.
+                EnsureCLITest(null, null, "1.0.0", false, false, true, Result.NONE), // No download, error when used.
+                EnsureCLITest("1.0.1", "1.0.1", "1.0.0", false, true, true, Result.DL_DATA), // Update fallback.
+                EnsureCLITest("1.0.1", "1.0.2", "1.0.0", false, false, true, Result.USE_BIN), // No update, use outdated.
+                EnsureCLITest(null, "1.0.2", "1.0.0", false, false, true, Result.USE_DATA), // No update, use outdated fallback.
+                EnsureCLITest("1.0.0", null, "1.0.0", false, false, true, Result.USE_BIN), // Use existing.
+                EnsureCLITest("1.0.1", "1.0.0", "1.0.0", false, false, true, Result.USE_DATA), // Use existing fallback.
+            )
 
         val (srv, url) = mockServer()
 
         tests.forEach {
-            val settings = CoderSettings(CoderSettingsState(
-                enableDownloads = it.enableDownloads,
-                enableBinaryDirectoryFallback = it.enableFallback,
-                dataDirectory = tmpdir.resolve("ensure-data-dir").toString(),
-                binaryDirectory = tmpdir.resolve("ensure-bin-dir").toString()))
+            val settings =
+                CoderSettings(
+                    CoderSettingsState(
+                        enableDownloads = it.enableDownloads,
+                        enableBinaryDirectoryFallback = it.enableFallback,
+                        dataDirectory = tmpdir.resolve("ensure-data-dir").toString(),
+                        binaryDirectory = tmpdir.resolve("ensure-bin-dir").toString(),
+                    ),
+                )
 
             // Clean up from previous test.
             tmpdir.resolve("ensure-data-dir").toFile().deleteRecursively()
@@ -539,18 +670,20 @@ internal class CoderCLIManagerTest {
                 settings.binPath(url, true).toFile().setExecutable(true)
             }
 
-            when(it.expect) {
+            when (it.expect) {
                 Result.ERROR -> {
                     assertFailsWith(
                         exceptionClass = AccessDeniedException::class,
-                        block = { ensureCLI(url, it.buildVersion, settings) })
+                        block = { ensureCLI(url, it.buildVersion, settings) },
+                    )
                 }
                 Result.NONE -> {
                     val ccm = ensureCLI(url, it.buildVersion, settings)
                     assertEquals(settings.binPath(url), ccm.localBinaryPath)
                     assertFailsWith(
                         exceptionClass = ProcessInitException::class,
-                        block = { ccm.version() })
+                        block = { ccm.version() },
+                    )
                 }
                 Result.DL_BIN -> {
                     val ccm = ensureCLI(url, it.buildVersion, settings)
@@ -585,18 +718,26 @@ internal class CoderCLIManagerTest {
 
     @Test
     fun testFeatures() {
-        val tests = listOf(
-            Pair("2.5.0", Features(true)),
-            Pair("4.9.0", Features(true)),
-            Pair("2.4.9", Features(false)),
-            Pair("1.0.1", Features(false)),
-        )
+        val tests =
+            listOf(
+                Pair("2.5.0", Features(true)),
+                Pair("4.9.0", Features(true)),
+                Pair("2.4.9", Features(false)),
+                Pair("1.0.1", Features(false)),
+            )
 
         tests.forEach {
             val (srv, url) = mockServer(version = it.first)
-            val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState(
-                dataDirectory = tmpdir.resolve("features").toString()),
-                binaryName = "coder.bat"))
+            val ccm =
+                CoderCLIManager(
+                    url,
+                    CoderSettings(
+                        CoderSettingsState(
+                            dataDirectory = tmpdir.resolve("features").toString(),
+                        ),
+                        binaryName = "coder.bat",
+                    ),
+                )
             assertEquals(true, ccm.download())
             assertEquals(it.second, ccm.features, "version: ${it.first}")
 

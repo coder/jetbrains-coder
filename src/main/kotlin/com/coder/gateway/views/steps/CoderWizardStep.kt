@@ -21,21 +21,24 @@ sealed class CoderWizardStep<T>(
     private lateinit var previousButton: JButton
     protected lateinit var nextButton: JButton
 
-    private val buttons = panel {
-        separator(background = WelcomeScreenUIManager.getSeparatorColor())
-        row {
-            label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
-            previousButton = button(IdeBundle.message("button.back")) { previous() }
-                .align(AlignX.RIGHT).gap(RightGap.SMALL)
-                .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
-            nextButton = button(nextActionText) { next() }
-                .align(AlignX.RIGHT)
-                .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
-        }.bottomGap(BottomGap.SMALL)
-    }.apply {
-        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16)
-    }
+    private val buttons =
+        panel {
+            separator(background = WelcomeScreenUIManager.getSeparatorColor())
+            row {
+                label("").resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
+                previousButton =
+                    button(IdeBundle.message("button.back")) { previous() }
+                        .align(AlignX.RIGHT).gap(RightGap.SMALL)
+                        .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+                nextButton =
+                    button(nextActionText) { next() }
+                        .align(AlignX.RIGHT)
+                        .applyToComponent { background = WelcomeScreenUIManager.getMainAssociatedComponentBackground() }.component
+            }.bottomGap(BottomGap.SMALL)
+        }.apply {
+            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            border = JBUI.Borders.empty(0, 16)
+        }
 
     init {
         nextButton.isEnabled = false
@@ -47,6 +50,7 @@ sealed class CoderWizardStep<T>(
             it()
         }
     }
+
     private fun next() {
         withoutNull(onNext) {
             it(data())

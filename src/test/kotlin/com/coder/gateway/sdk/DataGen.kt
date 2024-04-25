@@ -18,30 +18,41 @@ import java.util.UUID
 class DataGen {
     companion object {
         // Create a list of random agents for a random workspace.
-        fun agentList(workspaceName: String, vararg agentName: String): List<WorkspaceAgentListModel> {
+        fun agentList(
+            workspaceName: String,
+            vararg agentName: String,
+        ): List<WorkspaceAgentListModel> {
             val workspace = workspace(workspaceName, agents = agentName.associateWith { UUID.randomUUID().toString() })
             return workspace.toAgentList()
         }
 
-        fun resource(agentName: String, agentId: String): WorkspaceResource {
+        fun resource(
+            agentName: String,
+            agentId: String,
+        ): WorkspaceResource {
             return WorkspaceResource(
-                agents = listOf(WorkspaceAgent(
-                    id = UUID.fromString(agentId),
-                    status = WorkspaceAgentStatus.CONNECTED,
-                    name = agentName,
-                    architecture = Arch.from("amd64"),
-                    operatingSystem = OS.from("linux"),
-                    directory = null,
-                    expandedDirectory = null,
-                    lifecycleState = WorkspaceAgentLifecycleState.READY,
-                    loginBeforeReady = false,
-                )),
+                agents =
+                listOf(
+                    WorkspaceAgent(
+                        id = UUID.fromString(agentId),
+                        status = WorkspaceAgentStatus.CONNECTED,
+                        name = agentName,
+                        architecture = Arch.from("amd64"),
+                        operatingSystem = OS.from("linux"),
+                        directory = null,
+                        expandedDirectory = null,
+                        lifecycleState = WorkspaceAgentLifecycleState.READY,
+                        loginBeforeReady = false,
+                    ),
+                ),
             )
         }
 
-        fun workspace(name: String,
-                      templateID: UUID = UUID.randomUUID(),
-                      agents: Map<String, String> = emptyMap()): Workspace  {
+        fun workspace(
+            name: String,
+            templateID: UUID = UUID.randomUUID(),
+            agents: Map<String, String> = emptyMap(),
+        ): Workspace {
             val wsId = UUID.randomUUID()
             return Workspace(
                 id = wsId,
@@ -49,16 +60,19 @@ class DataGen {
                 templateName = "template-name",
                 templateDisplayName = "template-display-name",
                 templateIcon = "template-icon",
-                latestBuild = build(
-                    resources = agents.map{ resource(it.key, it.value) },
+                latestBuild =
+                build(
+                    resources = agents.map { resource(it.key, it.value) },
                 ),
                 outdated = false,
                 name = name,
             )
         }
 
-        fun build(templateVersionID: UUID = UUID.randomUUID(),
-                  resources: List<WorkspaceResource> = emptyList()): WorkspaceBuild {
+        fun build(
+            templateVersionID: UUID = UUID.randomUUID(),
+            resources: List<WorkspaceResource> = emptyList(),
+        ): WorkspaceBuild {
             return WorkspaceBuild(
                 templateVersionID = templateVersionID,
                 resources = resources,

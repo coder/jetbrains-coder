@@ -32,7 +32,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.data-directory.comment",
                             settings.dataDir.toString(),
-                        )
+                        ),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.binary-source.title")) {
@@ -42,7 +42,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message(
                             "gateway.connector.settings.binary-source.comment",
                             settings.binSource(URL("http://localhost")).path,
-                        )
+                        ),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row {
@@ -50,7 +50,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 checkBox(CoderGatewayBundle.message("gateway.connector.settings.enable-downloads.title"))
                     .bindSelected(state::enableDownloads)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.enable-downloads.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.enable-downloads.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             // The binary directory is not validated because it could be a
@@ -65,63 +65,63 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 checkBox(CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.title"))
                     .bindSelected(state::enableBinaryDirectoryFallback)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.header-command.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::headerCommand)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.header-command.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.header-command.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::tlsCertPath)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.tls-key-path.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::tlsKeyPath)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.tls-key-path.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-key-path.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.tls-ca-path.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::tlsCAPath)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.tls-ca-path.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-ca-path.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::tlsAlternateHostname)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.heading")) {
                 checkBox(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.title"))
                     .bindSelected(state::disableAutostart)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.title")) {
                 textArea().resizableColumn().align(AlignX.FILL)
                     .bindText(state::sshConfigOptions)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.comment", CODER_SSH_CONFIG_OPTIONS)
+                        CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.comment", CODER_SSH_CONFIG_OPTIONS),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.setup-command.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::setupCommand)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row {
@@ -129,24 +129,25 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 checkBox(CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.title"))
                     .bindSelected(state::ignoreSetupFailure)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.ignore-setup-failure.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.default-url.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::defaultURL)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment")
+                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
         }
     }
 
-    private fun validateDataDirectory(): ValidationInfoBuilder.(JBTextField) -> ValidationInfo? = {
-        if (it.text.isNotBlank() && !Path.of(it.text).canCreateDirectory()) {
-            error("Cannot create this directory")
-        } else {
-            null
+    private fun validateDataDirectory(): ValidationInfoBuilder.(JBTextField) -> ValidationInfo? =
+        {
+            if (it.text.isNotBlank() && !Path.of(it.text).canCreateDirectory()) {
+                error("Cannot create this directory")
+            } else {
+                null
+            }
         }
-    }
 }

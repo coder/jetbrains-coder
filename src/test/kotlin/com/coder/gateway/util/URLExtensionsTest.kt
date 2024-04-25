@@ -1,24 +1,29 @@
 package com.coder.gateway.util
 
+import java.net.URL
 import kotlin.test.Test
 import kotlin.test.assertEquals
-
-import java.net.URL
 
 internal class URLExtensionsTest {
     @Test
     fun testToURL() {
-        assertEquals(URL("https", "localhost", 8080, "/path"),
-                     "https://localhost:8080/path".toURL())
+        assertEquals(
+            URL("https", "localhost", 8080, "/path"),
+            "https://localhost:8080/path".toURL(),
+        )
     }
 
     @Test
     fun testWithPath() {
-        assertEquals(URL("https", "localhost", 8080, "/foo/bar"),
-                     URL("https", "localhost", 8080, "/").withPath("/foo/bar"))
+        assertEquals(
+            URL("https", "localhost", 8080, "/foo/bar"),
+            URL("https", "localhost", 8080, "/").withPath("/foo/bar"),
+        )
 
-        assertEquals(URL("https", "localhost", 8080, "/foo/bar"),
-                     URL("https", "localhost", 8080, "/old/path").withPath("/foo/bar"))
+        assertEquals(
+            URL("https", "localhost", 8080, "/foo/bar"),
+            URL("https", "localhost", 8080, "/old/path").withPath("/foo/bar"),
+        )
     }
 
     @Test

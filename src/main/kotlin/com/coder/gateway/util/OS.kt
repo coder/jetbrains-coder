@@ -11,7 +11,10 @@ fun getArch(): Arch? {
 }
 
 enum class OS {
-    WINDOWS, LINUX, MAC;
+    WINDOWS,
+    LINUX,
+    MAC,
+    ;
 
     companion object {
         fun from(os: String): OS? {
@@ -35,7 +38,10 @@ enum class OS {
 }
 
 enum class Arch {
-    AMD64, ARM64, ARMV7;
+    AMD64,
+    ARM64,
+    ARMV7,
+    ;
 
     companion object {
         fun from(arch: String): Arch? {

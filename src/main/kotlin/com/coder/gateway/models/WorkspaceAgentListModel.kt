@@ -10,16 +10,12 @@ import javax.swing.Icon
 // cannot be connected to.
 data class WorkspaceAgentListModel(
     val workspace: Workspace,
-
     // If this is missing, assume the workspace is off or has no agents.
     val agent: WorkspaceAgent? = null,
-
     // The icon to display on the row.
     var icon: Icon? = null,
-
     // The combined status of the workspace and agent to display on the row.
     val status: WorkspaceAndAgentStatus = WorkspaceAndAgentStatus.from(workspace, agent),
-
     // The combined `workspace.agent` name to display on the row.
-    val name: String = if (agent != null) "${workspace.name}.${agent.name}" else workspace.name
+    val name: String = if (agent != null) "${workspace.name}.${agent.name}" else workspace.name,
 )

@@ -1,0 +1,9 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = intellij_idea
+ktlint_standard_value-argument-comment = disabled
+ktlint_standard_value-parameter-comment = disabled
+ktlint_standard_no-multi-spaces = disabled
+ktlint_standard_spacing-between-declarations-with-annotations = disabled
+ktlint_standard_annotation = disabled

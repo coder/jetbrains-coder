@@ -16,8 +16,8 @@ import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.toURL
-import com.coder.gateway.util.withoutNull
 import com.coder.gateway.util.withPath
+import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
@@ -105,19 +105,26 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         indent {
                             row {
                                 cell(JLabel()).resizableColumn().align(AlignX.FILL)
-                                searchBar = cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
-                                    minimumSize = Dimension(350, -1)
-                                    textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                                    addDocumentListener(object : DocumentAdapter() {
-                                        override fun textChanged(e: DocumentEvent) {
-                                            filterString = this@applyToComponent.text.trim()
-                                            updateContentView()
-                                        }
-                                    })
-                                }.component
+                                searchBar =
+                                    cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
+                                        minimumSize = Dimension(350, -1)
+                                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                                        addDocumentListener(
+                                            object : DocumentAdapter() {
+                                                override fun textChanged(e: DocumentEvent) {
+                                                    filterString = this@applyToComponent.text.trim()
+                                                    updateContentView()
+                                                }
+                                            },
+                                        )
+                                    }.component
 
                                 actionButton(
-                                    object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"), null, AllIcons.General.Add) {
+                                    object : DumbAwareAction(
+                                        CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"),
+                                        null,
+                                        AllIcons.General.Add,
+                                    ) {
                                         override fun actionPerformed(e: AnActionEvent) {
                                             setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
                                         }
@@ -155,104 +162,145 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     private fun updateContentView() {
         var top = true
         val connections = getConnectionsByDeployment(true)
-        recentWorkspacesContentPanel.viewport.view = panel {
-            connections.forEach { (deploymentURL, connectionsByWorkspace) ->
-                val deployment = deployments[deploymentURL]
-                val deploymentError = deployment?.error
-                connectionsByWorkspace.forEach { (workspaceName, connections) ->
-                    val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
-                    val status = if (deploymentError != null) {
-                        Triple(UIUtil.getBalloonErrorIcon(), UIUtil.getErrorForeground(), deploymentError)
-                    } else if (workspaceWithAgent != null) {
-                        Triple(workspaceWithAgent.status.icon, workspaceWithAgent.status.statusColor(), workspaceWithAgent.status.description)
-                    } else {
-                        Triple(AnimatedIcon.Default.INSTANCE, UIUtil.getContextHelpForeground(), "Querying workspace status...")
-                    }
-                    val gap = if (top) {
-                        top = false
-                        TopGap.NONE
-                    } else TopGap.MEDIUM
-                    row {
-                        icon(status.first).applyToComponent {
-                            foreground = status.second
-                        }.align(AlignX.LEFT).gap(RightGap.SMALL).applyToComponent {
-                            size = Dimension(JBUI.scale(16), JBUI.scale(16))
-                        }
-                        label(workspaceName).applyToComponent {
-                            font = JBFont.h3().asBold()
-                        }.align(AlignX.LEFT).gap(RightGap.SMALL)
-                        label(deploymentURL).applyToComponent {
-                            foreground = UIUtil.getContextHelpForeground()
-                            font = ComponentPanelBuilder.getCommentFont(font)
-                        }
-                        label("").resizableColumn().align(AlignX.FILL)
-                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.start.button.tooltip"), "", CoderIcons.RUN) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
-                                    client.startWorkspace(ws.workspace)
-                                    cs.launch { fetchWorkspaces() }
-                                }
+        recentWorkspacesContentPanel.viewport.view =
+            panel {
+                connections.forEach { (deploymentURL, connectionsByWorkspace) ->
+                    val deployment = deployments[deploymentURL]
+                    val deploymentError = deployment?.error
+                    connectionsByWorkspace.forEach { (workspaceName, connections) ->
+                        val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
+                        val status =
+                            if (deploymentError != null) {
+                                Triple(UIUtil.getBalloonErrorIcon(), UIUtil.getErrorForeground(), deploymentError)
+                            } else if (workspaceWithAgent != null) {
+                                Triple(
+                                    workspaceWithAgent.status.icon,
+                                    workspaceWithAgent.status.statusColor(),
+                                    workspaceWithAgent.status.description,
+                                )
+                            } else {
+                                Triple(AnimatedIcon.Default.INSTANCE, UIUtil.getContextHelpForeground(), "Querying workspace status...")
                             }
-                        }).applyToComponent { isEnabled = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.FAILED).contains(workspaceWithAgent?.workspace?.latestBuild?.status) }
-                            .gap(RightGap.SMALL)
-                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.stop.button.tooltip"), "", CoderIcons.STOP) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
-                                    client.stopWorkspace(ws.workspace)
-                                    cs.launch { fetchWorkspaces() }
-                                }
+                        val gap =
+                            if (top) {
+                                top = false
+                                TopGap.NONE
+                            } else {
+                                TopGap.MEDIUM
                             }
-                        }).applyToComponent { isEnabled = workspaceWithAgent?.workspace?.latestBuild?.status == WorkspaceStatus.RUNNING }
-                            .gap(RightGap.SMALL)
-                        actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.terminal.button.tooltip"), "", CoderIcons.OPEN_TERMINAL) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
-                                    val link = client.url.withPath("/me/${ws.name}/terminal")
-                                    BrowserUtil.browse(link.toString())
-                                }
-                            }
-                        })
-                    }.topGap(gap)
-                    row {
-                        label(status.third).applyToComponent { foreground = status.second }
-                    }
-                    connections.forEach { workspaceProjectIDE ->
                         row {
-                            icon(workspaceProjectIDE.ideProductCode.icon)
-                            cell(ActionLink(workspaceProjectIDE.projectPathDisplay) {
-                                CoderRemoteConnectionHandle().connect{ workspaceProjectIDE }
-                                GatewayUI.getInstance().reset()
-                            })
+                            icon(status.first).applyToComponent {
+                                foreground = status.second
+                            }.align(AlignX.LEFT).gap(RightGap.SMALL).applyToComponent {
+                                size = Dimension(JBUI.scale(16), JBUI.scale(16))
+                            }
+                            label(workspaceName).applyToComponent {
+                                font = JBFont.h3().asBold()
+                            }.align(AlignX.LEFT).gap(RightGap.SMALL)
+                            label(deploymentURL).applyToComponent {
+                                foreground = UIUtil.getContextHelpForeground()
+                                font = ComponentPanelBuilder.getCommentFont(font)
+                            }
                             label("").resizableColumn().align(AlignX.FILL)
-                            label(workspaceProjectIDE.ideName).applyToComponent {
-                                foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                font = ComponentPanelBuilder.getCommentFont(font)
+                            actionButton(
+                                object : DumbAwareAction(
+                                    CoderGatewayBundle.message("gateway.connector.recent-connections.start.button.tooltip"),
+                                    "",
+                                    CoderIcons.RUN,
+                                ) {
+                                    override fun actionPerformed(e: AnActionEvent) {
+                                        withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                            client.startWorkspace(ws.workspace)
+                                            cs.launch { fetchWorkspaces() }
+                                        }
+                                    }
+                                },
+                            ).applyToComponent {
+                                isEnabled =
+                                    listOf(
+                                        WorkspaceStatus.STOPPED,
+                                        WorkspaceStatus.FAILED,
+                                    ).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
                             }
-                            label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
-                                foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                font = ComponentPanelBuilder.getCommentFont(font)
-                            }
-                            actionButton(object : DumbAwareAction(CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"), "", CoderIcons.DELETE) {
-                                override fun actionPerformed(e: AnActionEvent) {
-                                    recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
-                                    updateRecentView()
+                                .gap(RightGap.SMALL)
+                            actionButton(
+                                object : DumbAwareAction(
+                                    CoderGatewayBundle.message("gateway.connector.recent-connections.stop.button.tooltip"),
+                                    "",
+                                    CoderIcons.STOP,
+                                ) {
+                                    override fun actionPerformed(e: AnActionEvent) {
+                                        withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                            client.stopWorkspace(ws.workspace)
+                                            cs.launch { fetchWorkspaces() }
+                                        }
+                                    }
+                                },
+                            ).applyToComponent { isEnabled = workspaceWithAgent?.workspace?.latestBuild?.status == WorkspaceStatus.RUNNING }
+                                .gap(RightGap.SMALL)
+                            actionButton(
+                                object : DumbAwareAction(
+                                    CoderGatewayBundle.message("gateway.connector.recent-connections.terminal.button.tooltip"),
+                                    "",
+                                    CoderIcons.OPEN_TERMINAL,
+                                ) {
+                                    override fun actionPerformed(e: AnActionEvent) {
+                                        withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
+                                            val link = client.url.withPath("/me/${ws.name}/terminal")
+                                            BrowserUtil.browse(link.toString())
+                                        }
+                                    }
+                                },
+                            )
+                        }.topGap(gap)
+                        row {
+                            label(status.third).applyToComponent { foreground = status.second }
+                        }
+                        connections.forEach { workspaceProjectIDE ->
+                            row {
+                                icon(workspaceProjectIDE.ideProductCode.icon)
+                                cell(
+                                    ActionLink(workspaceProjectIDE.projectPathDisplay) {
+                                        CoderRemoteConnectionHandle().connect { workspaceProjectIDE }
+                                        GatewayUI.getInstance().reset()
+                                    },
+                                )
+                                label("").resizableColumn().align(AlignX.FILL)
+                                label(workspaceProjectIDE.ideName).applyToComponent {
+                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                    font = ComponentPanelBuilder.getCommentFont(font)
                                 }
-                            })
+                                label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
+                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                    font = ComponentPanelBuilder.getCommentFont(font)
+                                }
+                                actionButton(
+                                    object : DumbAwareAction(
+                                        CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"),
+                                        "",
+                                        CoderIcons.DELETE,
+                                    ) {
+                                        override fun actionPerformed(e: AnActionEvent) {
+                                            recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
+                                            updateRecentView()
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
                 }
+            }.apply {
+                background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+                border = JBUI.Borders.empty(12, 0, 12, 12)
             }
-        }.apply {
-            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-            border = JBUI.Borders.empty(12, 0, 12, 12)
-        }
     }
 
     /**
      * Get valid connections grouped by deployment and workspace.
      */
     private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> {
-       return recentConnectionsService.getAllRecentConnections()
+        return recentConnectionsService.getAllRecentConnections()
             // Validate and parse connections.
             .mapNotNull {
                 try {
@@ -278,9 +326,9 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      */
     private fun matchesFilter(connection: WorkspaceProjectIDE): Boolean {
         return filterString.let {
-            it.isNullOrBlank()
-                    || connection.hostname.lowercase(Locale.getDefault()).contains(it)
-                    || connection.projectPath.lowercase(Locale.getDefault()).contains(it)
+            it.isNullOrBlank() ||
+                connection.hostname.lowercase(Locale.getDefault()).contains(it) ||
+                connection.projectPath.lowercase(Locale.getDefault()).contains(it)
         }
     }
 
@@ -294,17 +342,18 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
         }
 
         logger.info("Starting poll loop")
-        poller = cs.launch {
-            while (isActive) {
-                if (recentWorkspacesContentPanel.isShowing) {
-                    fetchWorkspaces()
-                } else {
-                    logger.info("View not visible; aborting poll")
-                    poller?.cancel()
+        poller =
+            cs.launch {
+                while (isActive) {
+                    if (recentWorkspacesContentPanel.isShowing) {
+                        fetchWorkspaces()
+                    } else {
+                        logger.info("View not visible; aborting poll")
+                        poller?.cancel()
+                    }
+                    delay(5000)
                 }
-                delay(5000)
             }
-        }
     }
 
     /**
@@ -312,19 +361,21 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      */
     private suspend fun fetchWorkspaces() {
         withContext(Dispatchers.IO) {
-            val connections = getConnectionsByDeployment(false)
-                .map { Triple(it.key, deployments.getOrPut(it.key) { DeploymentInfo() }, it.value) }
+            val connections =
+                getConnectionsByDeployment(false)
+                    .map { Triple(it.key, deployments.getOrPut(it.key) { DeploymentInfo() }, it.value) }
             connections.forEach { (deploymentURL, deployment, workspaces) ->
-                val client = deployment.client ?: try {
-                    val token = settings.token(deploymentURL)
-                    deployment.client = CoderRestClientService(deploymentURL.toURL(), token?.first)
-                    deployment.error = null
-                    deployment.client
-                } catch (e: Exception) {
-                    logger.error("Unable to create client for $deploymentURL", e)
-                    deployment.error = "Error connecting to $deploymentURL: ${e.message}"
-                    null
-                }
+                val client =
+                    deployment.client ?: try {
+                        val token = settings.token(deploymentURL)
+                        deployment.client = CoderRestClientService(deploymentURL.toURL(), token?.first)
+                        deployment.error = null
+                        deployment.client
+                    } catch (e: Exception) {
+                        logger.error("Unable to create client for $deploymentURL", e)
+                        deployment.error = "Error connecting to $deploymentURL: ${e.message}"
+                        null
+                    }
                 if (client != null) {
                     try {
                         val items = client.workspaces().flatMap { it.toAgentList() }

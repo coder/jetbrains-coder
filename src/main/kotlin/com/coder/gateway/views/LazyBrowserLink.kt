@@ -18,7 +18,10 @@ import java.util.concurrent.ForkJoinPool
 import java.util.function.Consumer
 import javax.swing.Icon
 
-class LazyBrowserLink(icon: Icon, @Nls text: String) : ActionLink() {
+class LazyBrowserLink(
+    icon: Icon,
+    @Nls text: String,
+) : ActionLink() {
     init {
         setIcon(icon, false)
         setText(text)
@@ -53,15 +56,19 @@ class LazyBrowserLink(icon: Icon, @Nls text: String) : ActionLink() {
     }
 }
 
-private class CopyLinkAction(val url: String) : DumbAwareAction(IdeBundle.messagePointer("action.text.copy.link.address"), AllIcons.Actions.Copy) {
-
+private class CopyLinkAction(val url: String) : DumbAwareAction(
+    IdeBundle.messagePointer("action.text.copy.link.address"),
+    AllIcons.Actions.Copy,
+) {
     override fun actionPerformed(event: AnActionEvent) {
         CopyPasteManager.getInstance().setContents(StringSelection(url))
     }
 }
 
-private class OpenLinkInBrowser(val url: String) : DumbAwareAction(IdeBundle.messagePointer("action.text.open.link.in.browser"), AllIcons.Nodes.PpWeb) {
-
+private class OpenLinkInBrowser(val url: String) : DumbAwareAction(
+    IdeBundle.messagePointer("action.text.open.link.in.browser"),
+    AllIcons.Nodes.PpWeb,
+) {
     override fun actionPerformed(event: AnActionEvent) {
         BrowserUtil.browse(url)
     }

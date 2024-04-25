@@ -94,8 +94,8 @@ private const val SESSION_TOKEN_KEY = "session-token"
 private data class CoderWorkspacesFormFields(
     var coderURL: String = "",
     var token: Pair<String, Source>? = null,
-    var useExistingToken: Boolean = false)
-
+    var useExistingToken: Boolean = false,
+)
 
 /**
  * The data gathered by this step.
@@ -109,7 +109,8 @@ data class CoderWorkspacesStepSelection(
     val client: CoderRestClient,
     // Pass along the latest workspaces so we can configure the CLI a bit
     // faster, otherwise this step would have to fetch the workspaces again.
-    val workspaces: List<Workspace>)
+    val workspaces: List<Workspace>,
+)
 
 /**
  * A list of agents/workspaces belonging to a deployment.  Has inputs for
@@ -133,33 +134,34 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private var cbExistingToken: JCheckBox? = null
 
     private val notificationBanner = NotificationBanner()
-    private var tableOfWorkspaces = WorkspacesTable().apply {
-        setEnableAntialiasing(true)
-        rowSelectionAllowed = true
-        columnSelectionAllowed = false
-        tableHeader.reorderingAllowed = false
-        showVerticalLines = false
-        intercellSpacing = Dimension(0, 0)
-        columnModel.getColumn(0).apply {
-            maxWidth = JBUI.scale(52)
-            minWidth = JBUI.scale(52)
-        }
-        rowHeight = 48
-        setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
-        setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
-        selectionModel.addListSelectionListener {
-            nextButton.isEnabled = selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
-            if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
-                notificationBanner.apply {
-                    component.isVisible = true
-                    showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
-                }
-            } else {
-                notificationBanner.component.isVisible = false
+    private var tableOfWorkspaces =
+        WorkspacesTable().apply {
+            setEnableAntialiasing(true)
+            rowSelectionAllowed = true
+            columnSelectionAllowed = false
+            tableHeader.reorderingAllowed = false
+            showVerticalLines = false
+            intercellSpacing = Dimension(0, 0)
+            columnModel.getColumn(0).apply {
+                maxWidth = JBUI.scale(52)
+                minWidth = JBUI.scale(52)
             }
-            updateWorkspaceActions()
+            rowHeight = 48
+            setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
+            setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
+            selectionModel.addListSelectionListener {
+                nextButton.isEnabled = selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
+                if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
+                    notificationBanner.apply {
+                        component.isVisible = true
+                        showInfo(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.os.info"))
+                    }
+                } else {
+                    notificationBanner.component.isVisible = false
+                }
+                updateWorkspaceActions()
+            }
         }
-    }
 
     private val goToDashboardAction = GoToDashboardAction()
     private val goToTemplateAction = GoToTemplateAction()
@@ -168,100 +170,128 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private val updateWorkspaceTemplateAction = UpdateWorkspaceTemplateAction()
     private val createWorkspaceAction = CreateWorkspaceAction()
 
-    private val toolbar = ToolbarDecorator.createDecorator(tableOfWorkspaces)
-        .disableAddAction()
-        .disableRemoveAction()
-        .disableUpDownActions()
-        .addExtraActions(goToDashboardAction, startWorkspaceAction, stopWorkspaceAction, updateWorkspaceTemplateAction, createWorkspaceAction, goToTemplateAction as AnAction)
+    private val toolbar =
+        ToolbarDecorator.createDecorator(tableOfWorkspaces)
+            .disableAddAction()
+            .disableRemoveAction()
+            .disableUpDownActions()
+            .addExtraActions(
+                goToDashboardAction,
+                startWorkspaceAction,
+                stopWorkspaceAction,
+                updateWorkspaceTemplateAction,
+                createWorkspaceAction,
+                goToTemplateAction as AnAction,
+            )
 
-    private val component = panel {
-        row {
-            label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.header.text")).applyToComponent {
-                font = JBFont.h3().asBold()
-                icon = CoderIcons.LOGO_16
-            }
-        }.topGap(TopGap.SMALL)
-        row {
-            cell(
-                ComponentPanelBuilder.createCommentComponent(
-                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"),
-                    false,
-                    -1,
-                    true
-                )
-            )
-        }
-        row {
-            browserLink(
-                CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"),
-                "https://coder.com/docs/coder-oss/latest/workspaces"
-            )
-        }
-        row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
-            tfUrl = textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
-                .bindText(fields::coderURL).applyToComponent {
-                addActionListener {
-                    // Reconnect when the enter key is pressed.
-                    maybeAskTokenThenConnect()
+    private val component =
+        panel {
+            row {
+                label(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.header.text")).applyToComponent {
+                    font = JBFont.h3().asBold()
+                    icon = CoderIcons.LOGO_16
                 }
-            }.component
-            button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
-                // Reconnect when the connect button is pressed.
-                maybeAskTokenThenConnect()
-            }.applyToComponent {
-                background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-            }
-        }.layout(RowLayout.PARENT_GRID)
-        row {
-            cell() // Empty cells for alignment.
-            tfUrlComment = cell(
-                ComponentPanelBuilder.createCommentComponent(
-                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.comment",
-                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")),
-                    false, -1, true
-                )
-            ).resizableColumn().align(AlignX.FILL).component
-        }.layout(RowLayout.PARENT_GRID)
-        if (settings.requireTokenAuth) {
+            }.topGap(TopGap.SMALL)
             row {
-                cell() // Empty cell for alignment.
-                cbExistingToken = checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
-                    .bindSelected(fields::useExistingToken)
-                    .component
-            }.layout(RowLayout.PARENT_GRID)
-            row {
-                cell() // Empty cell for alignment.
                 cell(
                     ComponentPanelBuilder.createCommentComponent(
-                        CoderGatewayBundle.message(
-                            "gateway.connector.view.login.existing-token.tooltip",
-                            CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"),
-                            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")
-                        ),
-                        false, -1, true
-                    )
+                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.comment"),
+                        false,
+                        -1,
+                        true,
+                    ),
                 )
+            }
+            row {
+                browserLink(
+                    CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"),
+                    "https://coder.com/docs/coder-oss/latest/workspaces",
+                )
+            }
+            row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
+                tfUrl =
+                    textField().resizableColumn().align(AlignX.FILL).gap(RightGap.SMALL)
+                        .bindText(fields::coderURL).applyToComponent {
+                            addActionListener {
+                                // Reconnect when the enter key is pressed.
+                                maybeAskTokenThenConnect()
+                            }
+                        }.component
+                button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
+                    // Reconnect when the connect button is pressed.
+                    maybeAskTokenThenConnect()
+                }.applyToComponent {
+                    background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+                }
             }.layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // Empty cells for alignment.
+                tfUrlComment =
+                    cell(
+                        ComponentPanelBuilder.createCommentComponent(
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.coder.workspaces.connect.text.comment",
+                                CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                            ),
+                            false,
+                            -1,
+                            true,
+                        ),
+                    ).resizableColumn().align(AlignX.FILL).component
+            }.layout(RowLayout.PARENT_GRID)
+            if (settings.requireTokenAuth) {
+                row {
+                    cell() // Empty cell for alignment.
+                    cbExistingToken =
+                        checkBox(CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"))
+                            .bindSelected(fields::useExistingToken)
+                            .component
+                }.layout(RowLayout.PARENT_GRID)
+                row {
+                    cell() // Empty cell for alignment.
+                    cell(
+                        ComponentPanelBuilder.createCommentComponent(
+                            CoderGatewayBundle.message(
+                                "gateway.connector.view.login.existing-token.tooltip",
+                                CoderGatewayBundle.message("gateway.connector.view.login.existing-token.label"),
+                                CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                            ),
+                            false,
+                            -1,
+                            true,
+                        ),
+                    )
+                }.layout(RowLayout.PARENT_GRID)
+            }
+            row {
+                scrollCell(
+                    toolbar.createPanel().apply {
+                        add(notificationBanner.component.apply { isVisible = false }, "South")
+                    },
+                ).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
+        }.apply {
+            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            border = JBUI.Borders.empty(0, 16)
         }
-        row {
-            scrollCell(toolbar.createPanel().apply {
-                add(notificationBanner.component.apply { isVisible = false }, "South")
-            }).resizableColumn().align(AlignX.FILL).align(AlignY.FILL)
-        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).resizableRow()
-    }.apply {
-        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16)
-    }
 
     private inner class GoToDashboardAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"), CoderIcons.HOME) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"),
+            CoderIcons.HOME,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client) { BrowserUtil.browse(it.url) }
         }
     }
 
     private inner class GoToTemplateAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"), AllIcons.Nodes.Template) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"),
+            AllIcons.Nodes.Template,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 BrowserUtil.browse(c.url.toURI().resolve("/templates/${workspace.templateName}"))
@@ -270,105 +300,127 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 
     private inner class StartWorkspaceAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"), CoderIcons.RUN) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"),
+            CoderIcons.RUN,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            c.startWorkspace(workspace)
-                            loadWorkspaces()
-                        } catch (e: WorkspaceResponseException) {
-                            logger.error("Could not start workspace ${workspace.name}, reason: $e")
+                jobs[workspace.id] =
+                    cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                c.startWorkspace(workspace)
+                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.error("Could not start workspace ${workspace.name}, reason: $e")
+                            }
                         }
                     }
-                }
             }
         }
     }
 
     private inner class UpdateWorkspaceTemplateAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"), CoderIcons.UPDATE) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"),
+            CoderIcons.UPDATE,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            // Stop the workspace first if it is running.
-                            if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
-                                logger.info("Waiting for ${workspace.name} to stop before updating")
-                                c.stopWorkspace(workspace)
-                                loadWorkspaces()
-                                var elapsed = Duration.ofSeconds(0)
-                                val timeout = Duration.ofSeconds(5)
-                                val maxWait = Duration.ofMinutes(10)
-                                while (isActive) { // Wait for the workspace to fully stop.
-                                    delay(timeout.toMillis())
-                                    val found = tableOfWorkspaces.items.firstOrNull{ it.workspace.id == workspace.id }
-                                    when (val status = found?.workspace?.latestBuild?.status) {
-                                        WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
-                                            logger.info("Still waiting for ${workspace.name} to stop before updating")
+                jobs[workspace.id] =
+                    cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                // Stop the workspace first if it is running.
+                                if (workspace.latestBuild.status == WorkspaceStatus.RUNNING) {
+                                    logger.info("Waiting for ${workspace.name} to stop before updating")
+                                    c.stopWorkspace(workspace)
+                                    loadWorkspaces()
+                                    var elapsed = Duration.ofSeconds(0)
+                                    val timeout = Duration.ofSeconds(5)
+                                    val maxWait = Duration.ofMinutes(10)
+                                    while (isActive) { // Wait for the workspace to fully stop.
+                                        delay(timeout.toMillis())
+                                        val found = tableOfWorkspaces.items.firstOrNull { it.workspace.id == workspace.id }
+                                        when (val status = found?.workspace?.latestBuild?.status) {
+                                            WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
+                                                logger.info("Still waiting for ${workspace.name} to stop before updating")
+                                            }
+                                            WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
+                                            WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+                                            WorkspaceStatus.DELETING, WorkspaceStatus.DELETED,
+                                            -> {
+                                                logger.warn("Canceled ${workspace.name} update due to status change to $status")
+                                                break
+                                            }
+                                            null -> {
+                                                logger.warn("Canceled ${workspace.name} update because it no longer exists")
+                                                break
+                                            }
+                                            WorkspaceStatus.STOPPED -> {
+                                                logger.info("${workspace.name} has stopped; updating now")
+                                                c.updateWorkspace(workspace)
+                                                break
+                                            }
                                         }
-                                        WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
-                                        WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-                                        WorkspaceStatus.DELETING, WorkspaceStatus.DELETED -> {
-                                            logger.warn("Canceled ${workspace.name} update due to status change to $status")
-                                            break
-                                        }
-                                        null -> {
-                                            logger.warn("Canceled ${workspace.name} update because it no longer exists")
-                                            break
-                                        }
-                                        WorkspaceStatus.STOPPED -> {
-                                            logger.info("${workspace.name} has stopped; updating now")
-                                            c.updateWorkspace(workspace)
+                                        elapsed += timeout
+                                        if (elapsed > maxWait) {
+                                            logger.error(
+                                                "Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop",
+                                            )
                                             break
                                         }
                                     }
-                                    elapsed += timeout
-                                    if (elapsed > maxWait) {
-                                        logger.error("Canceled ${workspace.name} update because it took took longer than ${maxWait.toMinutes()} minutes to stop")
-                                        break
-                                    }
+                                } else {
+                                    c.updateWorkspace(workspace)
+                                    loadWorkspaces()
                                 }
-                            } else {
-                                c.updateWorkspace(workspace)
-                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
+                            } catch (e: TemplateResponseException) {
+                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
                             }
-                        } catch (e: WorkspaceResponseException) {
-                            logger.error("Could not update workspace ${workspace.name}, reason: $e")
-                        } catch (e: TemplateResponseException) {
-                            logger.error("Could not update workspace ${workspace.name}, reason: $e")
                         }
                     }
-                }
             }
         }
     }
 
     private inner class StopWorkspaceAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"), CoderIcons.STOP) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"),
+            CoderIcons.STOP,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
-                jobs[workspace.id] = cs.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            c.stopWorkspace(workspace)
-                            loadWorkspaces()
-                        } catch (e: WorkspaceResponseException) {
-                            logger.error("Could not stop workspace ${workspace.name}, reason: $e")
+                jobs[workspace.id] =
+                    cs.launch {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                c.stopWorkspace(workspace)
+                                loadWorkspaces()
+                            } catch (e: WorkspaceResponseException) {
+                                logger.error("Could not stop workspace ${workspace.name}, reason: $e")
+                            }
                         }
                     }
-                }
             }
         }
     }
 
     private inner class CreateWorkspaceAction :
-        AnActionButton(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"), CoderIcons.CREATE) {
+        AnActionButton(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"),
+            CoderIcons.CREATE,
+        ) {
         override fun actionPerformed(p0: AnActionEvent) {
             withoutNull(client) { BrowserUtil.browse(it.url.toURI().resolve("/templates")) }
         }
@@ -392,12 +444,20 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             // Try finding a URL and matching token to use.
             val lastUrl = appPropertiesService.getValue(CODER_URL_KEY)
             val lastToken = appPropertiesService.getValue(SESSION_TOKEN_KEY)
-            val url = if (!lastUrl.isNullOrBlank()) {
-                lastUrl to Source.LAST_USED
-            } else settings.defaultURL()
-            val token = if (!lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
-                lastToken to Source.LAST_USED
-            } else if (url != null) settings.token(url.first) else null
+            val url =
+                if (!lastUrl.isNullOrBlank()) {
+                    lastUrl to Source.LAST_USED
+                } else {
+                    settings.defaultURL()
+                }
+            val token =
+                if (!lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
+                    lastToken to Source.LAST_USED
+                } else if (url != null) {
+                    settings.token(url.first)
+                } else {
+                    null
+                }
             // Set them into the fields.
             if (url != null) {
                 fields.coderURL = url.first
@@ -457,15 +517,16 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         component.apply() // Force bindings to be filled.
         val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
-            val pastedToken = CoderRemoteConnectionHandle.askToken(
-                newURL,
-                // If this is a new URL there is no point in trying to use the same
-                // token.
-                if (oldURL.toString() == newURL.toString()) fields.token else null,
-                isRetry,
-                fields.useExistingToken,
-                settings,
-            ) ?: return // User aborted.
+            val pastedToken =
+                CoderRemoteConnectionHandle.askToken(
+                    newURL,
+                    // If this is a new URL there is no point in trying to use the same
+                    // token.
+                    if (oldURL.toString() == newURL.toString()) fields.token else null,
+                    isRetry,
+                    fields.useExistingToken,
+                    settings,
+                ) ?: return // User aborted.
             fields.token = pastedToken
             connect(newURL, pastedToken.first) {
                 maybeAskTokenThenConnect(true)
@@ -495,8 +556,14 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         onAuthFailure: (() -> Unit)? = null,
     ): Job {
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
-        tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host)
-        tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host))
+        tfUrlComment?.text =
+            CoderGatewayBundle.message(
+                "gateway.connector.view.coder.workspaces.connect.text.connecting",
+                deploymentURL.host,
+            )
+        tableOfWorkspaces.setEmptyState(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host),
+        )
 
         tableOfWorkspaces.listTableModel.items = emptyList()
         cliManager = null
@@ -505,7 +572,9 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         stop()
 
         // Authenticate and load in a background process with progress.
-        return LifetimeDefinition().launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title")) {
+        return LifetimeDefinition().launchUnderBackgroundProgress(
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"),
+        ) {
             try {
                 this.indicator.text = "Authenticating client..."
                 val authedClient = authenticate(deploymentURL, token)
@@ -514,12 +583,13 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 appPropertiesService.setValue(CODER_URL_KEY, deploymentURL.toString())
                 appPropertiesService.setValue(SESSION_TOKEN_KEY, token ?: "")
 
-                val cli = ensureCLI(
-                    deploymentURL,
-                    authedClient.buildVersion,
-                    settings,
-                    this.indicator,
-                )
+                val cli =
+                    ensureCLI(
+                        deploymentURL,
+                        authedClient.buildVersion,
+                        settings,
+                        this.indicator,
+                    )
 
                 // We only need to log the cli in if we have token-based auth.
                 // Otherwise, we assume it is set up in the same way the plugin
@@ -532,64 +602,93 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 cliManager = cli
                 client = authedClient
 
-                tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host))
-                tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host)
+                tableOfWorkspaces.setEmptyState(
+                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host),
+                )
+                tfUrlComment?.text =
+                    CoderGatewayBundle.message(
+                        "gateway.connector.view.coder.workspaces.connect.text.connected",
+                        deploymentURL.host,
+                    )
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
                 triggerWorkspacePolling(false)
             } catch (e: Exception) {
                 if (isCancellation(e)) {
-                    tfUrlComment?.text = CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.comment",
-                        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"))
-                    tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
-                        "gateway.connector.view.workspaces.connect.canceled",
-                        deploymentURL.host,
-                    ))
+                    tfUrlComment?.text =
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.coder.workspaces.connect.text.comment",
+                            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                        )
+                    tableOfWorkspaces.setEmptyState(
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.canceled",
+                            deploymentURL.host,
+                        ),
+                    )
                     logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
                     val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
-                    val msg = when (e) {
-                        is java.nio.file.AccessDeniedException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.access-denied", e.file)
-                        is UnknownHostException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unknown-host", e.message ?: deploymentURL.host)
-                        is InvalidExitValueException -> CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.unexpected-exit", e.exitValue)
-                        is AuthenticationResponseException -> {
-                            CoderGatewayBundle.message(
-                                if (settings.requireTokenAuth) "gateway.connector.view.workspaces.connect.unauthorized-token"
-                                else "gateway.connector.view.workspaces.connect.unauthorized-other",
-                                deploymentURL,
-                            )
+                    val msg =
+                        when (e) {
+                            is java.nio.file.AccessDeniedException ->
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.access-denied",
+                                    e.file,
+                                )
+                            is UnknownHostException ->
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.unknown-host",
+                                    e.message ?: deploymentURL.host,
+                                )
+                            is InvalidExitValueException ->
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.unexpected-exit",
+                                    e.exitValue,
+                                )
+                            is AuthenticationResponseException -> {
+                                CoderGatewayBundle.message(
+                                    if (settings.requireTokenAuth) {
+                                        "gateway.connector.view.workspaces.connect.unauthorized-token"
+                                    } else {
+                                        "gateway.connector.view.workspaces.connect.unauthorized-other"
+                                    },
+                                    deploymentURL,
+                                )
+                            }
+                            is SocketTimeoutException -> {
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.timeout",
+                                    deploymentURL,
+                                )
+                            }
+                            is ResponseException, is ConnectException -> {
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.download-failed",
+                                    reason,
+                                )
+                            }
+                            is SSLHandshakeException -> {
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.ssl-error",
+                                    deploymentURL.host,
+                                    reason,
+                                )
+                            }
+                            else -> reason
                         }
-                        is SocketTimeoutException -> {
-                            CoderGatewayBundle.message(
-                                "gateway.connector.view.workspaces.connect.timeout",
-                                deploymentURL,
-                            )
-                        }
-                        is ResponseException, is ConnectException -> {
-                            CoderGatewayBundle.message(
-                                "gateway.connector.view.workspaces.connect.download-failed",
-                                reason,
-                            )
-                        }
-                        is SSLHandshakeException -> {
-                            CoderGatewayBundle.message(
-                                "gateway.connector.view.workspaces.connect.ssl-error",
-                                deploymentURL.host,
-                                reason,
-                            )
-                        }
-                        else -> reason
-                    }
                     // It would be nice to place messages directly into the table,
                     // but it does not support wrapping or markup so place it in the
                     // comment field of the URL input instead.
                     tfUrlComment?.foreground = UIUtil.getErrorForeground()
                     tfUrlComment?.text = msg
-                    tableOfWorkspaces.setEmptyState(CoderGatewayBundle.message(
-                        "gateway.connector.view.workspaces.connect.failed",
-                        deploymentURL.host,
-                    ))
+                    tableOfWorkspaces.setEmptyState(
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.workspaces.connect.failed",
+                            deploymentURL.host,
+                        ),
+                    )
                     logger.error(msg, e)
 
                     if (e is AuthenticationResponseException && onAuthFailure != null) {
@@ -609,15 +708,16 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         if (poller != null && poller?.isCancelled != true) {
             throw Exception("Poller was not canceled before starting a new one")
         }
-        poller = cs.launch {
-            if (fetchNow) {
-                loadWorkspaces()
+        poller =
+            cs.launch {
+                if (fetchNow) {
+                    loadWorkspaces()
+                }
+                while (isActive) {
+                    delay(5000)
+                    loadWorkspaces()
+                }
             }
-            while (isActive) {
-                delay(5000)
-                loadWorkspaces()
-            }
-        }
     }
 
     /**
@@ -625,7 +725,10 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * required).  On failure throw an error.  On success display warning
      * banners if versions do not match.  Return the authenticated client.
      */
-    private fun authenticate(url: URL, token: String?): CoderRestClient {
+    private fun authenticate(
+        url: URL,
+        token: String?,
+    ): CoderRestClient {
         logger.info("Authenticating to $url...")
         val tryClient = CoderRestClientService(url, token)
         tryClient.authenticate()
@@ -639,7 +742,12 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 logger.warn("${tryClient.buildVersion} is not compatible")
                 notificationBanner.apply {
                     component.isVisible = true
-                    showWarning(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.unsupported.coder.version", tryClient.buildVersion))
+                    showWarning(
+                        CoderGatewayBundle.message(
+                            "gateway.connector.view.coder.workspaces.unsupported.coder.version",
+                            tryClient.buildVersion,
+                        ),
+                    )
                 }
             }
         } catch (e: InvalidVersionException) {
@@ -649,8 +757,8 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 showWarning(
                     CoderGatewayBundle.message(
                         "gateway.connector.view.coder.workspaces.invalid.coder.version",
-                        tryClient.buildVersion
-                    )
+                        tryClient.buildVersion,
+                    ),
                 )
             }
         }
@@ -663,28 +771,29 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * Request workspaces then update the table.
      */
     private suspend fun loadWorkspaces() {
-        val ws = withContext(Dispatchers.IO) {
-            val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
-            val clientNow = client ?: return@withContext emptySet()
-            try {
-                val ws = clientNow.workspaces()
-                val ams = ws.flatMap { it.toAgentList() }
-                ams.forEach {
-                    cs.launch(Dispatchers.IO) {
-                        it.icon = clientNow.loadIcon(it.workspace.templateIcon, it.workspace.name)
-                        withContext(Dispatchers.Main) {
-                            tableOfWorkspaces.updateUI()
+        val ws =
+            withContext(Dispatchers.IO) {
+                val timeBeforeRequestingWorkspaces = System.currentTimeMillis()
+                val clientNow = client ?: return@withContext emptySet()
+                try {
+                    val ws = clientNow.workspaces()
+                    val ams = ws.flatMap { it.toAgentList() }
+                    ams.forEach {
+                        cs.launch(Dispatchers.IO) {
+                            it.icon = clientNow.loadIcon(it.workspace.templateIcon, it.workspace.name)
+                            withContext(Dispatchers.Main) {
+                                tableOfWorkspaces.updateUI()
+                            }
                         }
                     }
+                    val timeAfterRequestingWorkspaces = System.currentTimeMillis()
+                    logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
+                    return@withContext ams
+                } catch (e: Exception) {
+                    logger.error("Could not retrieve workspaces for ${clientNow.me.username} on ${clientNow.url}. Reason: $e")
+                    emptySet()
                 }
-                val timeAfterRequestingWorkspaces = System.currentTimeMillis()
-                logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
-                return@withContext ams
-            } catch (e: Exception) {
-                logger.error("Could not retrieve workspaces for ${clientNow.me.username} on ${clientNow.url}. Reason: $e")
-                emptySet()
             }
-        }
         withContext(Dispatchers.Main) {
             val selectedWorkspace = tableOfWorkspaces.selectedObject
             tableOfWorkspaces.listTableModel.items = ws.toList()
@@ -705,7 +814,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 workspace = workspace,
                 cliManager = cli,
                 client = client,
-                workspaces = tableOfWorkspaces.items.map { it.workspace }
+                workspaces = tableOfWorkspaces.items.map { it.workspace },
             )
         }
     }
@@ -731,7 +840,7 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
     WorkspaceNameColumnInfo("Name"),
     WorkspaceTemplateNameColumnInfo("Template"),
     WorkspaceVersionColumnInfo("Version"),
-    WorkspaceStatusColumnInfo("Status")
+    WorkspaceStatusColumnInfo("Status"),
 ) {
     private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? {
@@ -744,13 +853,24 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
                     return ""
                 }
 
-                override fun getIcon(value: String, table: JTable?, row: Int): Icon {
+                override fun getIcon(
+                    value: String,
+                    table: JTable?,
+                    row: Int,
+                ): Icon {
                     return item?.icon ?: CoderIcons.UNKNOWN
                 }
 
                 override fun isCenterAlignment() = true
 
-                override fun getTableCellRendererComponent(table: JTable?, value: Any?, selected: Boolean, focus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable?,
+                    value: Any?,
+                    selected: Boolean,
+                    focus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, selected, focus, row, column).apply {
                         border = JBUI.Borders.empty(8)
                     }
@@ -773,7 +893,14 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
@@ -801,7 +928,14 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
@@ -821,7 +955,14 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value
@@ -848,7 +989,15 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : DefaultTableCellRenderer() {
                 private val item = item
-                override fun getTableCellRendererComponent(table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int): Component {
+
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
                     super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
                     if (value is String) {
                         text = value

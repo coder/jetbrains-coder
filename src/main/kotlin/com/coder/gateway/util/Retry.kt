@@ -11,7 +11,7 @@ import kotlin.math.min
 
 fun unwrap(ex: Exception): Throwable {
     var cause = ex.cause
-    while(cause?.cause != null) {
+    while (cause?.cause != null) {
         cause = cause.cause
     }
     return cause ?: ex
@@ -45,31 +45,30 @@ suspend fun <T> suspendingRetryWithExponentialBackOff(
     retryIf: (e: Throwable) -> Boolean,
     onException: (attempt: Int, nextMs: Long, e: Throwable) -> Unit,
     onCountdown: (remaining: Long) -> Unit,
-    action: suspend (attempt: Int) -> T
+    action: suspend (attempt: Int) -> T,
 ): T {
     val random = Random()
     var delayMs = initialDelayMs
     for (attempt in 1..Int.MAX_VALUE) {
-      try {
-          return action(attempt)
-      }
-      catch (originalEx: Exception) {
-          // SshException can happen due to anything from a timeout to being
-          // canceled so unwrap to find out.
-          val unwrappedEx = if (originalEx is SshException) unwrap(originalEx) else originalEx
-          if (!retryIf(unwrappedEx)) {
-              throw unwrappedEx
-          }
-          onException(attempt, delayMs, unwrappedEx)
-          var remainingMs = delayMs
-          while (remainingMs > 0) {
-              onCountdown(remainingMs)
-              val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
-              remainingMs -= next
-              delay(next)
-          }
-          delayMs = min(delayMs * backOffFactor, backOffLimitMs) + (random.nextGaussian() * delayMs * backOffJitter).toLong()
-      }
+        try {
+            return action(attempt)
+        } catch (originalEx: Exception) {
+            // SshException can happen due to anything from a timeout to being
+            // canceled so unwrap to find out.
+            val unwrappedEx = if (originalEx is SshException) unwrap(originalEx) else originalEx
+            if (!retryIf(unwrappedEx)) {
+                throw unwrappedEx
+            }
+            onException(attempt, delayMs, unwrappedEx)
+            var remainingMs = delayMs
+            while (remainingMs > 0) {
+                onCountdown(remainingMs)
+                val next = min(remainingMs, TimeUnit.SECONDS.toMillis(1))
+                remainingMs -= next
+                delay(next)
+            }
+            delayMs = min(delayMs * backOffFactor, backOffLimitMs) + (random.nextGaussian() * delayMs * backOffJitter).toLong()
+        }
     }
     error("Should never be reached")
 }
@@ -99,7 +98,7 @@ fun isWorkerTimeout(e: Throwable): Boolean {
  * Return true if the exception is some kind of cancellation.
  */
 fun isCancellation(e: Throwable): Boolean {
-    return e is InterruptedException
-            || e is CancellationException
-            || e is ProcessCanceledException
+    return e is InterruptedException ||
+        e is CancellationException ||
+        e is ProcessCanceledException
 }

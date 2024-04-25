@@ -14,16 +14,21 @@ class NotificationBanner {
     private lateinit var txt: JEditorPane
 
     init {
-        component = panel {
-            row {
-                icon = icon(AllIcons.General.Warning).applyToComponent {
-                    border = JBUI.Borders.empty(0, 5)
-                }.component
-                txt = text("").resizableColumn().align(AlignX.FILL).applyToComponent { foreground = JBUI.CurrentTheme.NotificationWarning.foregroundColor() }.component
+        component =
+            panel {
+                row {
+                    icon =
+                        icon(AllIcons.General.Warning).applyToComponent {
+                            border = JBUI.Borders.empty(0, 5)
+                        }.component
+                    txt =
+                        text("").resizableColumn().align(AlignX.FILL).applyToComponent {
+                            foreground = JBUI.CurrentTheme.NotificationWarning.foregroundColor()
+                        }.component
+                }
+            }.apply {
+                background = JBUI.CurrentTheme.NotificationWarning.backgroundColor()
             }
-        }.apply {
-            background = JBUI.CurrentTheme.NotificationWarning.backgroundColor()
-        }
     }
 
     fun showWarning(warning: String) {
@@ -34,7 +39,6 @@ class NotificationBanner {
         }
 
         component.background = JBUI.CurrentTheme.NotificationWarning.backgroundColor()
-
     }
 
     fun showInfo(info: String) {

@@ -9,5 +9,6 @@ import com.squareup.moshi.ToJson
  */
 class OSConverter {
     @ToJson fun toJson(src: OS?): String = src?.toString() ?: ""
+
     @FromJson fun fromJson(src: String): OS? = OS.from(src)
 }

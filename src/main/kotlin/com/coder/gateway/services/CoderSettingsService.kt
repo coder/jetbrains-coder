@@ -31,9 +31,8 @@ class CoderSettingsService : CoderSettings(service<CoderSettingsStateService>())
 @Service(Service.Level.APP)
 @State(
     name = "CoderSettingsState",
-    storages = [Storage("coder-settings.xml", roamingType = RoamingType.DISABLED, exportable = true)]
+    storages = [Storage("coder-settings.xml", roamingType = RoamingType.DISABLED, exportable = true)],
 )
-
 class CoderSettingsStateService : CoderSettingsState(), PersistentStateComponent<CoderSettingsStateService> {
     override fun getState(): CoderSettingsStateService {
         return this

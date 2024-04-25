@@ -25,26 +25,36 @@ class RecentWorkspaceConnection(
 ) : BaseState(), Comparable<RecentWorkspaceConnection> {
     @get:Attribute
     var coderWorkspaceHostname by string()
+
     @get:Attribute
     var projectPath by string()
+
     @get:Attribute
     var lastOpened by string()
+
     @get:Attribute
     var ideProductCode by string()
+
     @get:Attribute
     var ideBuildNumber by string()
+
     @get:Attribute
     var downloadSource by string()
+
     @get:Attribute
     var idePathOnHost by string()
+
     @Deprecated("Derive from deploymentURL instead.")
     @get:Attribute
     var webTerminalLink by string()
+
     @Deprecated("Derive from deploymentURL instead.")
     @get:Attribute
     var configDirectory by string()
+
     @get:Attribute
     var name by string()
+
     @get:Attribute
     var deploymentURL by string()
 

@@ -26,7 +26,9 @@ interface CoderV2RestFacade {
      * Retrieves all workspaces the authenticated user has access to.
      */
     @GET("api/v2/workspaces")
-    fun workspaces(@Query("q") searchParams: String): Call<WorkspacesResponse>
+    fun workspaces(
+        @Query("q") searchParams: String,
+    ): Call<WorkspacesResponse>
 
     @GET("api/v2/buildinfo")
     fun buildInfo(): Call<BuildInfo>
@@ -35,11 +37,18 @@ interface CoderV2RestFacade {
      * Queues a new build to occur for a workspace.
      */
     @POST("api/v2/workspaces/{workspaceID}/builds")
-    fun createWorkspaceBuild(@Path("workspaceID") workspaceID: UUID, @Body createWorkspaceBuildRequest: CreateWorkspaceBuildRequest): Call<WorkspaceBuild>
+    fun createWorkspaceBuild(
+        @Path("workspaceID") workspaceID: UUID,
+        @Body createWorkspaceBuildRequest: CreateWorkspaceBuildRequest,
+    ): Call<WorkspaceBuild>
 
     @GET("api/v2/templates/{templateID}")
-    fun template(@Path("templateID") templateID: UUID): Call<Template>
+    fun template(
+        @Path("templateID") templateID: UUID,
+    ): Call<Template>
 
     @GET("api/v2/templateversions/{templateID}/resources")
-    fun templateVersionResources(@Path("templateID") templateID: UUID): Call<List<WorkspaceResource>>
+    fun templateVersionResources(
+        @Path("templateID") templateID: UUID,
+    ): Call<List<WorkspaceResource>>
 }

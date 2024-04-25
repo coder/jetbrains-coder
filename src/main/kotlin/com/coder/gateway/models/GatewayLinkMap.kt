@@ -17,13 +17,23 @@ private const val IDE_PATH_ON_HOST = "ide_path_on_host"
 // interacting with the map.
 
 fun Map<String, String>.isCoder(): Boolean = this[TYPE] == "coder"
+
 fun Map<String, String>.url() = this[URL]
+
 fun Map<String, String>.token() = this[TOKEN]
+
 fun Map<String, String>.workspace() = this[WORKSPACE]
+
 fun Map<String, String?>.agentName() = this[AGENT_NAME]
+
 fun Map<String, String?>.agentID() = this[AGENT_ID]
+
 fun Map<String, String>.folder() = this[FOLDER]
+
 fun Map<String, String>.ideDownloadLink() = this[IDE_DOWNLOAD_LINK]
+
 fun Map<String, String>.ideProductCode() = this[IDE_PRODUCT_CODE]
+
 fun Map<String, String>.ideBuildNumber() = this[IDE_BUILD_NUMBER]
+
 fun Map<String, String>.idePathOnHost() = this[IDE_PATH_ON_HOST]

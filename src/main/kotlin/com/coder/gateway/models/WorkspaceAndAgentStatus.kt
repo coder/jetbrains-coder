@@ -31,23 +31,33 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
     DISCONNECTED(CoderIcons.OFF, "Disconnected", "The agent has disconnected."),
     TIMEOUT(CoderIcons.PENDING, "Timeout", "The agent is taking longer than expected to connect."),
     AGENT_STARTING(CoderIcons.PENDING, "Starting", "The startup script is running."),
-    AGENT_STARTING_READY(CoderIcons.RUNNING, "Starting", "The startup script is still running but the agent is ready to accept connections."),
+    AGENT_STARTING_READY(
+        CoderIcons.RUNNING,
+        "Starting",
+        "The startup script is still running but the agent is ready to accept connections.",
+    ),
     CREATED(CoderIcons.PENDING, "Created", "The agent has been created."),
     START_ERROR(CoderIcons.RUNNING, "Started with error", "The agent is ready but the startup script errored."),
     START_TIMEOUT(CoderIcons.PENDING, "Starting", "The startup script is taking longer than expected."),
-    START_TIMEOUT_READY(CoderIcons.RUNNING, "Starting", "The startup script is taking longer than expected but the agent is ready to accept connections."),
+    START_TIMEOUT_READY(
+        CoderIcons.RUNNING,
+        "Starting",
+        "The startup script is taking longer than expected but the agent is ready to accept connections.",
+    ),
     SHUTTING_DOWN(CoderIcons.PENDING, "Shutting down", "The agent is shutting down."),
     SHUTDOWN_ERROR(CoderIcons.OFF, "Shutdown with error", "The agent shut down but the shutdown script errored."),
     SHUTDOWN_TIMEOUT(CoderIcons.OFF, "Shutting down", "The shutdown script is taking longer than expected."),
     OFF(CoderIcons.OFF, "Off", "The agent has shut down."),
-    READY(CoderIcons.RUNNING, "Ready", "The agent is ready to accept connections.");
+    READY(CoderIcons.RUNNING, "Ready", "The agent is ready to accept connections."),
+    ;
 
-    fun statusColor(): JBColor = when (this) {
-        READY, AGENT_STARTING_READY, START_TIMEOUT_READY -> JBColor.GREEN
-        START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
-        FAILED, DISCONNECTED, TIMEOUT, SHUTDOWN_ERROR -> JBColor.RED
-        else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
-    }
+    fun statusColor(): JBColor =
+        when (this) {
+            READY, AGENT_STARTING_READY, START_TIMEOUT_READY -> JBColor.GREEN
+            START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
+            FAILED, DISCONNECTED, TIMEOUT, SHUTDOWN_ERROR -> JBColor.RED
+            else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
+        }
 
     /**
      * Return true if the agent is in a connectable state.
@@ -80,27 +90,32 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
     // Note that latest_build.status is derived from latest_build.job.status and
     // latest_build.job.transition so there is no need to check those.
     companion object {
-        fun from(workspace: Workspace, agent: WorkspaceAgent? = null) = when (workspace.latestBuild.status) {
+        fun from(
+            workspace: Workspace,
+            agent: WorkspaceAgent? = null,
+        ) = when (workspace.latestBuild.status) {
             WorkspaceStatus.PENDING -> QUEUED
             WorkspaceStatus.STARTING -> STARTING
-            WorkspaceStatus.RUNNING -> when (agent?.status) {
-                WorkspaceAgentStatus.CONNECTED -> when (agent.lifecycleState) {
-                    WorkspaceAgentLifecycleState.CREATED -> CREATED
-                    WorkspaceAgentLifecycleState.STARTING -> if (agent.loginBeforeReady == true) AGENT_STARTING_READY else AGENT_STARTING
-                    WorkspaceAgentLifecycleState.START_TIMEOUT -> if (agent.loginBeforeReady == true) START_TIMEOUT_READY else START_TIMEOUT
-                    WorkspaceAgentLifecycleState.START_ERROR -> START_ERROR
-                    WorkspaceAgentLifecycleState.READY -> READY
-                    WorkspaceAgentLifecycleState.SHUTTING_DOWN -> SHUTTING_DOWN
-                    WorkspaceAgentLifecycleState.SHUTDOWN_TIMEOUT -> SHUTDOWN_TIMEOUT
-                    WorkspaceAgentLifecycleState.SHUTDOWN_ERROR -> SHUTDOWN_ERROR
-                    WorkspaceAgentLifecycleState.OFF -> OFF
-                }
+            WorkspaceStatus.RUNNING ->
+                when (agent?.status) {
+                    WorkspaceAgentStatus.CONNECTED ->
+                        when (agent.lifecycleState) {
+                            WorkspaceAgentLifecycleState.CREATED -> CREATED
+                            WorkspaceAgentLifecycleState.STARTING -> if (agent.loginBeforeReady == true) AGENT_STARTING_READY else AGENT_STARTING
+                            WorkspaceAgentLifecycleState.START_TIMEOUT -> if (agent.loginBeforeReady == true) START_TIMEOUT_READY else START_TIMEOUT
+                            WorkspaceAgentLifecycleState.START_ERROR -> START_ERROR
+                            WorkspaceAgentLifecycleState.READY -> READY
+                            WorkspaceAgentLifecycleState.SHUTTING_DOWN -> SHUTTING_DOWN
+                            WorkspaceAgentLifecycleState.SHUTDOWN_TIMEOUT -> SHUTDOWN_TIMEOUT
+                            WorkspaceAgentLifecycleState.SHUTDOWN_ERROR -> SHUTDOWN_ERROR
+                            WorkspaceAgentLifecycleState.OFF -> OFF
+                        }
 
-                WorkspaceAgentStatus.DISCONNECTED -> DISCONNECTED
-                WorkspaceAgentStatus.TIMEOUT -> TIMEOUT
-                WorkspaceAgentStatus.CONNECTING -> CONNECTING
-                else -> RUNNING
-            }
+                    WorkspaceAgentStatus.DISCONNECTED -> DISCONNECTED
+                    WorkspaceAgentStatus.TIMEOUT -> TIMEOUT
+                    WorkspaceAgentStatus.CONNECTING -> CONNECTING
+                    else -> RUNNING
+                }
 
             WorkspaceStatus.STOPPING -> STOPPING
             WorkspaceStatus.STOPPED -> STOPPED

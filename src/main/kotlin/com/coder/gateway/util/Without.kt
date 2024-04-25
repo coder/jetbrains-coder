@@ -4,7 +4,10 @@ package com.coder.gateway.util
  * Run block with provided arguments after checking they are all non-null.  This
  * is to enforce non-null values and should be used to signify developer error.
  */
-fun <A, Z> withoutNull(a: A?, block: (a: A) -> Z): Z {
+fun <A, Z> withoutNull(
+    a: A?,
+    block: (a: A) -> Z,
+): Z {
     if (a == null) {
         throw Exception("Unexpected null value")
     }
@@ -15,7 +18,11 @@ fun <A, Z> withoutNull(a: A?, block: (a: A) -> Z): Z {
  * Run block with provided arguments after checking they are all non-null.  This
  * is to enforce non-null values and should be used to signify developer error.
  */
-fun <A, B, Z> withoutNull(a: A?, b: B?, block: (a: A, b: B) -> Z): Z {
+fun <A, B, Z> withoutNull(
+    a: A?,
+    b: B?,
+    block: (a: A, b: B) -> Z,
+): Z {
     if (a == null || b == null) {
         throw Exception("Unexpected null value")
     }
@@ -26,7 +33,13 @@ fun <A, B, Z> withoutNull(a: A?, b: B?, block: (a: A, b: B) -> Z): Z {
  * Run block with provided arguments after checking they are all non-null.  This
  * is to enforce non-null values and should be used to signify developer error.
  */
-fun <A, B, C, D, Z> withoutNull(a: A?, b: B?, c: C?, d: D?, block: (a: A, b: B, c: C, d: D) -> Z): Z {
+fun <A, B, C, D, Z> withoutNull(
+    a: A?,
+    b: B?,
+    c: C?,
+    d: D?,
+    block: (a: A, b: B, c: C, d: D) -> Z,
+): Z {
     if (a == null || b == null || c == null || d == null) {
         throw Exception("Unexpected null value")
     }

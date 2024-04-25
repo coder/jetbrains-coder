@@ -110,7 +110,7 @@ fun ensureCLI(
 /**
  * The supported features of the CLI.
  */
-data class Features (
+data class Features(
     val disableAutostart: Boolean = false,
 )
 
@@ -220,7 +220,10 @@ class CoderCLIManager(
      *
      * This can take supported features for testing purposes only.
      */
-    fun configSsh(workspaceNames: Set<String>, feats: Features = features) {
+    fun configSsh(
+        workspaceNames: Set<String>,
+        feats: Features = features,
+    ) {
         writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, feats))
     }
 
@@ -243,38 +246,51 @@ class CoderCLIManager(
      * If features are not provided, calculate them based on the binary
      * version.
      */
-    private fun modifySSHConfig(contents: String?, workspaceNames: Set<String>, feats: Features): String? {
+    private fun modifySSHConfig(
+        contents: String?,
+        workspaceNames: Set<String>,
+        feats: Features,
+    ): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
         val isRemoving = workspaceNames.isEmpty()
-        val proxyArgs = listOfNotNull(
-            escape(localBinaryPath.toString()),
-            "--global-config", escape(coderConfigPath.toString()),
-            if (settings.headerCommand.isNotBlank()) "--header-command" else null,
-            if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
-           "ssh", "--stdio",
-            if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null)
-        val extraConfig = if (settings.sshConfigOptions.isNotBlank()) {
-            "\n" + settings.sshConfigOptions.prependIndent("  ")
-        } else ""
-        val blockContent = workspaceNames.joinToString(
-            System.lineSeparator(),
-            startBlock + System.lineSeparator(),
-            System.lineSeparator() + endBlock,
-            transform = {
-                """
-                Host ${getHostName(deploymentURL, it)}
-                  ProxyCommand ${proxyArgs.joinToString(" ")} $it
-                  ConnectTimeout 0
-                  StrictHostKeyChecking no
-                  UserKnownHostsFile /dev/null
-                  LogLevel ERROR
-                  SetEnv CODER_SSH_SESSION_TYPE=JetBrains
-                """.trimIndent()
-                    .plus(extraConfig)
-                    .replace("\n", System.lineSeparator())
-            })
+        val proxyArgs =
+            listOfNotNull(
+                escape(localBinaryPath.toString()),
+                "--global-config",
+                escape(coderConfigPath.toString()),
+                if (settings.headerCommand.isNotBlank()) "--header-command" else null,
+                if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
+                "ssh",
+                "--stdio",
+                if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null,
+            )
+        val extraConfig =
+            if (settings.sshConfigOptions.isNotBlank()) {
+                "\n" + settings.sshConfigOptions.prependIndent("  ")
+            } else {
+                ""
+            }
+        val blockContent =
+            workspaceNames.joinToString(
+                System.lineSeparator(),
+                startBlock + System.lineSeparator(),
+                System.lineSeparator() + endBlock,
+                transform = {
+                    """
+                    Host ${getHostName(deploymentURL, it)}
+                      ProxyCommand ${proxyArgs.joinToString(" ")} $it
+                      ConnectTimeout 0
+                      StrictHostKeyChecking no
+                      UserKnownHostsFile /dev/null
+                      LogLevel ERROR
+                      SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+                    """.trimIndent()
+                        .plus(extraConfig)
+                        .replace("\n", System.lineSeparator())
+                },
+            )
 
         if (contents == null) {
             logger.info("No existing SSH config to modify")
@@ -291,10 +307,15 @@ class CoderCLIManager(
 
         if (start == null && end == null) {
             logger.info("Appending config block")
-            val toAppend = if (contents.isEmpty()) blockContent else listOf(
-                contents,
-                blockContent
-            ).joinToString(System.lineSeparator())
+            val toAppend =
+                if (contents.isEmpty()) {
+                    blockContent
+                } else {
+                    listOf(
+                        contents,
+                        blockContent,
+                    ).joinToString(System.lineSeparator())
+                }
             return toAppend + System.lineSeparator()
         }
 
@@ -316,7 +337,7 @@ class CoderCLIManager(
                 // front of the file otherwise the before and after lines would
                 // get joined.
                 if (start.range.first > 0) end.groupValues[1] else "",
-                contents.substring(end.range.last + 1)
+                contents.substring(end.range.last + 1),
             ).joinToString("")
         }
 
@@ -326,7 +347,7 @@ class CoderCLIManager(
             start.groupValues[1], // Leading newline(s).
             blockContent,
             end.groupValues[1], // Trailing newline(s).
-            contents.substring(end.range.last + 1)
+            contents.substring(end.range.last + 1),
         ).joinToString("")
     }
 
@@ -390,12 +411,13 @@ class CoderCLIManager(
      */
     fun matchesVersion(rawBuildVersion: String): Boolean? {
         val cliVersion = tryVersion() ?: return null
-        val buildVersion = try {
-            SemVer.parse(rawBuildVersion)
-        } catch (e: InvalidVersionException) {
-            logger.info("Got invalid build version: $rawBuildVersion")
-            return null
-        }
+        val buildVersion =
+            try {
+                SemVer.parse(rawBuildVersion)
+            } catch (e: InvalidVersionException) {
+                logger.info("Got invalid build version: $rawBuildVersion")
+                return null
+            }
 
         val matches = cliVersion == buildVersion
         logger.info("$localBinaryPath version $cliVersion matches $buildVersion: $matches")
@@ -403,13 +425,14 @@ class CoderCLIManager(
     }
 
     private fun exec(vararg args: String): String {
-        val stdout = ProcessExecutor()
-            .command(localBinaryPath.toString(), *args)
-            .environment("CODER_HEADER_COMMAND", settings.headerCommand)
-            .exitValues(0)
-            .readOutput(true)
-            .execute()
-            .outputUTF8()
+        val stdout =
+            ProcessExecutor()
+                .command(localBinaryPath.toString(), *args)
+                .environment("CODER_HEADER_COMMAND", settings.headerCommand)
+                .exitValues(0)
+                .readOutput(true)
+                .execute()
+                .outputUTF8()
         val redactedArgs = listOf(*args).joinToString(" ").replace(tokenRegex, "--token <redacted>")
         logger.info("`$localBinaryPath $redactedArgs`: $stdout")
         return stdout
@@ -423,7 +446,8 @@ class CoderCLIManager(
             } else {
                 Features(
                     // Autostart with SSH was added in 2.5.0.
-                    disableAutostart = version >= SemVer(2, 5, 0))
+                    disableAutostart = version >= SemVer(2, 5, 0),
+                )
             }
         }
 
@@ -433,8 +457,11 @@ class CoderCLIManager(
         private val tokenRegex = "--token [^ ]+".toRegex()
 
         @JvmStatic
-        fun getHostName(url: URL, workspaceName: String): String {
-            return "coder-jetbrains--${workspaceName}--${url.safeHost()}"
+        fun getHostName(
+            url: URL,
+            workspaceName: String,
+        ): String {
+            return "coder-jetbrains--$workspaceName--${url.safeHost()}"
         }
     }
 }

@@ -60,7 +60,8 @@ data class ProxyValues(
  * The token can be omitted if some other authentication mechanism is in use.
  */
 open class CoderRestClient(
-    val url: URL, val token: String?,
+    val url: URL,
+    val token: String?,
     private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
     private val proxyValues: ProxyValues? = null,
     private val pluginVersion: String = "development",
@@ -73,59 +74,75 @@ open class CoderRestClient(
     lateinit var buildVersion: String
 
     init {
-        val moshi = Moshi.Builder()
-            .add(ArchConverter())
-            .add(InstantConverter())
-            .add(OSConverter())
-            .add(UUIDConverter())
-            .build()
+        val moshi =
+            Moshi.Builder()
+                .add(ArchConverter())
+                .add(InstantConverter())
+                .add(OSConverter())
+                .add(UUIDConverter())
+                .build()
 
         val socketFactory = coderSocketFactory(settings.tls)
         val trustManagers = coderTrustManagers(settings.tls.caPath)
         var builder = existingHttpClient?.newBuilder() ?: OkHttpClient.Builder()
 
         if (proxyValues != null) {
-            builder = builder
-                .proxySelector(proxyValues.selector)
-                .proxyAuthenticator { _, response ->
-                    if (proxyValues.useAuth && proxyValues.username != null && proxyValues.password != null) {
-                        val credentials = Credentials.basic(proxyValues.username, proxyValues.password)
-                        response.request.newBuilder()
-                            .header("Proxy-Authorization", credentials)
-                            .build()
-                    } else null
-                }
+            builder =
+                builder
+                    .proxySelector(proxyValues.selector)
+                    .proxyAuthenticator { _, response ->
+                        if (proxyValues.useAuth && proxyValues.username != null && proxyValues.password != null) {
+                            val credentials = Credentials.basic(proxyValues.username, proxyValues.password)
+                            response.request.newBuilder()
+                                .header("Proxy-Authorization", credentials)
+                                .build()
+                        } else {
+                            null
+                        }
+                    }
         }
 
         if (token != null) {
             builder = builder.addInterceptor { it.proceed(it.request().newBuilder().addHeader("Coder-Session-Token", token).build()) }
         }
 
-        httpClient = builder
-            .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
-            .hostnameVerifier(CoderHostnameVerifier(settings.tls.altHostname))
-            .addInterceptor { it.proceed(it.request().newBuilder().addHeader("User-Agent", "Coder Gateway/${pluginVersion} (${getOS()}; ${getArch()})").build()) }
-            .addInterceptor {
-                var request = it.request()
-                val headers = getHeaders(url, settings.headerCommand)
-                if (headers.isNotEmpty()) {
-                    val reqBuilder = request.newBuilder()
-                    headers.forEach { h -> reqBuilder.addHeader(h.key, h.value) }
-                    request = reqBuilder.build()
+        httpClient =
+            builder
+                .sslSocketFactory(socketFactory, trustManagers[0] as X509TrustManager)
+                .hostnameVerifier(CoderHostnameVerifier(settings.tls.altHostname))
+                .addInterceptor {
+                    it.proceed(
+                        it.request().newBuilder().addHeader(
+                            "User-Agent",
+                            "Coder Gateway/$pluginVersion (${getOS()}; ${getArch()})",
+                        ).build(),
+                    )
                 }
-                it.proceed(request)
-            }
-            // This should always be last if we want to see previous interceptors logged.
-            .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
-            .build()
+                .addInterceptor {
+                    var request = it.request()
+                    val headers = getHeaders(url, settings.headerCommand)
+                    if (headers.isNotEmpty()) {
+                        val reqBuilder = request.newBuilder()
+                        headers.forEach { h -> reqBuilder.addHeader(h.key, h.value) }
+                        request = reqBuilder.build()
+                    }
+                    it.proceed(request)
+                }
+                // This should always be last if we want to see previous interceptors logged.
+                .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
+                .build()
 
-        retroRestClient = Retrofit.Builder().baseUrl(url.toString()).client(httpClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build().create(CoderV2RestFacade::class.java)
+        retroRestClient =
+            Retrofit.Builder().baseUrl(url.toString()).client(httpClient)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build().create(CoderV2RestFacade::class.java)
     }
 
-    private fun <T> error(action: String, res: retrofit2.Response<T>): String {
-        val details = res.errorBody()?.charStream()?.use{ it.readText() } ?: "no details provided"
+    private fun <T> error(
+        action: String,
+        res: retrofit2.Response<T>,
+    ): String {
+        val details = res.errorBody()?.charStream()?.use { it.readText() } ?: "no details provided"
         return "Unable to $action: url=$url, code=${res.code()}, details=$details"
     }
 
@@ -253,10 +270,12 @@ open class CoderRestClient(
         return buildResponse.body()!!
     }
 
-
     private val iconCache = mutableMapOf<Pair<String, String>, Icon>()
 
-    fun loadIcon(path: String, workspaceName: String): Icon {
+    fun loadIcon(
+        path: String,
+        workspaceName: String,
+    ): Icon {
         var iconURL: URL? = null
         if (path.startsWith("http")) {
             iconURL = path.toURL()

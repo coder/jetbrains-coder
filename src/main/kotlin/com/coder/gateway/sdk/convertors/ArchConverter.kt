@@ -9,5 +9,6 @@ import com.squareup.moshi.ToJson
  */
 class ArchConverter {
     @ToJson fun toJson(src: Arch?): String = src?.toString() ?: ""
+
     @FromJson fun fromJson(src: String): Arch? = Arch.from(src)
 }

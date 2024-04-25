@@ -208,8 +208,12 @@ open class CoderSettings(
      */
     fun dataDir(url: URL): Path {
         state.dataDirectory.let {
-            val dir = if (it.isBlank()) dataDir
-            else Path.of(expand(it))
+            val dir =
+                if (it.isBlank()) {
+                    dataDir
+                } else {
+                    Path.of(expand(it))
+                }
             return withHost(dir, url).toAbsolutePath()
         }
     }
@@ -236,11 +240,18 @@ open class CoderSettings(
     /**
      * To where the specified deployment should download the binary.
      */
-    fun binPath(url: URL, forceDownloadToData: Boolean = false): Path {
+    fun binPath(
+        url: URL,
+        forceDownloadToData: Boolean = false,
+    ): Path {
         state.binaryDirectory.let {
             val name = binaryName ?: getCoderCLIForOS(getOS(), getArch())
-            val dir = if (forceDownloadToData || it.isBlank()) dataDir(url)
-            else withHost(Path.of(expand(it)), url)
+            val dir =
+                if (forceDownloadToData || it.isBlank()) {
+                    dataDir(url)
+                } else {
+                    withHost(Path.of(expand(it)), url)
+                }
             return dir.resolve(name).toAbsolutePath()
         }
     }
@@ -255,19 +266,23 @@ open class CoderSettings(
         } catch (e: Exception) {
             // SSH has not been configured yet, or using some other authorization mechanism.
             null
-        } to try {
-            Files.readString(dir.resolve("session"))
-        } catch (e: Exception) {
-            // SSH has not been configured yet, or using some other authorization mechanism.
-            null
-        }
+        } to
+            try {
+                Files.readString(dir.resolve("session"))
+            } catch (e: Exception) {
+                // SSH has not been configured yet, or using some other authorization mechanism.
+                null
+            }
     }
 
     /**
      * Append the host to the path.  For example, foo/bar could become
      * foo/bar/dev.coder.com-8080.
      */
-    private fun withHost(path: Path, url: URL): Path {
+    private fun withHost(
+        path: Path,
+        url: URL,
+    ): Path {
         val host = if (url.port > 0) "${url.safeHost()}-${url.port}" else url.safeHost()
         return path.resolve(host)
     }
@@ -323,31 +338,37 @@ open class CoderSettings(
      * Return the name of the binary (with extension) for the provided OS and
      * architecture.
      */
-    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
+    private fun getCoderCLIForOS(
+        os: OS?,
+        arch: Arch?,
+    ): String {
         logger.info("Resolving binary for $os $arch")
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
             return "coder-windows-amd64.exe"
         }
         return when (os) {
-            OS.WINDOWS -> when (arch) {
-                Arch.AMD64 -> "coder-windows-amd64.exe"
-                Arch.ARM64 -> "coder-windows-arm64.exe"
-                else -> "coder-windows-amd64.exe"
-            }
+            OS.WINDOWS ->
+                when (arch) {
+                    Arch.AMD64 -> "coder-windows-amd64.exe"
+                    Arch.ARM64 -> "coder-windows-arm64.exe"
+                    else -> "coder-windows-amd64.exe"
+                }
 
-            OS.LINUX -> when (arch) {
-                Arch.AMD64 -> "coder-linux-amd64"
-                Arch.ARM64 -> "coder-linux-arm64"
-                Arch.ARMV7 -> "coder-linux-armv7"
-                else -> "coder-linux-amd64"
-            }
+            OS.LINUX ->
+                when (arch) {
+                    Arch.AMD64 -> "coder-linux-amd64"
+                    Arch.ARM64 -> "coder-linux-arm64"
+                    Arch.ARMV7 -> "coder-linux-armv7"
+                    else -> "coder-linux-amd64"
+                }
 
-            OS.MAC -> when (arch) {
-                Arch.AMD64 -> "coder-darwin-amd64"
-                Arch.ARM64 -> "coder-darwin-arm64"
-                else -> "coder-darwin-amd64"
-            }
+            OS.MAC ->
+                when (arch) {
+                    Arch.AMD64 -> "coder-darwin-amd64"
+                    Arch.ARM64 -> "coder-darwin-arm64"
+                    else -> "coder-darwin-amd64"
+                }
         }
     }
 

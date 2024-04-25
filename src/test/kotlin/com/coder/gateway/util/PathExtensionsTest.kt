@@ -1,25 +1,25 @@
 package com.coder.gateway.util
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.attribute.AclEntry
 import java.nio.file.attribute.AclEntryPermission
 import java.nio.file.attribute.AclEntryType
 import java.nio.file.attribute.AclFileAttributeView
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 internal class PathExtensionsTest {
     private val isWindows = System.getProperty("os.name").lowercase().contains("windows")
 
     private fun setWindowsPermissions(path: Path) {
         val view = Files.getFileAttributeView(path, AclFileAttributeView::class.java)
-        val entry = AclEntry.newBuilder()
+        val entry =
+            AclEntry.newBuilder()
                 .setType(AclEntryType.DENY)
                 .setPrincipal(view.owner)
                 .setPermissions(AclEntryPermission.WRITE_DATA)
@@ -30,18 +30,19 @@ internal class PathExtensionsTest {
     }
 
     private fun setupDirs(): Path {
-        val tmpdir = Path.of(System.getProperty("java.io.tmpdir"))
-            .resolve("coder-gateway-test/path-extensions/")
+        val tmpdir =
+            Path.of(System.getProperty("java.io.tmpdir"))
+                .resolve("coder-gateway-test/path-extensions/")
 
         // Clean up from the last run, if any.
         tmpdir.toFile().deleteRecursively()
 
         // Push out the test files.
-        listOf("read-only-dir", "no-permissions-dir").forEach{
+        listOf("read-only-dir", "no-permissions-dir").forEach {
             Files.createDirectories(tmpdir.resolve(it))
             tmpdir.resolve(it).resolve("file").toFile().writeText("")
         }
-        listOf("read-only-file", "writable-file", "no-permissions-file").forEach{
+        listOf("read-only-file", "writable-file", "no-permissions-file").forEach {
             tmpdir.resolve(it).toFile().writeText("")
         }
 
@@ -97,15 +98,17 @@ internal class PathExtensionsTest {
     @Test
     fun testExpand() {
         val home = System.getProperty("user.home")
-        listOf("~", "\$HOME", "\${user.home}").forEach{
+        listOf("~", "\$HOME", "\${user.home}").forEach {
             // Only replace at the beginning of the string.
-            assertEquals(Paths.get(home, "foo", it, "bar").toString(),
-                         expand(Paths.get(it, "foo", it, "bar" ).toString()))
+            assertEquals(
+                Paths.get(home, "foo", it, "bar").toString(),
+                expand(Paths.get(it, "foo", it, "bar").toString()),
+            )
 
             // Do not replace if part of a larger string.
             assertEquals(home, expand(it))
             assertEquals(home, expand(it + File.separator))
-            assertEquals(it+"hello", expand(it + "hello"))
+            assertEquals(it + "hello", expand(it + "hello"))
         }
     }
 }

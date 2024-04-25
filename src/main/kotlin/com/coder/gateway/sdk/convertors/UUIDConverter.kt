@@ -9,5 +9,6 @@ import java.util.UUID
  */
 class UUIDConverter {
     @ToJson fun toJson(src: UUID): String = src.toString()
+
     @FromJson fun fromJson(src: String): UUID = UUID.fromString(src)
 }

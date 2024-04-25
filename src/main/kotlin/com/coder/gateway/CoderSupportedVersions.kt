@@ -14,5 +14,8 @@ object CoderSupportedVersions : DynamicBundle(BUNDLE) {
 
     @JvmStatic
     @Suppress("SpreadOperator")
-    private fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any) = getMessage(key, *params)
+    private fun message(
+        @PropertyKey(resourceBundle = BUNDLE) key: String,
+        vararg params: Any,
+    ) = getMessage(key, *params)
 }

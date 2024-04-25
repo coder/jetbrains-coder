@@ -25,5 +25,5 @@ enum class WorkspaceStatus {
     @Json(name = "canceling") CANCELING,
     @Json(name = "canceled") CANCELED,
     @Json(name = "deleting") DELETING,
-    @Json(name = "deleted") DELETED
+    @Json(name = "deleted") DELETED,
 }

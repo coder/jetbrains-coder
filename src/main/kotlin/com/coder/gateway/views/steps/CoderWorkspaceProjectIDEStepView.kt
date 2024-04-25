@@ -13,8 +13,8 @@ import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.util.withoutNull
 import com.coder.gateway.util.withPath
+import com.coder.gateway.util.withoutNull
 import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -85,7 +85,7 @@ import javax.swing.event.DocumentEvent
 class CoderWorkspaceProjectIDEStepView(
     private val showTitle: Boolean = true,
 ) : CoderWizardStep<WorkspaceProjectIDE>(
-    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text")
+    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text"),
 ) {
     private val cs = CoroutineScope(Dispatchers.IO)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
@@ -99,65 +99,74 @@ class CoderWorkspaceProjectIDEStepView(
     private var ideResolvingJob: Job? = null
     private val pathValidationJobs = MergingUpdateQueue("remote-path-validation", 1000, true, tfProject)
 
-    private val component = panel {
-        row {
-            titleLabel = label("").applyToComponent {
-                font = JBFont.h3().asBold()
-                icon = CoderIcons.LOGO_16
-            }.component
-        }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE)
-        row {
-            label("IDE:")
-            cbIDE = cell(IDEComboBox(ideComboBoxModel).apply {
-                addActionListener {
-                    nextButton.isEnabled = this.selectedItem != null
-                    logger.info("Selected IDE: ${this.selectedItem}")
-                    cbIDEComment.foreground = UIUtil.getContextHelpForeground()
-                    when (this.selectedItem?.status) {
-                        IdeStatus.ALREADY_INSTALLED ->
-                            cbIDEComment.text =
-                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
+    private val component =
+        panel {
+            row {
+                titleLabel =
+                    label("").applyToComponent {
+                        font = JBFont.h3().asBold()
+                        icon = CoderIcons.LOGO_16
+                    }.component
+            }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE)
+            row {
+                label("IDE:")
+                cbIDE =
+                    cell(
+                        IDEComboBox(ideComboBoxModel).apply {
+                            addActionListener {
+                                nextButton.isEnabled = this.selectedItem != null
+                                logger.info("Selected IDE: ${this.selectedItem}")
+                                cbIDEComment.foreground = UIUtil.getContextHelpForeground()
+                                when (this.selectedItem?.status) {
+                                    IdeStatus.ALREADY_INSTALLED ->
+                                        cbIDEComment.text =
+                                            CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.installed.comment")
 
-                        IdeStatus.DOWNLOAD ->
-                            cbIDEComment.text =
-                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
+                                    IdeStatus.DOWNLOAD ->
+                                        cbIDEComment.text =
+                                            CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.download.comment")
 
-                        else ->
-                            cbIDEComment.text =
-                                CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
-                    }
-                }
-            }).resizableColumn().align(AlignX.FILL).component
-        }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-        row {
-            cell() // Empty cell for alignment.
-            cbIDEComment = cell(
-                ComponentPanelBuilder.createCommentComponent(
-                    CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
-                    false, -1, true
-                )
-            ).resizableColumn().align(AlignX.FILL).component
-        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-        row {
-            label("Project directory:")
-            cell(tfProject).resizableColumn().align(AlignX.FILL).applyToComponent {
-                minimumSize = Dimension(520, -1)
-            }.component
-        }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
-        row {
-            cell() // Empty cell for alignment.
-            terminalLink = cell(
-                LazyBrowserLink(
-                    CoderIcons.OPEN_TERMINAL,
-                    "Open Terminal"
-                )
-            ).component
-        }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
-        gap(RightGap.SMALL)
-    }.apply {
-        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-        border = JBUI.Borders.empty(0, 16)
-    }
+                                    else ->
+                                        cbIDEComment.text =
+                                            CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment")
+                                }
+                            }
+                        },
+                    ).resizableColumn().align(AlignX.FILL).component
+            }.topGap(TopGap.SMALL).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // Empty cell for alignment.
+                cbIDEComment =
+                    cell(
+                        ComponentPanelBuilder.createCommentComponent(
+                            CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.ide.none.comment"),
+                            false,
+                            -1,
+                            true,
+                        ),
+                    ).resizableColumn().align(AlignX.FILL).component
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+            row {
+                label("Project directory:")
+                cell(tfProject).resizableColumn().align(AlignX.FILL).applyToComponent {
+                    minimumSize = Dimension(520, -1)
+                }.component
+            }.topGap(TopGap.NONE).bottomGap(BottomGap.NONE).layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // Empty cell for alignment.
+                terminalLink =
+                    cell(
+                        LazyBrowserLink(
+                            CoderIcons.OPEN_TERMINAL,
+                            "Open Terminal",
+                        ),
+                    ).component
+            }.topGap(TopGap.NONE).layout(RowLayout.PARENT_GRID)
+            gap(RightGap.SMALL)
+        }.apply {
+            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+            border = JBUI.Borders.empty(0, 16)
+        }
 
     init {
         addToCenter(component)
@@ -182,67 +191,90 @@ class CoderWorkspaceProjectIDEStepView(
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
         titleLabel.isVisible = showTitle
-        terminalLink.url = data.client.url.withPath("/me/${name}/terminal").toString()
+        terminalLink.url = data.client.url.withPath("/me/$name/terminal").toString()
 
-        ideResolvingJob = cs.launch(ModalityState.current().asContextElement()) {
-            try {
-                logger.info("Configuring Coder CLI...")
-                cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
-                withContext(Dispatchers.IO) {
-                    data.cliManager.configSsh(data.client.agentNames(data.workspaces))
-                }
+        ideResolvingJob =
+            cs.launch(ModalityState.current().asContextElement()) {
+                try {
+                    logger.info("Configuring Coder CLI...")
+                    cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
+                    withContext(Dispatchers.IO) {
+                        data.cliManager.configSsh(data.client.agentNames(data.workspaces))
+                    }
 
-                val ides = suspendingRetryWithExponentialBackOff(
-                    action = { attempt ->
-                        logger.info("Connecting with SSH and uploading worker if missing... (attempt $attempt)")
-                        cbIDE.renderer =
-                            if (attempt > 1)
-                                IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt))
-                            else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
-                        val executor = createRemoteExecutor(CoderCLIManager.getHostName(data.client.url, name))
+                    val ides =
+                        suspendingRetryWithExponentialBackOff(
+                            action = { attempt ->
+                                logger.info("Connecting with SSH and uploading worker if missing... (attempt $attempt)")
+                                cbIDE.renderer =
+                                    if (attempt > 1) {
+                                        IDECellRenderer(
+                                            CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt),
+                                        )
+                                    } else {
+                                        IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
+                                    }
+                                val executor = createRemoteExecutor(CoderCLIManager.getHostName(data.client.url, name))
 
-                        if (ComponentValidator.getInstance(tfProject).isEmpty) {
-                            logger.info("Installing remote path validator...")
-                            installRemotePathValidator(executor)
-                        }
+                                if (ComponentValidator.getInstance(tfProject).isEmpty) {
+                                    logger.info("Installing remote path validator...")
+                                    installRemotePathValidator(executor)
+                                }
 
-                        logger.info("Retrieving IDEs... (attempt $attempt)")
-                        cbIDE.renderer =
-                            if (attempt > 1)
-                                IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt))
-                            else IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
-                        retrieveIDEs(executor, data.workspace, data.agent)
-                    },
-                    retryIf = {
-                        it is ConnectionException || it is TimeoutException
-                                || it is SSHException || it is DeployException
-                    },
-                    onException = { attempt, nextMs, e ->
-                        logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
+                                logger.info("Retrieving IDEs... (attempt $attempt)")
+                                cbIDE.renderer =
+                                    if (attempt > 1) {
+                                        IDECellRenderer(
+                                            CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt),
+                                        )
+                                    } else {
+                                        IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
+                                    }
+                                retrieveIDEs(executor, data.workspace, data.agent)
+                            },
+                            retryIf = {
+                                it is ConnectionException || it is TimeoutException ||
+                                    it is SSHException || it is DeployException
+                            },
+                            onException = { attempt, nextMs, e ->
+                                logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
+                                cbIDEComment.foreground = UIUtil.getErrorForeground()
+                                cbIDEComment.text =
+                                    if (isWorkerTimeout(e)) {
+                                        "Failed to upload worker binary...it may have timed out.  Check the command log for more details."
+                                    } else {
+                                        e.message ?: e.javaClass.simpleName
+                                    }
+                            },
+                            onCountdown = { remainingMs ->
+                                cbIDE.renderer =
+                                    IDECellRenderer(
+                                        CoderGatewayBundle.message(
+                                            "gateway.connector.view.coder.retrieve-ides.failed.retry",
+                                            humanizeDuration(remainingMs),
+                                        ),
+                                    )
+                            },
+                        )
+                    withContext(Dispatchers.IO) {
+                        ideComboBoxModel.addAll(ides)
+                        cbIDE.selectedIndex = 0
+                    }
+                } catch (e: Exception) {
+                    if (isCancellation(e)) {
+                        logger.info("Connection canceled due to ${e.javaClass.simpleName}")
+                    } else {
+                        logger.error("Failed to retrieve IDEs (will not retry)", e)
                         cbIDEComment.foreground = UIUtil.getErrorForeground()
-                        cbIDEComment.text =
-                            if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out.  Check the command log for more details."
-                            else e.message ?: e.javaClass.simpleName
-                    },
-                    onCountdown = { remainingMs ->
-                        cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed.retry", humanizeDuration(remainingMs)))
-                    },
-                )
-                withContext(Dispatchers.IO) {
-                    ideComboBoxModel.addAll(ides)
-                    cbIDE.selectedIndex = 0
-                }
-            } catch (e: Exception) {
-                if (isCancellation(e)) {
-                    logger.info("Connection canceled due to ${e.javaClass.simpleName}")
-                } else {
-                    logger.error("Failed to retrieve IDEs (will not retry)", e)
-                    cbIDEComment.foreground = UIUtil.getErrorForeground()
-                    cbIDEComment.text = e.message ?: e.javaClass.simpleName
-                    cbIDE.renderer = IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed"), UIUtil.getBalloonErrorIcon())
+                        cbIDEComment.text = e.message ?: e.javaClass.simpleName
+                        cbIDE.renderer =
+                            IDECellRenderer(
+                                CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.failed"),
+                                UIUtil.getBalloonErrorIcon(),
+                            )
+                    }
                 }
             }
-        }
     }
 
     /**
@@ -252,30 +284,34 @@ class CoderWorkspaceProjectIDEStepView(
         val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceProjectIDEStepView::class.java.name)
         ComponentValidator(disposable).installOn(tfProject)
 
-        tfProject.document.addDocumentListener(object : DocumentAdapter() {
-            override fun textChanged(event: DocumentEvent) {
-                pathValidationJobs.queue(Update.create("validate-remote-path") {
-                    runBlocking {
-                        try {
-                            val isPathPresent = validateRemotePath(tfProject.text, executor)
-                            if (isPathPresent.pathOrNull == null) {
-                                ComponentValidator.getInstance(tfProject).ifPresent {
-                                    it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
-                                }
-                            } else {
-                                ComponentValidator.getInstance(tfProject).ifPresent {
-                                    it.updateInfo(null)
+        tfProject.document.addDocumentListener(
+            object : DocumentAdapter() {
+                override fun textChanged(event: DocumentEvent) {
+                    pathValidationJobs.queue(
+                        Update.create("validate-remote-path") {
+                            runBlocking {
+                                try {
+                                    val isPathPresent = validateRemotePath(tfProject.text, executor)
+                                    if (isPathPresent.pathOrNull == null) {
+                                        ComponentValidator.getInstance(tfProject).ifPresent {
+                                            it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
+                                        }
+                                    } else {
+                                        ComponentValidator.getInstance(tfProject).ifPresent {
+                                            it.updateInfo(null)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    ComponentValidator.getInstance(tfProject).ifPresent {
+                                        it.updateInfo(ValidationInfo("Can't validate directory: ${tfProject.text}", tfProject))
+                                    }
                                 }
                             }
-                        } catch (e: Exception) {
-                            ComponentValidator.getInstance(tfProject).ifPresent {
-                                it.updateInfo(ValidationInfo("Can't validate directory: ${tfProject.text}", tfProject))
-                            }
-                        }
-                    }
-                })
-            }
-        })
+                        },
+                    )
+                }
+            },
+        )
     }
 
     /**
@@ -289,32 +325,63 @@ class CoderWorkspaceProjectIDEStepView(
                 port = 22
                 authType = AuthType.OPEN_SSH
             },
-            true
+            true,
         )
     }
 
     /**
      * Get a list of available IDEs.
      */
-    private suspend fun retrieveIDEs(executor: HighLevelHostAccessor, workspace: Workspace, agent: WorkspaceAgent): List<IdeWithStatus> {
+    private suspend fun retrieveIDEs(
+        executor: HighLevelHostAccessor,
+        workspace: Workspace,
+        agent: WorkspaceAgent,
+    ): List<IdeWithStatus> {
         val name = "${workspace.name}.${agent.name}"
         logger.info("Retrieving available IDEs for $name...")
-        val workspaceOS = if (agent.operatingSystem != null && agent.architecture != null)
-            toDeployedOS(agent.operatingSystem, agent.architecture)
-        else withContext(Dispatchers.IO) {
-            executor.guessOs()
-        }
+        val workspaceOS =
+            if (agent.operatingSystem != null && agent.architecture != null) {
+                toDeployedOS(agent.operatingSystem, agent.architecture)
+            } else {
+                withContext(Dispatchers.IO) {
+                    executor.guessOs()
+                }
+            }
 
         logger.info("Resolved OS and Arch for $name is: $workspaceOS")
-        val installedIdesJob = cs.async(Dispatchers.IO) {
-            executor.getInstalledIDEs().map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.ALREADY_INSTALLED, null, ide.pathToIde, ide.presentableVersion, ide.remoteDevType) }
-        }
-        val idesWithStatusJob = cs.async(Dispatchers.IO) {
-            IntelliJPlatformProduct.entries
-                .filter { it.showInGateway }
-                .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
-                .map { ide -> IdeWithStatus(ide.product, ide.buildNumber, IdeStatus.DOWNLOAD, ide.download, null, ide.presentableVersion, ide.remoteDevType) }
-        }
+        val installedIdesJob =
+            cs.async(Dispatchers.IO) {
+                executor.getInstalledIDEs().map {
+                        ide ->
+                    IdeWithStatus(
+                        ide.product,
+                        ide.buildNumber,
+                        IdeStatus.ALREADY_INSTALLED,
+                        null,
+                        ide.pathToIde,
+                        ide.presentableVersion,
+                        ide.remoteDevType,
+                    )
+                }
+            }
+        val idesWithStatusJob =
+            cs.async(Dispatchers.IO) {
+                IntelliJPlatformProduct.entries
+                    .filter { it.showInGateway }
+                    .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
+                    .map {
+                            ide ->
+                        IdeWithStatus(
+                            ide.product,
+                            ide.buildNumber,
+                            IdeStatus.DOWNLOAD,
+                            ide.download,
+                            null,
+                            ide.presentableVersion,
+                            ide.remoteDevType,
+                        )
+                    }
+            }
 
         val installedIdes = installedIdesJob.await().sorted()
         val idesWithStatus = idesWithStatusJob.await().sorted()
@@ -327,25 +394,31 @@ class CoderWorkspaceProjectIDEStepView(
         return installedIdes + idesWithStatus
     }
 
-    private fun toDeployedOS(os: OS, arch: Arch): DeployTargetOS {
+    private fun toDeployedOS(
+        os: OS,
+        arch: Arch,
+    ): DeployTargetOS {
         return when (os) {
-            OS.LINUX -> when (arch) {
-                Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.ARM_64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.UNKNOWN)
-            }
+            OS.LINUX ->
+                when (arch) {
+                    Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
+                    Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.ARM_64)
+                    Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.UNKNOWN)
+                }
 
-            OS.WINDOWS -> when (arch) {
-                Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.ARM_64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.UNKNOWN)
-            }
+            OS.WINDOWS ->
+                when (arch) {
+                    Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
+                    Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.ARM_64)
+                    Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.UNKNOWN)
+                }
 
-            OS.MAC -> when (arch) {
-                Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
-                Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.ARM_64)
-                Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.UNKNOWN)
-            }
+            OS.MAC ->
+                when (arch) {
+                    Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
+                    Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.ARM_64)
+                    Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.UNKNOWN)
+                }
         }
     }
 
@@ -374,7 +447,6 @@ class CoderWorkspaceProjectIDEStepView(
     }
 
     private class IDEComboBox(model: ComboBoxModel<IdeWithStatus>) : ComboBox<IdeWithStatus>(model) {
-
         init {
             putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         }
@@ -385,24 +457,43 @@ class CoderWorkspaceProjectIDEStepView(
     }
 
     private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) : ListCellRenderer<IdeWithStatus> {
-        private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> = object : ColoredListCellRenderer<IdeWithStatus>() {
-            override fun customizeCellRenderer(list: JList<out IdeWithStatus>, value: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean) {
-                background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                icon = cellIcon
-                append(message)
+        private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> =
+            object : ColoredListCellRenderer<IdeWithStatus>() {
+                override fun customizeCellRenderer(
+                    list: JList<out IdeWithStatus>,
+                    value: IdeWithStatus?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean,
+                ) {
+                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
+                    icon = cellIcon
+                    append(message)
+                }
             }
-        }
 
-        override fun getListCellRendererComponent(list: JList<out IdeWithStatus>?, ideWithStatus: IdeWithStatus?, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
+        override fun getListCellRendererComponent(
+            list: JList<out IdeWithStatus>?,
+            ideWithStatus: IdeWithStatus?,
+            index: Int,
+            isSelected: Boolean,
+            cellHasFocus: Boolean,
+        ): Component {
             return if (ideWithStatus == null && index == -1) {
                 loadingComponentRenderer.getListCellRendererComponent(list, null, -1, isSelected, cellHasFocus)
             } else if (ideWithStatus != null) {
                 JPanel().apply {
                     layout = FlowLayout(FlowLayout.LEFT)
                     add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
-                    add(JLabel("${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(Locale.getDefault())}").apply {
-                        foreground = UIUtil.getLabelDisabledForeground()
-                    })
+                    add(
+                        JLabel(
+                            "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
+                                Locale.getDefault(),
+                            )}",
+                        ).apply {
+                            foreground = UIUtil.getLabelDisabledForeground()
+                        },
+                    )
                     background = UIUtil.getListBackground(isSelected, cellHasFocus)
                 }
             } else {

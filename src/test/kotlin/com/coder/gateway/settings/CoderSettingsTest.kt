@@ -31,26 +31,41 @@ internal class CoderSettingsTest {
     fun testDataDir() {
         val state = CoderSettingsState()
         val url = URL("http://localhost")
-        var settings = CoderSettings(state,
-            env = Environment(mapOf(
-                "LOCALAPPDATA"     to "/tmp/coder-gateway-test/localappdata",
-                "HOME"             to "/tmp/coder-gateway-test/home",
-                "XDG_DATA_HOME"    to "/tmp/coder-gateway-test/xdg-data")))
-        var expected = when(getOS()) {
-            OS.WINDOWS -> "/tmp/coder-gateway-test/localappdata/coder-gateway/localhost"
-            OS.MAC -> "/tmp/coder-gateway-test/home/Library/Application Support/coder-gateway/localhost"
-            else -> "/tmp/coder-gateway-test/xdg-data/coder-gateway/localhost"
-        }
+        var settings =
+            CoderSettings(
+                state,
+                env =
+                Environment(
+                    mapOf(
+                        "LOCALAPPDATA" to "/tmp/coder-gateway-test/localappdata",
+                        "HOME" to "/tmp/coder-gateway-test/home",
+                        "XDG_DATA_HOME" to "/tmp/coder-gateway-test/xdg-data",
+                    ),
+                ),
+            )
+        var expected =
+            when (getOS()) {
+                OS.WINDOWS -> "/tmp/coder-gateway-test/localappdata/coder-gateway/localhost"
+                OS.MAC -> "/tmp/coder-gateway-test/home/Library/Application Support/coder-gateway/localhost"
+                else -> "/tmp/coder-gateway-test/xdg-data/coder-gateway/localhost"
+            }
 
         assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url).parent)
 
         // Fall back to HOME on Linux.
         if (getOS() == OS.LINUX) {
-            settings = CoderSettings(state,
-                env = Environment(mapOf(
-                    "XDG_DATA_HOME" to "",
-                    "HOME" to "/tmp/coder-gateway-test/home")))
+            settings =
+                CoderSettings(
+                    state,
+                    env =
+                    Environment(
+                        mapOf(
+                            "XDG_DATA_HOME" to "",
+                            "HOME" to "/tmp/coder-gateway-test/home",
+                        ),
+                    ),
+                )
             expected = "/tmp/coder-gateway-test/home/.local/share/coder-gateway/localhost"
 
             assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
@@ -59,11 +74,18 @@ internal class CoderSettingsTest {
 
         // Override environment with settings.
         state.dataDirectory = "/tmp/coder-gateway-test/data-dir"
-        settings = CoderSettings(state,
-            env = Environment(mapOf(
-                "LOCALAPPDATA"     to "/ignore",
-                "HOME"             to "/ignore",
-                "XDG_DATA_HOME"    to "/ignore")))
+        settings =
+            CoderSettings(
+                state,
+                env =
+                Environment(
+                    mapOf(
+                        "LOCALAPPDATA" to "/ignore",
+                        "HOME" to "/ignore",
+                        "XDG_DATA_HOME" to "/ignore",
+                    ),
+                ),
+            )
         expected = "/tmp/coder-gateway-test/data-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
         assertEquals(Path.of(expected).toAbsolutePath(), settings.binPath(url).parent)
@@ -105,35 +127,57 @@ internal class CoderSettingsTest {
     @Test
     fun testCoderConfigDir() {
         val state = CoderSettingsState()
-        var settings = CoderSettings(state,
-            env = Environment(mapOf(
-                "APPDATA"          to "/tmp/coder-gateway-test/cli-appdata",
-                "HOME"             to "/tmp/coder-gateway-test/cli-home",
-                "XDG_CONFIG_HOME"  to "/tmp/coder-gateway-test/cli-xdg-config")))
-        var expected = when(getOS()) {
-            OS.WINDOWS -> "/tmp/coder-gateway-test/cli-appdata/coderv2"
-            OS.MAC -> "/tmp/coder-gateway-test/cli-home/Library/Application Support/coderv2"
-            else -> "/tmp/coder-gateway-test/cli-xdg-config/coderv2"
-        }
+        var settings =
+            CoderSettings(
+                state,
+                env =
+                Environment(
+                    mapOf(
+                        "APPDATA" to "/tmp/coder-gateway-test/cli-appdata",
+                        "HOME" to "/tmp/coder-gateway-test/cli-home",
+                        "XDG_CONFIG_HOME" to "/tmp/coder-gateway-test/cli-xdg-config",
+                    ),
+                ),
+            )
+        var expected =
+            when (getOS()) {
+                OS.WINDOWS -> "/tmp/coder-gateway-test/cli-appdata/coderv2"
+                OS.MAC -> "/tmp/coder-gateway-test/cli-home/Library/Application Support/coderv2"
+                else -> "/tmp/coder-gateway-test/cli-xdg-config/coderv2"
+            }
         assertEquals(Path.of(expected), settings.coderConfigDir)
 
         // Fall back to HOME on Linux.
         if (getOS() == OS.LINUX) {
-            settings = CoderSettings(state,
-                env = Environment(mapOf(
-                    "XDG_CONFIG_HOME" to "",
-                    "HOME" to "/tmp/coder-gateway-test/cli-home")))
+            settings =
+                CoderSettings(
+                    state,
+                    env =
+                    Environment(
+                        mapOf(
+                            "XDG_CONFIG_HOME" to "",
+                            "HOME" to "/tmp/coder-gateway-test/cli-home",
+                        ),
+                    ),
+                )
             expected = "/tmp/coder-gateway-test/cli-home/.config/coderv2"
             assertEquals(Path.of(expected), settings.coderConfigDir)
         }
 
         // Read CODER_CONFIG_DIR.
-        settings = CoderSettings(state,
-            env = Environment(mapOf(
-                "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
-                "APPDATA"          to "/ignore",
-                "HOME"             to "/ignore",
-                "XDG_CONFIG_HOME"  to "/ignore")))
+        settings =
+            CoderSettings(
+                state,
+                env =
+                Environment(
+                    mapOf(
+                        "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
+                        "APPDATA" to "/ignore",
+                        "HOME" to "/ignore",
+                        "XDG_CONFIG_HOME" to "/ignore",
+                    ),
+                ),
+            )
         expected = "/tmp/coder-gateway-test/coder-config-dir"
         assertEquals(Path.of(expected), settings.coderConfigDir)
     }
@@ -144,8 +188,10 @@ internal class CoderSettingsTest {
         val settings = CoderSettings(state)
         // As-is if no source override.
         val url = URL("http://localhost/")
-        assertContains(settings.binSource(url).toString(),
-            url.withPath("/bin/coder-").toString())
+        assertContains(
+            settings.binSource(url).toString(),
+            url.withPath("/bin/coder-").toString(),
+        )
 
         // Override with absolute URL.
         val absolute = URL("http://dev.coder.com/some-path")
@@ -180,13 +226,19 @@ internal class CoderSettingsTest {
         var settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"))
         assertEquals("ssh config options from state", settings.sshConfigOptions)
 
-        settings = CoderSettings(CoderSettingsState(),
-            env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
+        settings =
+            CoderSettings(
+                CoderSettingsState(),
+                env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")),
+            )
         assertEquals("ssh config options from env", settings.sshConfigOptions)
 
         // State has precedence.
-        settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"),
-            env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")))
+        settings =
+            CoderSettings(
+                CoderSettingsState(sshConfigOptions = "ssh config options from state"),
+                env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to "ssh config options from env")),
+            )
         assertEquals("ssh config options from state", settings.sshConfigOptions)
     }
 
@@ -224,16 +276,24 @@ internal class CoderSettingsTest {
         assertEquals("url-from-global-config" to Source.CONFIG, settings.defaultURL())
 
         // Read from environment.
-        env = Environment(mapOf(
-            "CODER_URL"        to "url-from-env",
-            "CODER_CONFIG_DIR" to dir.toString()))
+        env =
+            Environment(
+                mapOf(
+                    "CODER_URL" to "url-from-env",
+                    "CODER_CONFIG_DIR" to dir.toString(),
+                ),
+            )
         settings = CoderSettings(CoderSettingsState(), env = env)
         assertEquals("url-from-env" to Source.ENVIRONMENT, settings.defaultURL())
 
         // Read from settings.
-        settings = CoderSettings(CoderSettingsState(
-            defaultURL = "url-from-settings"),
-            env = env)
+        settings =
+            CoderSettings(
+                CoderSettingsState(
+                    defaultURL = "url-from-settings",
+                ),
+                env = env,
+            )
         assertEquals("url-from-settings" to Source.SETTINGS, settings.defaultURL())
     }
 
@@ -242,10 +302,15 @@ internal class CoderSettingsTest {
         val tmp = Path.of(System.getProperty("java.io.tmpdir"))
         val url = "http://test.deployment.coder.com"
         val dir = tmp.resolve("coder-gateway-test/test-default-token")
-        var env = Environment(mapOf("CODER_CONFIG_DIR" to dir.toString(),
-                                    "LOCALAPPDATA" to dir.toString(),
-                                    "XDG_DATA_HOME" to dir.toString(),
-                                    "HOME" to dir.toString()))
+        var env =
+            Environment(
+                mapOf(
+                    "CODER_CONFIG_DIR" to dir.toString(),
+                    "LOCALAPPDATA" to dir.toString(),
+                    "XDG_DATA_HOME" to dir.toString(),
+                    "HOME" to dir.toString(),
+                ),
+            )
         dir.toFile().deleteRecursively()
 
         // No config.
@@ -274,14 +339,20 @@ internal class CoderSettingsTest {
 
         // Missing protocol; will still match global if also missing there.
         globalConfigPath.resolve("url").toFile().writeText("test.deployment.coder.com")
-        assertEquals("token-from-global-config" to Source.CONFIG,
-                     settings.token("test.deployment.coder.com"))
+        assertEquals(
+            "token-from-global-config" to Source.CONFIG,
+            settings.token("test.deployment.coder.com"),
+        )
 
         // Ignore if using mTLS.
-        settings = CoderSettings(CoderSettingsState(
-            tlsKeyPath = "key",
-            tlsCertPath = "cert"),
-            env = env)
+        settings =
+            CoderSettings(
+                CoderSettingsState(
+                    tlsKeyPath = "key",
+                    tlsCertPath = "cert",
+                ),
+                env = env,
+            )
         assertEquals(null, settings.token(url))
     }
 
@@ -304,20 +375,21 @@ internal class CoderSettingsTest {
     @Test
     fun testSettings() {
         // Make sure the remaining settings are being conveyed.
-        val settings = CoderSettings(
-            CoderSettingsState(
-                enableDownloads = false,
-                enableBinaryDirectoryFallback = true,
-                headerCommand = "test header",
-                tlsCertPath = "tls cert path",
-                tlsKeyPath = "tls key path",
-                tlsCAPath = "tls ca path",
-                tlsAlternateHostname = "tls alt hostname",
-                disableAutostart = getOS() != OS.MAC,
-                setupCommand = "test setup",
-                ignoreSetupFailure = true,
+        val settings =
+            CoderSettings(
+                CoderSettingsState(
+                    enableDownloads = false,
+                    enableBinaryDirectoryFallback = true,
+                    headerCommand = "test header",
+                    tlsCertPath = "tls cert path",
+                    tlsKeyPath = "tls key path",
+                    tlsCAPath = "tls ca path",
+                    tlsAlternateHostname = "tls alt hostname",
+                    disableAutostart = getOS() != OS.MAC,
+                    setupCommand = "test setup",
+                    ignoreSetupFailure = true,
+                ),
             )
-        )
 
         assertEquals(false, settings.enableDownloads)
         assertEquals(true, settings.enableBinaryDirectoryFallback)

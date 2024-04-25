@@ -55,39 +55,52 @@ class CoderRemoteConnectionHandle {
                 val parameters = getParameters(indicator)
                 logger.debug("Creating connection handle", parameters)
                 indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting")
-                val context = suspendingRetryWithExponentialBackOff(
-                    action = { attempt ->
-                        logger.info("Connecting... (attempt $attempt)")
-                        if (attempt > 1) {
-                            // indicator.text is the text above the progress bar.
-                            indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.retry", attempt)
-                        }
-                        val deployInputs = parameters.deploy(
-                            indicator,
-                            Duration.ofMinutes(10),
-                            settings.setupCommand,
-                            settings.ignoreSetupFailure)
-                        SshMultistagePanelContext(deployInputs)
-                    },
-                    retryIf = {
-                        it is ConnectionException || it is TimeoutException
-                                || it is SSHException || it is DeployException
-                    },
-                    onException = { attempt, nextMs, e ->
-                        logger.error("Failed to connect (attempt $attempt; will retry in $nextMs ms)")
-                        // indicator.text2 is the text below the progress bar.
-                        indicator.text2 =
-                            if (isWorkerTimeout(e)) "Failed to upload worker binary...it may have timed out"
-                            else e.message ?: e.javaClass.simpleName
-                    },
-                    onCountdown = { remainingMs ->
-                        indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.failed.retry", humanizeDuration(remainingMs))
-                    },
-                )
+                val context =
+                    suspendingRetryWithExponentialBackOff(
+                        action = { attempt ->
+                            logger.info("Connecting... (attempt $attempt)")
+                            if (attempt > 1) {
+                                // indicator.text is the text above the progress bar.
+                                indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.retry", attempt)
+                            }
+                            val deployInputs =
+                                parameters.deploy(
+                                    indicator,
+                                    Duration.ofMinutes(10),
+                                    settings.setupCommand,
+                                    settings.ignoreSetupFailure,
+                                )
+                            SshMultistagePanelContext(deployInputs)
+                        },
+                        retryIf = {
+                            it is ConnectionException || it is TimeoutException ||
+                                it is SSHException || it is DeployException
+                        },
+                        onException = { attempt, nextMs, e ->
+                            logger.error("Failed to connect (attempt $attempt; will retry in $nextMs ms)")
+                            // indicator.text2 is the text below the progress bar.
+                            indicator.text2 =
+                                if (isWorkerTimeout(e)) {
+                                    "Failed to upload worker binary...it may have timed out"
+                                } else {
+                                    e.message ?: e.javaClass.simpleName
+                                }
+                        },
+                        onCountdown = { remainingMs ->
+                            indicator.text =
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.coder.connecting.failed.retry",
+                                    humanizeDuration(remainingMs),
+                                )
+                        },
+                    )
                 logger.info("Starting and connecting to ${parameters.ideName} with $context")
                 // At this point JetBrains takes over with their own UI.
-                @Suppress("UnstableApiUsage") SshDeployFlowUtil.fullDeployCycle(
-                    clientLifetime, context, Duration.ofMinutes(10)
+                @Suppress("UnstableApiUsage")
+                SshDeployFlowUtil.fullDeployCycle(
+                    clientLifetime,
+                    context,
+                    Duration.ofMinutes(10),
                 )
                 logger.info("Adding ${parameters.ideName} for ${parameters.hostname}:${parameters.projectPath} to recent connections")
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
@@ -102,7 +115,8 @@ class CoderRemoteConnectionHandle {
                         Messages.showMessageDialog(
                             e.message ?: e.javaClass.simpleName ?: "Aborted",
                             CoderGatewayBundle.message("gateway.connector.coder.connection.failed"),
-                            Messages.getErrorIcon())
+                            Messages.getErrorIcon(),
+                        )
                     }
                 }
             }
@@ -115,17 +129,22 @@ class CoderRemoteConnectionHandle {
         /**
          * Generic function to ask for consent.
          */
-        fun confirm(title: String, comment: String, details: String): Boolean {
+        fun confirm(
+            title: String,
+            comment: String,
+            details: String,
+        ): Boolean {
             var inputFromUser = false
             ApplicationManager.getApplication().invokeAndWait({
-                val panel = panel {
-                    row {
-                        label(comment)
+                val panel =
+                    panel {
+                        row {
+                            label(comment)
+                        }
+                        row {
+                            label(details)
+                        }
                     }
-                    row {
-                        label(details)
-                    }
-                }
                 AppIcon.getInstance().requestAttention(null, true)
                 if (!dialog(
                         title = title,
@@ -143,36 +162,43 @@ class CoderRemoteConnectionHandle {
          * Generic function to ask for input.
          */
         @JvmStatic
-        fun ask(comment: String, isError: Boolean = false, link: Pair<String, String>? = null, default: String? = null): String? {
+        fun ask(
+            comment: String,
+            isError: Boolean = false,
+            link: Pair<String, String>? = null,
+            default: String? = null,
+        ): String? {
             var inputFromUser: String? = null
             ApplicationManager.getApplication().invokeAndWait({
                 lateinit var inputTextField: JBTextField
-                val panel = panel {
-                    row {
-                        if (link != null) browserLink(link.first, link.second)
-                        inputTextField = textField()
-                            .applyToComponent {
-                                text = default ?: ""
-                                minimumSize = Dimension(520, -1)
-                            }.component
-                    }.layout(RowLayout.PARENT_GRID)
-                    row {
-                        cell() // To align with the text box.
-                        cell(
-                            ComponentPanelBuilder.createCommentComponent(comment, false, -1, true)
-                                .applyIf(isError) {
-                                    apply {
-                                        foreground = UIUtil.getErrorForeground()
-                                    }
-                                }
-                        )
-                    }.layout(RowLayout.PARENT_GRID)
-                }
+                val panel =
+                    panel {
+                        row {
+                            if (link != null) browserLink(link.first, link.second)
+                            inputTextField =
+                                textField()
+                                    .applyToComponent {
+                                        text = default ?: ""
+                                        minimumSize = Dimension(520, -1)
+                                    }.component
+                        }.layout(RowLayout.PARENT_GRID)
+                        row {
+                            cell() // To align with the text box.
+                            cell(
+                                ComponentPanelBuilder.createCommentComponent(comment, false, -1, true)
+                                    .applyIf(isError) {
+                                        apply {
+                                            foreground = UIUtil.getErrorForeground()
+                                        }
+                                    },
+                            )
+                        }.layout(RowLayout.PARENT_GRID)
+                    }
                 AppIcon.getInstance().requestAttention(null, true)
                 if (!dialog(
                         CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
                         panel = panel,
-                        focusedComponent = inputTextField
+                        focusedComponent = inputTextField,
                     ).showAndGet()
                 ) {
                     return@invokeAndWait
@@ -225,24 +251,33 @@ class CoderRemoteConnectionHandle {
 
             // On subsequent tries or if not using an existing token, ask the user
             // for the token.
-            val tokenFromUser = ask(
-                CoderGatewayBundle.message(
-                    if (isRetry) "gateway.connector.view.workspaces.token.rejected"
-                    else if (tokenSource == Source.CONFIG) "gateway.connector.view.workspaces.token.injected-global"
-                    else if (tokenSource == Source.DEPLOYMENT_CONFIG) "gateway.connector.view.workspaces.token.injected"
-                    else if (tokenSource == Source.LAST_USED) "gateway.connector.view.workspaces.token.last-used"
-                    else if (tokenSource == Source.QUERY) "gateway.connector.view.workspaces.token.query"
-                    else if (existingToken.isNotBlank()) "gateway.connector.view.workspaces.token.comment"
-                    else "gateway.connector.view.workspaces.token.none",
-                    url.host,
-                ),
-                isRetry,
-                Pair(
-                    CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
-                    getTokenUrl.toString()
-                ),
-                existingToken,
-            )
+            val tokenFromUser =
+                ask(
+                    CoderGatewayBundle.message(
+                        if (isRetry) {
+                            "gateway.connector.view.workspaces.token.rejected"
+                        } else if (tokenSource == Source.CONFIG) {
+                            "gateway.connector.view.workspaces.token.injected-global"
+                        } else if (tokenSource == Source.DEPLOYMENT_CONFIG) {
+                            "gateway.connector.view.workspaces.token.injected"
+                        } else if (tokenSource == Source.LAST_USED) {
+                            "gateway.connector.view.workspaces.token.last-used"
+                        } else if (tokenSource == Source.QUERY) {
+                            "gateway.connector.view.workspaces.token.query"
+                        } else if (existingToken.isNotBlank()) {
+                            "gateway.connector.view.workspaces.token.comment"
+                        } else {
+                            "gateway.connector.view.workspaces.token.none"
+                        },
+                        url.host,
+                    ),
+                    isRetry,
+                    Pair(
+                        CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
+                        getTokenUrl.toString(),
+                    ),
+                    existingToken,
+                )
             if (tokenFromUser.isNullOrBlank()) {
                 return null
             }
@@ -263,27 +298,31 @@ class CoderRemoteConnectionHandle {
             val domainAllowlist = listOf("intellij.net", "jetbrains.com")
 
             // Resolve any redirects.
-            val finalUrl = try {
-                resolveRedirects(url)
-            } catch (e: Exception) {
-                when (e) {
-                    is SSLHandshakeException ->
-                    throw Exception(CoderGatewayBundle.message(
-                        "gateway.connector.view.workspaces.connect.ssl-error",
-                        url.host,
-                        e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
-                    ))
-                    else -> throw e
+            val finalUrl =
+                try {
+                    resolveRedirects(url)
+                } catch (e: Exception) {
+                    when (e) {
+                        is SSLHandshakeException ->
+                            throw Exception(
+                                CoderGatewayBundle.message(
+                                    "gateway.connector.view.workspaces.connect.ssl-error",
+                                    url.host,
+                                    e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason"),
+                                ),
+                            )
+                        else -> throw e
+                    }
                 }
-            }
 
             var linkWithRedirect = url.toString()
             if (finalUrl.host != url.host) {
                 linkWithRedirect = "$linkWithRedirect (redirects to to $finalUrl)"
             }
 
-            val allowlisted = domainAllowlist.any { url.host == it || url.host.endsWith(".$it") }
-                    && domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
+            val allowlisted =
+                domainAllowlist.any { url.host == it || url.host.endsWith(".$it") } &&
+                    domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
             val https = url.protocol == "https" && finalUrl.protocol == "https"
             return Triple(allowlisted, https, linkWithRedirect)
         }

@@ -24,11 +24,15 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSession
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
-fun sslContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLContext {
+fun sslContextFromPEMs(
+    certPath: String,
+    keyPath: String,
+    caPath: String,
+): SSLContext {
     var km: Array<KeyManager>? = null
     if (certPath.isNotBlank() && keyPath.isNotBlank()) {
         val certificateFactory = CertificateFactory.getInstance("X.509")
@@ -42,20 +46,22 @@ fun sslContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLC
         val privateKeyPem = File(expand(keyPath)).readText()
         val start: Int = privateKeyPem.indexOf("-----BEGIN PRIVATE KEY-----")
         val end: Int = privateKeyPem.indexOf("-----END PRIVATE KEY-----", start)
-        val pemBytes: ByteArray = Base64.getDecoder().decode(
-            privateKeyPem.substring(start + "-----BEGIN PRIVATE KEY-----".length, end)
-                .replace("\\s+".toRegex(), "")
-        )
+        val pemBytes: ByteArray =
+            Base64.getDecoder().decode(
+                privateKeyPem.substring(start + "-----BEGIN PRIVATE KEY-----".length, end)
+                    .replace("\\s+".toRegex(), ""),
+            )
 
-        val privateKey = try {
-            val kf = KeyFactory.getInstance("RSA")
-            val keySpec = PKCS8EncodedKeySpec(pemBytes)
-            kf.generatePrivate(keySpec)
-        } catch (e: InvalidKeySpecException) {
-            val kf = KeyFactory.getInstance("EC")
-            val keySpec = PKCS8EncodedKeySpec(pemBytes)
-            kf.generatePrivate(keySpec)
-        }
+        val privateKey =
+            try {
+                val kf = KeyFactory.getInstance("RSA")
+                val keySpec = PKCS8EncodedKeySpec(pemBytes)
+                kf.generatePrivate(keySpec)
+            } catch (e: InvalidKeySpecException) {
+                val kf = KeyFactory.getInstance("EC")
+                val keySpec = PKCS8EncodedKeySpec(pemBytes)
+                kf.generatePrivate(keySpec)
+            }
 
         val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
         keyStore.load(null)
@@ -76,7 +82,7 @@ fun sslContextFromPEMs(certPath: String, keyPath: String, caPath: String) : SSLC
     return sslContext
 }
 
-fun coderSocketFactory(settings: CoderTLSSettings) : SSLSocketFactory {
+fun coderSocketFactory(settings: CoderTLSSettings): SSLSocketFactory {
     val sslContext = sslContextFromPEMs(settings.certPath, settings.keyPath, settings.caPath)
     if (settings.altHostname.isBlank()) {
         return sslContext.socketFactory
@@ -85,14 +91,13 @@ fun coderSocketFactory(settings: CoderTLSSettings) : SSLSocketFactory {
     return AlternateNameSSLSocketFactory(sslContext.socketFactory, settings.altHostname)
 }
 
-fun coderTrustManagers(tlsCAPath: String) : Array<TrustManager> {
+fun coderTrustManagers(tlsCAPath: String): Array<TrustManager> {
     val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
     if (tlsCAPath.isBlank()) {
         // return default trust managers
         trustManagerFactory.init(null as KeyStore?)
         return trustManagerFactory.trustManagers
     }
-
 
     val certificateFactory = CertificateFactory.getInstance("X.509")
     val caInputStream = FileInputStream(expand(tlsCAPath))
@@ -122,31 +127,52 @@ class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, priv
         return socket
     }
 
-    override fun createSocket(host: String?, port: Int): Socket {
-        val socket = delegate.createSocket(host,  port) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(host: String?, port: Int, localHost: InetAddress?, localPort: Int): Socket {
-        val socket = delegate.createSocket(host, port, localHost, localPort) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(host: InetAddress?, port: Int): Socket {
+    override fun createSocket(
+        host: String?,
+        port: Int,
+    ): Socket {
         val socket = delegate.createSocket(host, port) as SSLSocket
         customizeSocket(socket)
         return socket
     }
 
-    override fun createSocket(address: InetAddress?, port: Int, localAddress: InetAddress?, localPort: Int): Socket {
+    override fun createSocket(
+        host: String?,
+        port: Int,
+        localHost: InetAddress?,
+        localPort: Int,
+    ): Socket {
+        val socket = delegate.createSocket(host, port, localHost, localPort) as SSLSocket
+        customizeSocket(socket)
+        return socket
+    }
+
+    override fun createSocket(
+        host: InetAddress?,
+        port: Int,
+    ): Socket {
+        val socket = delegate.createSocket(host, port) as SSLSocket
+        customizeSocket(socket)
+        return socket
+    }
+
+    override fun createSocket(
+        address: InetAddress?,
+        port: Int,
+        localAddress: InetAddress?,
+        localPort: Int,
+    ): Socket {
         val socket = delegate.createSocket(address, port, localAddress, localPort) as SSLSocket
         customizeSocket(socket)
         return socket
     }
 
-    override fun createSocket(s: Socket?, host: String?, port: Int, autoClose: Boolean): Socket {
+    override fun createSocket(
+        s: Socket?,
+        host: String?,
+        port: Int,
+        autoClose: Boolean,
+    ): Socket {
         val socket = delegate.createSocket(s, host, port, autoClose) as SSLSocket
         customizeSocket(socket)
         return socket
@@ -162,7 +188,10 @@ class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, priv
 class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifier {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    override fun verify(host: String, session: SSLSession): Boolean {
+    override fun verify(
+        host: String,
+        session: SSLSession,
+    ): Boolean {
         if (alternateName.isEmpty()) {
             return OkHostnameVerifier.verify(host, session)
         }
@@ -189,14 +218,18 @@ class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifie
 }
 
 class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) : X509TrustManager {
-    private val systemTrustManager : X509TrustManager
+    private val systemTrustManager: X509TrustManager
+
     init {
         val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
         trustManagerFactory.init(null as KeyStore?)
         systemTrustManager = trustManagerFactory.trustManagers.first { it is X509TrustManager } as X509TrustManager
     }
 
-    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String?) {
+    override fun checkClientTrusted(
+        chain: Array<out X509Certificate>,
+        authType: String?,
+    ) {
         try {
             otherTrustManager.checkClientTrusted(chain, authType)
         } catch (e: CertificateException) {
@@ -204,7 +237,10 @@ class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) :
         }
     }
 
-    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String?) {
+    override fun checkServerTrusted(
+        chain: Array<out X509Certificate>,
+        authType: String?,
+    ) {
         try {
             otherTrustManager.checkServerTrusted(chain, authType)
         } catch (e: CertificateException) {

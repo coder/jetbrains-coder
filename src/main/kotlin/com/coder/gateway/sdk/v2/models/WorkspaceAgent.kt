@@ -23,7 +23,7 @@ enum class WorkspaceAgentStatus {
     @Json(name = "connecting") CONNECTING,
     @Json(name = "connected") CONNECTED,
     @Json(name = "disconnected") DISCONNECTED,
-    @Json(name = "timeout") TIMEOUT
+    @Json(name = "timeout") TIMEOUT,
 }
 
 enum class WorkspaceAgentLifecycleState {

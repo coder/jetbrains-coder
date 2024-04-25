@@ -15,5 +15,5 @@ import com.squareup.moshi.JsonClass
 @JsonClass(generateAdapter = true)
 data class BuildInfo(
     @Json(name = "external_url") val externalUrl: String,
-    @Json(name = "version") val version: String
+    @Json(name = "version") val version: String,
 )
