@@ -451,7 +451,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     settings.defaultURL()
                 }
             val token =
-                if (!lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
+                if (settings.requireTokenAuth && !lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
                     lastToken to Source.LAST_USED
                 } else if (url != null) {
                     settings.token(url.first)
