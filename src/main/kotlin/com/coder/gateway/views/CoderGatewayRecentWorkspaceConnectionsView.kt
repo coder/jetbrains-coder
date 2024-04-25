@@ -244,10 +244,12 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 },
                             )
                         }.topGap(gap)
-                        row {
-                            // There must be a way to make this properly wrap?
-                            label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
-                                foreground = status.second
+                        if (gap == TopGap.NONE) { // Show the error once at the top.
+                            row {
+                                // There must be a way to make this properly wrap?
+                                label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
+                                    foreground = status.second
+                                }
                             }
                         }
                         connections.forEach { workspaceProjectIDE ->
