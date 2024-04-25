@@ -245,7 +245,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             )
                         }.topGap(gap)
                         row {
-                            label(status.third).applyToComponent { foreground = status.second }
+                            // There must be a way to make this properly wrap?
+                            label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
+                                foreground = status.second
+                            }
                         }
                         connections.forEach { workspaceProjectIDE ->
                             row {
