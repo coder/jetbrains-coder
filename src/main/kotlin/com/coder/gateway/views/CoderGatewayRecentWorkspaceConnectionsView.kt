@@ -158,9 +158,17 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
         recentWorkspacesContentPanel.viewport.view =
             panel {
                 connectionsByDeployment.forEach { (deploymentURL, connectionsByWorkspace) ->
+                    var first = true
                     val deployment = deployments[deploymentURL.toString()]
                     val deploymentError = deployment?.error
                     connectionsByWorkspace.forEach { (workspaceName, connections) ->
+                        // Show the error at the top of each deployment list.
+                        val showError = if (first) {
+                            first = false
+                            true
+                        } else {
+                            false
+                        }
                         val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
                         val status =
                             if (deploymentError != null) {
@@ -246,7 +254,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 },
                             )
                         }.topGap(gap)
-                        if (gap == TopGap.NONE) { // Show the error once at the top.
+                        if (showError) {
                             row {
                                 // There must be a way to make this properly wrap?
                                 label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
