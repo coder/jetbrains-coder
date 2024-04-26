@@ -271,7 +271,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class GoToDashboardAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.dashboard.description"),
             CoderIcons.HOME,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -282,7 +282,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class GoToTemplateAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.template.description"),
             AllIcons.Nodes.Template,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -295,7 +295,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class StartWorkspaceAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.start.description"),
             CoderIcons.RUN,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -319,7 +319,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class UpdateWorkspaceTemplateAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.update.description"),
             CoderIcons.UPDATE,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -385,7 +385,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class StopWorkspaceAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.stop.description"),
             CoderIcons.STOP,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
@@ -409,7 +409,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     private inner class CreateWorkspaceAction :
         AnActionButton(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"),
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.text"),
+            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.create.description"),
             CoderIcons.CREATE,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
