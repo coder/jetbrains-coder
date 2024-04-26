@@ -163,7 +163,7 @@ open class CoderRestClient(
 
     /**
      * Retrieves the available workspaces created by the user.
-     * @throws [ApiResponseException].
+     * @throws [APIResponseException].
      */
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
@@ -193,7 +193,7 @@ open class CoderRestClient(
      * does not include agents when the workspace is off so this can be used to
      * get them instead, just like `coder config-ssh` does (otherwise we risk
      * removing hosts from the SSH config when they are off).
-     * @throws [ApiResponseException].
+     * @throws [APIResponseException].
      */
     fun resources(workspace: Workspace): List<WorkspaceResource> {
         val resourcesResponse = retroRestClient.templateVersionResources(workspace.latestBuild.templateVersionID).execute()
@@ -212,7 +212,7 @@ open class CoderRestClient(
     }
 
     /**
-     * @throws [ApiResponseException].
+     * @throws [APIResponseException].
      */
     private fun template(templateID: UUID): Template {
         val templateResponse = retroRestClient.template(templateID).execute()
@@ -223,7 +223,7 @@ open class CoderRestClient(
     }
 
     /**
-     * @throws [ApiResponseException].
+     * @throws [APIResponseException].
      */
     fun startWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START)
@@ -235,7 +235,7 @@ open class CoderRestClient(
     }
 
     /**
-     * @throws [ApiResponseException].
+     * @throws [APIResponseException].
      */
     fun stopWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP)
@@ -254,7 +254,7 @@ open class CoderRestClient(
      * 2. The agent gets a new ID and token on each START build.  Many template
      *    authors are not diligent about making sure the agent gets restarted
      *    with this information when we do two START builds in a row.
-     *  @throws [ApiResponseException].
+     *  @throws [APIResponseException].
      */
     fun updateWorkspace(workspace: Workspace): WorkspaceBuild {
         val template = template(workspace.templateID)
