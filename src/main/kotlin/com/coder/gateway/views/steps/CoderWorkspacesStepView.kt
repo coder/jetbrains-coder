@@ -418,6 +418,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 
     init {
+        updateWorkspaceActions()
         addToCenter(component)
     }
 
@@ -651,7 +652,6 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * poller and it has not been stopped.
      */
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
-        updateWorkspaceActions()
         if (poller != null && poller?.isCancelled != true) {
             throw Exception("Poller was not canceled before starting a new one")
         }
