@@ -162,9 +162,9 @@ open class CoderSettings(
     fun defaultURL(): Pair<String, Source>? {
         val defaultURL = state.defaultURL
         val envURL = env.get(CODER_URL)
-        if (!defaultURL.isBlank()) {
+        if (defaultURL.isNotBlank()) {
             return defaultURL to Source.SETTINGS
-        } else if (!envURL.isBlank()) {
+        } else if (envURL.isNotBlank()) {
             return envURL to Source.ENVIRONMENT
         } else {
             val (configUrl, _) = readConfig(coderConfigDir)
