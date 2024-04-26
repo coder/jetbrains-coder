@@ -222,7 +222,7 @@ class WorkspaceProjectIDE(
 
         logger.info("Successfully installed ${ideProductCode.productCode}-$ideBuildNumber on $hostname")
         indicator.text = "Connecting..."
-        indicator.text = ""
+        indicator.text2 = ""
 
         return ideDir.toRawString()
     }
