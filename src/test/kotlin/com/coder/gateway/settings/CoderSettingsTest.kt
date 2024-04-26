@@ -300,7 +300,7 @@ internal class CoderSettingsTest {
     @Test
     fun testToken() {
         val tmp = Path.of(System.getProperty("java.io.tmpdir"))
-        val url = "http://test.deployment.coder.com"
+        val url = URL("http://test.deployment.coder.com")
         val dir = tmp.resolve("coder-gateway-test/test-default-token")
         var env =
             Environment(
@@ -317,32 +317,30 @@ internal class CoderSettingsTest {
         var settings = CoderSettings(CoderSettingsState(), env = env)
         assertEquals(null, settings.token(url))
 
-        // Ignore global config if it does not match.
         val globalConfigPath = settings.coderConfigDir
         globalConfigPath.toFile().mkdirs()
-        globalConfigPath.resolve("url").toFile().writeText(url)
+        globalConfigPath.resolve("url").toFile().writeText(url.toString())
         globalConfigPath.resolve("session").toFile().writeText("token-from-global-config")
-        assertEquals(null, settings.token("http://some.random.url"))
 
-        // Missing protocol.
-        assertEquals(null, settings.token("test.deployment.coder.com"))
+        // Ignore global config if it does not match.
+        assertEquals(null, settings.token(URL("http://some.random.url")))
 
         // Read from global config.
         assertEquals("token-from-global-config" to Source.CONFIG, settings.token(url))
 
-        // Read from deployment config.
-        val deploymentConfigPath = settings.dataDir(URL(url)).resolve("config")
+        // Compares exactly.
+        assertEquals(null, settings.token(url.withPath("/test")))
+
+        val deploymentConfigPath = settings.dataDir(url).resolve("config")
         deploymentConfigPath.toFile().mkdirs()
         deploymentConfigPath.resolve("url").toFile().writeText("url-from-deployment-config")
         deploymentConfigPath.resolve("session").toFile().writeText("token-from-deployment-config")
+
+        // Read from deployment config.
         assertEquals("token-from-deployment-config" to Source.DEPLOYMENT_CONFIG, settings.token(url))
 
-        // Missing protocol; will still match global if also missing there.
-        globalConfigPath.resolve("url").toFile().writeText("test.deployment.coder.com")
-        assertEquals(
-            "token-from-global-config" to Source.CONFIG,
-            settings.token("test.deployment.coder.com"),
-        )
+        // Only compares host .
+        assertEquals("token-from-deployment-config" to Source.DEPLOYMENT_CONFIG, settings.token(url.withPath("/test")))
 
         // Ignore if using mTLS.
         settings =

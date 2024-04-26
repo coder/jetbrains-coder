@@ -23,7 +23,7 @@ import com.coder.gateway.models.token
 import com.coder.gateway.models.url
 import com.coder.gateway.models.workspace
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.ex.AuthenticationResponseException
+import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
@@ -244,9 +244,9 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         return try {
             client.authenticate()
             client
-        } catch (ex: AuthenticationResponseException) {
+        } catch (ex: APIResponseException) {
             // If doing token auth we can ask and try again.
-            if (settings.requireTokenAuth) {
+            if (settings.requireTokenAuth && ex.isUnauthorized) {
                 authenticate(deploymentURL, queryToken, token)
             } else {
                 throw ex

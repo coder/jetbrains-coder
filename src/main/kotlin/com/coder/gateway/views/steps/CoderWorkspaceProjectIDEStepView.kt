@@ -432,7 +432,7 @@ class CoderWorkspaceProjectIDEStepView(
                 name = name,
                 hostname = CoderCLIManager.getHostName(state.client.url, name),
                 projectPath = tfProject.text,
-                deploymentURL = state.client.url.toString(),
+                deploymentURL = state.client.url,
             )
         }
     }

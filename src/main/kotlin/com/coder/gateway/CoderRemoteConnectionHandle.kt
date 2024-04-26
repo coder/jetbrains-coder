@@ -241,10 +241,10 @@ class CoderRemoteConnectionHandle {
                 } else {
                     // Look on disk in case we already have a token, either in
                     // the deployment's config or the global config.
-                    val token = settings.token(url.toString())
-                    if (token != null && token.first != existingToken) {
-                        logger.info("Injecting token for $url from ${token.second}")
-                        return token
+                    val tryToken = settings.token(url)
+                    if (tryToken != null && tryToken.first != existingToken) {
+                        logger.info("Injecting token for $url from ${tryToken.second}")
+                        return tryToken
                     }
                 }
             }

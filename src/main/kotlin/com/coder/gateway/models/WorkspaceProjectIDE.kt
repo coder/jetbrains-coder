@@ -16,6 +16,7 @@ import com.jetbrains.gateway.ssh.deploy.TransferProgressTracker
 import com.jetbrains.gateway.ssh.util.validateIDEInstallPath
 import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URI
+import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -39,7 +40,7 @@ class WorkspaceProjectIDE(
     var idePathOnHost: String?,
     val downloadSource: String?,
     // These are used in the recent connections window.
-    val deploymentURL: String,
+    val deploymentURL: URL,
     var lastOpened: String?, // Null if never opened.
 ) {
     val ideName = "${ideProductCode.productCode}-$ideBuildNumber"
@@ -250,7 +251,7 @@ class WorkspaceProjectIDE(
             ideBuildNumber = ideBuildNumber,
             downloadSource = downloadSource,
             idePathOnHost = idePathOnHost,
-            deploymentURL = deploymentURL,
+            deploymentURL = deploymentURL.toString(),
             lastOpened = lastOpened,
         )
     }
@@ -295,7 +296,7 @@ class WorkspaceProjectIDE(
                 ideBuildNumber = ideBuildNumber,
                 idePathOnHost = idePathOnHost,
                 downloadSource = downloadSource,
-                deploymentURL = deploymentURL,
+                deploymentURL = URL(deploymentURL),
                 lastOpened = lastOpened,
             )
         }
@@ -359,7 +360,7 @@ fun IdeWithStatus.withWorkspaceProject(
     name: String,
     hostname: String,
     projectPath: String,
-    deploymentURL: String,
+    deploymentURL: URL,
 ): WorkspaceProjectIDE {
     return WorkspaceProjectIDE(
         name = name,

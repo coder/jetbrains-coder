@@ -6,9 +6,7 @@ import com.coder.gateway.sdk.convertors.ArchConverter
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.convertors.OSConverter
 import com.coder.gateway.sdk.convertors.UUIDConverter
-import com.coder.gateway.sdk.ex.AuthenticationResponseException
-import com.coder.gateway.sdk.ex.TemplateResponseException
-import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
 import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
@@ -138,19 +136,11 @@ open class CoderRestClient(
                 .build().create(CoderV2RestFacade::class.java)
     }
 
-    private fun <T> error(
-        action: String,
-        res: retrofit2.Response<T>,
-    ): String {
-        val details = res.errorBody()?.charStream()?.use { it.readText() } ?: "no details provided"
-        return "Unable to $action: url=$url, code=${res.code()}, details=$details"
-    }
-
     /**
      * Authenticate and load information about the current user and the build
      * version.
      *
-     * @throws [AuthenticationResponseException] if authentication failed.
+     * @throws [APIResponseException].
      */
     fun authenticate(): User {
         me = me()
@@ -160,12 +150,12 @@ open class CoderRestClient(
 
     /**
      * Retrieve the current user.
-     * @throws [AuthenticationResponseException] if authentication failed.
+     * @throws [APIResponseException].
      */
     fun me(): User {
         val userResponse = retroRestClient.me().execute()
         if (!userResponse.isSuccessful) {
-            throw AuthenticationResponseException(error("authenticate", userResponse))
+            throw APIResponseException("authenticate", url, userResponse)
         }
 
         return userResponse.body()!!
@@ -173,12 +163,12 @@ open class CoderRestClient(
 
     /**
      * Retrieves the available workspaces created by the user.
-     * @throws WorkspaceResponseException if workspaces could not be retrieved.
+     * @throws [ApiResponseException].
      */
     fun workspaces(): List<Workspace> {
         val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
         if (!workspacesResponse.isSuccessful) {
-            throw WorkspaceResponseException(error("retrieve workspaces", workspacesResponse))
+            throw APIResponseException("retrieve workspaces", url, workspacesResponse)
         }
 
         return workspacesResponse.body()!!.workspaces
@@ -203,11 +193,12 @@ open class CoderRestClient(
      * does not include agents when the workspace is off so this can be used to
      * get them instead, just like `coder config-ssh` does (otherwise we risk
      * removing hosts from the SSH config when they are off).
+     * @throws [ApiResponseException].
      */
     fun resources(workspace: Workspace): List<WorkspaceResource> {
         val resourcesResponse = retroRestClient.templateVersionResources(workspace.latestBuild.templateVersionID).execute()
         if (!resourcesResponse.isSuccessful) {
-            throw WorkspaceResponseException(error("retrieve resources for ${workspace.name}", resourcesResponse))
+            throw APIResponseException("retrieve resources for ${workspace.name}", url, resourcesResponse)
         }
         return resourcesResponse.body()!!
     }
@@ -215,36 +206,43 @@ open class CoderRestClient(
     fun buildInfo(): BuildInfo {
         val buildInfoResponse = retroRestClient.buildInfo().execute()
         if (!buildInfoResponse.isSuccessful) {
-            throw java.lang.IllegalStateException(error("retrieve build information", buildInfoResponse))
+            throw APIResponseException("retrieve build information", url, buildInfoResponse)
         }
         return buildInfoResponse.body()!!
     }
 
+    /**
+     * @throws [ApiResponseException].
+     */
     private fun template(templateID: UUID): Template {
         val templateResponse = retroRestClient.template(templateID).execute()
         if (!templateResponse.isSuccessful) {
-            throw TemplateResponseException(error("retrieve template with ID $templateID", templateResponse))
+            throw APIResponseException("retrieve template with ID $templateID", url, templateResponse)
         }
         return templateResponse.body()!!
     }
 
+    /**
+     * @throws [ApiResponseException].
+     */
     fun startWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("start workspace ${workspace.name}", buildResponse))
+            throw APIResponseException("start workspace ${workspace.name}", url, buildResponse)
         }
-
         return buildResponse.body()!!
     }
 
+    /**
+     * @throws [ApiResponseException].
+     */
     fun stopWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("stop workspace ${workspace.name}", buildResponse))
+            throw APIResponseException("stop workspace ${workspace.name}", url, buildResponse)
         }
-
         return buildResponse.body()!!
     }
 
@@ -256,17 +254,16 @@ open class CoderRestClient(
      * 2. The agent gets a new ID and token on each START build.  Many template
      *    authors are not diligent about making sure the agent gets restarted
      *    with this information when we do two START builds in a row.
+     *  @throws [ApiResponseException].
      */
     fun updateWorkspace(workspace: Workspace): WorkspaceBuild {
         val template = template(workspace.templateID)
-
         val buildRequest =
             CreateWorkspaceBuildRequest(template.activeVersionID, WorkspaceTransition.START)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
         if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw WorkspaceResponseException(error("update workspace ${workspace.name}", buildResponse))
+            throw APIResponseException("update workspace ${workspace.name}", url, buildResponse)
         }
-
         return buildResponse.body()!!
     }
 

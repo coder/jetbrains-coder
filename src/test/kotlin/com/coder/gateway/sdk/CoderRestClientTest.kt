@@ -2,7 +2,7 @@ package com.coder.gateway.sdk
 
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.convertors.UUIDConverter
-import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.Response
 import com.coder.gateway.sdk.v2.models.Template
@@ -125,6 +125,37 @@ class CoderRestClientTest {
         )
         srv.start()
         return srv
+    }
+
+    @Test
+    fun testUnauthorized() {
+        val workspace = DataGen.workspace("ws1")
+        val tests = listOf<Pair<String, (CoderRestClient) -> Unit>>(
+            "/api/v2/workspaces" to { it.workspaces() },
+            "/api/v2/users/me" to { it.me() },
+            "/api/v2/buildinfo" to { it.buildInfo() },
+            "/api/v2/templates/${workspace.templateID}" to { it.updateWorkspace(workspace) },
+        )
+        tests.forEach { (endpoint, block) ->
+            val (srv, url) = mockServer()
+            val client = CoderRestClient(URL(url), "token")
+            srv.createContext(
+                endpoint,
+                BaseHttpHandler("GET") { exchange ->
+                    val response = Response("Unauthorized", "You do not have permission to the requested resource")
+                    val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
+                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_UNAUTHORIZED, body.size.toLong())
+                    exchange.responseBody.write(body)
+                },
+            )
+            val ex =
+                assertFailsWith(
+                    exceptionClass = APIResponseException::class,
+                    block = { block(client) },
+                )
+            assertEquals(true, ex.isUnauthorized)
+            srv.stop(0)
+        }
     }
 
     @Test
@@ -296,7 +327,7 @@ class CoderRestClientTest {
         val badWorkspace = DataGen.workspace("bad", templates[0].id)
         val ex =
             assertFailsWith(
-                exceptionClass = WorkspaceResponseException::class,
+                exceptionClass = APIResponseException::class,
                 block = { client.updateWorkspace(badWorkspace) },
             )
         assertEquals(

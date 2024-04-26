@@ -178,7 +178,7 @@ open class CoderSettings(
     /**
      * Given a deployment URL, try to find a token for it if required.
      */
-    fun token(url: String): Pair<String, Source>? {
+    fun token(deploymentURL: URL): Pair<String, Source>? {
         // No need to bother if we do not need token auth anyway.
         if (!requireTokenAuth) {
             return null
@@ -186,18 +186,14 @@ open class CoderSettings(
         // Try the deployment's config directory.  This could exist if someone
         // has entered a URL that they are not currently connected to, but have
         // connected to in the past.
-        try {
-            val (_, deploymentToken) = readConfig(dataDir(url.toURL()).resolve("config"))
-            if (!deploymentToken.isNullOrBlank()) {
-                return deploymentToken to Source.DEPLOYMENT_CONFIG
-            }
-        } catch (ex: Exception) {
-            // URL is invalid.
+        val (_, deploymentToken) = readConfig(dataDir(deploymentURL).resolve("config"))
+        if (!deploymentToken.isNullOrBlank()) {
+            return deploymentToken to Source.DEPLOYMENT_CONFIG
         }
         // Try the global config directory, in case they previously set up the
         // CLI with this URL.
         val (configUrl, configToken) = readConfig(coderConfigDir)
-        if (configUrl == url && !configToken.isNullOrBlank()) {
+        if (configUrl == deploymentURL.toString() && !configToken.isNullOrBlank()) {
             return configToken to Source.CONFIG
         }
         return null

@@ -1,5 +1,6 @@
 package com.coder.gateway.models
 
+import java.net.URL
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -53,7 +54,7 @@ internal class WorkspaceProjectIDETest {
     fun testURLFallback() {
         // Deployment URL already exists.
         assertEquals(
-            "https://foo.coder.com",
+            URL("https://foo.coder.com"),
             RecentWorkspaceConnection(
                 name = "workspace.agent",
                 deploymentURL = "https://foo.coder.com",
@@ -67,7 +68,7 @@ internal class WorkspaceProjectIDETest {
 
         // Pull from config directory.
         assertEquals(
-            "https://baz.coder.com",
+            URL("https://baz.coder.com"),
             RecentWorkspaceConnection(
                 name = "workspace.agent",
                 configDirectory = "/foo/bar/baz.coder.com/qux",
@@ -81,7 +82,7 @@ internal class WorkspaceProjectIDETest {
 
         // Pull from host name.
         assertEquals(
-            "https://bar.coder.com",
+            URL("https://bar.coder.com"),
             RecentWorkspaceConnection(
                 name = "workspace.agent",
                 coderWorkspaceHostname = "coder-jetbrains--hostname--bar.coder.com",
@@ -108,18 +109,20 @@ internal class WorkspaceProjectIDETest {
             )
         assertContains(ex.message.toString(), "Deployment URL is missing")
 
-        // Accepts invalid URL.
-        assertEquals(
-            "foo.coder.com",
-            RecentWorkspaceConnection(
-                name = "workspace.agent",
-                deploymentURL = "foo.coder.com", // Missing protocol.
-                coderWorkspaceHostname = "coder-jetbrains--hostname--bar.coder.com",
-                projectPath = "/foo/bar",
-                ideProductCode = "IU",
-                ideBuildNumber = "number",
-                idePathOnHost = "/foo/bar",
-            ).toWorkspaceProjectIDE().deploymentURL,
+        // Invalid URL.
+        assertFailsWith(
+            exceptionClass = Exception::class,
+            block = {
+                RecentWorkspaceConnection(
+                    name = "workspace.agent",
+                    deploymentURL = "foo.coder.com", // Missing protocol.
+                    coderWorkspaceHostname = "coder-jetbrains--hostname--bar.coder.com",
+                    projectPath = "/foo/bar",
+                    ideProductCode = "IU",
+                    ideBuildNumber = "number",
+                    idePathOnHost = "/foo/bar",
+                ).toWorkspaceProjectIDE()
+            },
         )
     }
 }

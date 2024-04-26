@@ -5,13 +5,10 @@ import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
-import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.ex.AuthenticationResponseException
-import com.coder.gateway.sdk.ex.TemplateResponseException
-import com.coder.gateway.sdk.ex.WorkspaceResponseException
+import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
@@ -22,6 +19,7 @@ import com.coder.gateway.settings.Source
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withoutNull
@@ -65,16 +63,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.zeroturnaround.exec.InvalidExitValueException
 import java.awt.Component
 import java.awt.Dimension
-import java.net.ConnectException
-import java.net.SocketTimeoutException
 import java.net.URL
-import java.net.UnknownHostException
 import java.time.Duration
 import java.util.UUID
-import javax.net.ssl.SSLHandshakeException
 import javax.swing.Icon
 import javax.swing.JCheckBox
 import javax.swing.JLabel
@@ -314,7 +307,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                             try {
                                 c.startWorkspace(workspace)
                                 loadWorkspaces()
-                            } catch (e: WorkspaceResponseException) {
+                            } catch (e: Exception) {
                                 logger.error("Could not start workspace ${workspace.name}, reason: $e")
                             }
                         }
@@ -380,9 +373,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                                     c.updateWorkspace(workspace)
                                     loadWorkspaces()
                                 }
-                            } catch (e: WorkspaceResponseException) {
-                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
-                            } catch (e: TemplateResponseException) {
+                            } catch (e: Exception) {
                                 logger.error("Could not update workspace ${workspace.name}, reason: $e")
                             }
                         }
@@ -406,7 +397,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                             try {
                                 c.stopWorkspace(workspace)
                                 loadWorkspaces()
-                            } catch (e: WorkspaceResponseException) {
+                            } catch (e: Exception) {
                                 logger.error("Could not stop workspace ${workspace.name}, reason: $e")
                             }
                         }
@@ -454,7 +445,11 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                 if (settings.requireTokenAuth && !lastUrl.isNullOrBlank() && !lastToken.isNullOrBlank()) {
                     lastToken to Source.LAST_USED
                 } else if (url != null) {
-                    settings.token(url.first)
+                    try {
+                        settings.token(URL(url.first))
+                    } catch (ex: Exception) {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -629,55 +624,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     )
                     logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
-                    val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
-                    val msg =
-                        when (e) {
-                            is java.nio.file.AccessDeniedException ->
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.access-denied",
-                                    e.file,
-                                )
-                            is UnknownHostException ->
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.unknown-host",
-                                    e.message ?: deploymentURL.host,
-                                )
-                            is InvalidExitValueException ->
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.unexpected-exit",
-                                    e.exitValue,
-                                )
-                            is AuthenticationResponseException -> {
-                                CoderGatewayBundle.message(
-                                    if (settings.requireTokenAuth) {
-                                        "gateway.connector.view.workspaces.connect.unauthorized-token"
-                                    } else {
-                                        "gateway.connector.view.workspaces.connect.unauthorized-other"
-                                    },
-                                    deploymentURL,
-                                )
-                            }
-                            is SocketTimeoutException -> {
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.timeout",
-                                    deploymentURL,
-                                )
-                            }
-                            is ResponseException, is ConnectException -> {
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.download-failed",
-                                    reason,
-                                )
-                            }
-                            is SSLHandshakeException -> {
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.ssl-error",
-                                    deploymentURL.host,
-                                    reason,
-                                )
-                            }
-                            else -> reason
-                        }
+                    val msg = humanizeConnectionError(deploymentURL, settings.requireTokenAuth, e)
                     // It would be nice to place messages directly into the table,
                     // but it does not support wrapping or markup so place it in the
                     // comment field of the URL input instead.
@@ -691,7 +638,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     )
                     logger.error(msg, e)
 
-                    if (e is AuthenticationResponseException && onAuthFailure != null) {
+                    if (e is APIResponseException && e.isUnauthorized && onAuthFailure != null) {
                         cs.launch { onAuthFailure.invoke() }
                     }
                 }
