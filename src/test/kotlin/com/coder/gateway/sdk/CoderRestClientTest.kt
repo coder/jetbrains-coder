@@ -159,6 +159,42 @@ class CoderRestClientTest {
     }
 
     @Test
+    fun testToken() {
+        val user = DataGen.user()
+        val (srv, url) = mockServer()
+        srv.createContext(
+            "/api/v2/users/me",
+            BaseHttpHandler("GET") { exchange ->
+                if (exchange.requestHeaders.getFirst("Coder-Session-Token") != "token") {
+                    val response = Response("Unauthorized", "You do not have permission to the requested resource")
+                    val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
+                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_UNAUTHORIZED, body.size.toLong())
+                    exchange.responseBody.write(body)
+                } else {
+                    val body = moshi.adapter(User::class.java).toJson(user).toByteArray()
+                    exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, body.size.toLong())
+                    exchange.responseBody.write(body)
+                }
+            },
+        )
+
+        val client = CoderRestClient(URL(url), "token")
+        assertEquals(user.username, client.me().username)
+
+        val tests = listOf("invalid", null)
+        tests.forEach { token ->
+            val ex =
+                assertFailsWith(
+                    exceptionClass = APIResponseException::class,
+                    block = { CoderRestClient(URL(url), token).me() },
+                )
+            assertEquals(true, ex.isUnauthorized)
+        }
+
+        srv.stop(0)
+    }
+
+    @Test
     fun testGetsWorkspaces() {
         val tests =
             listOf(
