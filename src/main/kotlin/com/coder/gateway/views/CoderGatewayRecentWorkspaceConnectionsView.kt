@@ -10,13 +10,13 @@ import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toWorkspaceProjectIDE
 import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.humanizeConnectionError
+import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
 import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
@@ -56,7 +56,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.Dimension
-import java.net.URL
 import java.util.Locale
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
@@ -159,7 +158,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
             panel {
                 connectionsByDeployment.forEach { (deploymentURL, connectionsByWorkspace) ->
                     var first = true
-                    val deployment = deployments[deploymentURL.toString()]
+                    val deployment = deployments[deploymentURL]
                     val deploymentError = deployment?.error
                     connectionsByWorkspace.forEach { (workspaceName, connections) ->
                         // Show the error at the top of each deployment list.
@@ -198,7 +197,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             label(workspaceName).applyToComponent {
                                 font = JBFont.h3().asBold()
                             }.align(AlignX.LEFT).gap(RightGap.SMALL)
-                            label(deploymentURL.toString()).applyToComponent {
+                            label(deploymentURL).applyToComponent {
                                 foreground = UIUtil.getContextHelpForeground()
                                 font = ComponentPanelBuilder.getCommentFont(font)
                             }
@@ -305,7 +304,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     /**
      * Get valid connections grouped by deployment and workspace.
      */
-    private fun getConnectionsByDeployment(filter: Boolean): Map<URL, Map<String, List<WorkspaceProjectIDE>>> {
+    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> {
         return recentConnectionsService.getAllRecentConnections()
             // Validate and parse connections.
             .mapNotNull {
@@ -319,7 +318,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
             }
             .filter { !filter || matchesFilter(it) }
             // Group by the deployment.
-            .groupBy { it.deploymentURL }
+            .groupBy { it.deploymentURL.toString() }
             // Group the connections in each deployment by workspace.
             .mapValues { (_, connections) ->
                 connections
@@ -369,12 +368,12 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
         withContext(Dispatchers.IO) {
             val connectionsByDeployment = getConnectionsByDeployment(false)
             connectionsByDeployment.forEach { (deploymentURL, connectionsByWorkspace) ->
-                val deployment = deployments.getOrPut(deploymentURL.toString()) { DeploymentInfo() }
+                val deployment = deployments.getOrPut(deploymentURL) { DeploymentInfo() }
                 try {
                     val client = deployment.client
                         ?: CoderRestClientService(
-                            deploymentURL,
-                            settings.token(deploymentURL)?.first,
+                            deploymentURL.toURL(),
+                            settings.token(deploymentURL.toURL())?.first,
                         )
 
                     // Delete connections that have no workspace.
@@ -390,13 +389,13 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     deployment.items = items
                     deployment.error = null
                 } catch (e: Exception) {
-                    val msg = humanizeConnectionError(deploymentURL, settings.requireTokenAuth, e)
+                    val msg = humanizeConnectionError(deploymentURL.toURL(), settings.requireTokenAuth, e)
                     deployment.items = null
                     deployment.error = msg
                     logger.error(msg, e)
-                    if (e is APIResponseException && e.isUnauthorized && settings.requireTokenAuth) {
-                        // TODO: Ask for a token and reconfigure the CLI.
-                    }
+                    // TODO: Ask for a token and reconfigure the CLI.
+                    // if (e is APIResponseException && e.isUnauthorized && settings.requireTokenAuth) {
+                    // }
                 }
             }
         }
