@@ -102,6 +102,7 @@ class WorkspaceProjectIDE(
                     throw ex
                 }
             }
+            indicator.text = "Connecting..."
         } else {
             logger.info("No setup command to run on $hostname")
         }
