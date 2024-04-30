@@ -509,7 +509,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * unless retry is false.
      */
     private fun maybeAskTokenThenConnect(isRetry: Boolean = false) {
-        val oldURL = fields.coderURL.toURL()
+        val oldURL = fields.coderURL
         component.apply() // Force bindings to be filled.
         val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
@@ -518,7 +518,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     newURL,
                     // If this is a new URL there is no point in trying to use the same
                     // token.
-                    if (oldURL.toString() == newURL.toString()) fields.token else null,
+                    if (oldURL == newURL.toString()) fields.token else null,
                     isRetry,
                     fields.useExistingToken,
                     settings,

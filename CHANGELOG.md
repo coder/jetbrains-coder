@@ -8,6 +8,7 @@
 
 - Default URL setting was showing the help text for the setup command instead of
   its own description.
+- Exception when there is no default or last used URL.
 
 ## 2.11.2 - 2024-04-30
 
