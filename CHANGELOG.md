@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.11.2 - 2024-04-30
+
 ### Fixed
 
 - Sort IDEs by version (latest first).
