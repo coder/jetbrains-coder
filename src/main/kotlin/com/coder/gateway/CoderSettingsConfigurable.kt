@@ -136,7 +136,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::defaultURL)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.setup-command.comment"),
+                        CoderGatewayBundle.message("gateway.connector.settings.default-url.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
         }

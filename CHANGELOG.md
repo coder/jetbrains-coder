@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Default URL setting was showing the help text for the setup command instead of
+  its own description.
+
 ## 2.11.2 - 2024-04-30
 
 ### Fixed
