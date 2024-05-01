@@ -253,7 +253,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 },
                             )
                         }.topGap(gap)
-                        if (showError) {
+                        if (deploymentError == null || showError) {
                             row {
                                 // There must be a way to make this properly wrap?
                                 label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
