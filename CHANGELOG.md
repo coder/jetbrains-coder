@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.11.4 - 2024-05-01
+
 ### Fixed
 
 - All recent connections show their status now, not just the first.
