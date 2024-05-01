@@ -376,6 +376,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             settings.token(deploymentURL.toURL())?.first,
                         )
 
+                    if (client.token == null && settings.requireTokenAuth) {
+                        throw Exception("Unable to make request; token was not found in CLI config.")
+                    }
+
                     // Delete connections that have no workspace.
                     val items = client.workspaces().flatMap { it.toAgentList() }
                     connectionsByWorkspace.forEach { (name, connections) ->
