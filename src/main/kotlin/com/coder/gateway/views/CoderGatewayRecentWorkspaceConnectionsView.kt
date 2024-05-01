@@ -394,6 +394,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     deployment.error = null
                 } catch (e: Exception) {
                     val msg = humanizeConnectionError(deploymentURL.toURL(), settings.requireTokenAuth, e)
+                    deployment.client = null
                     deployment.items = null
                     deployment.error = msg
                     logger.error(msg, e)
