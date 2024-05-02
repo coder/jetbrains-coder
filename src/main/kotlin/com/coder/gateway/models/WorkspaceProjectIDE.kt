@@ -1,35 +1,17 @@
 package com.coder.gateway.models
 
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.remote.AuthType
-import com.intellij.remote.RemoteCredentialsHolder
-import com.intellij.ssh.config.unified.SshConfig
-import com.jetbrains.gateway.ssh.HighLevelHostAccessor
-import com.jetbrains.gateway.ssh.HostDeployInputs
-import com.jetbrains.gateway.ssh.IdeInfo
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
-import com.jetbrains.gateway.ssh.deploy.DeployTargetInfo
 import com.jetbrains.gateway.ssh.deploy.ShellArgument
-import com.jetbrains.gateway.ssh.deploy.TransferProgressTracker
-import com.jetbrains.gateway.ssh.util.validateIDEInstallPath
-import org.zeroturnaround.exec.ProcessExecutor
-import java.net.URI
 import java.net.URL
 import java.nio.file.Path
-import java.time.Duration
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.io.path.name
 
-private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
-
 /**
- * Validated parameters for downloading (if necessary) and opening a project
- * using an IDE on a workspace.
+ * Validated parameters for downloading and opening a project using an IDE on a
+ * workspace.
  */
-@Suppress("UnstableApiUsage")
 class WorkspaceProjectIDE(
     val name: String,
     val hostname: String,
@@ -61,183 +43,6 @@ class WorkspaceProjectIDE(
         if (idePathOnHost.isNullOrBlank() && downloadSource.isNullOrBlank()) {
             throw Exception("A path to the IDE on the host or a download source is required")
         }
-    }
-
-    /**
-     * Return an accessor for connecting to the IDE, deploying it first if
-     * necessary.  If a deployment was necessary, the IDE path on the host will
-     * be updated to reflect the location on disk.
-     */
-    suspend fun deploy(
-        indicator: ProgressIndicator,
-        timeout: Duration,
-        setupCommand: String,
-        ignoreSetupFailure: Boolean,
-    ): HostDeployInputs {
-        this.lastOpened = localTimeFormatter.format(LocalDateTime.now())
-        indicator.text = "Connecting to remote worker..."
-        logger.info("Connecting to remote worker on $hostname")
-        val accessor =
-            HighLevelHostAccessor.create(
-                RemoteCredentialsHolder().apply {
-                    setHost(hostname)
-                    userName = "coder"
-                    port = 22
-                    authType = AuthType.OPEN_SSH
-                },
-                true,
-            )
-
-        val path = this.doDeploy(accessor, indicator, timeout)
-        idePathOnHost = path
-
-        if (setupCommand.isNotBlank()) {
-            // The accessor does not appear to provide a generic exec.
-            indicator.text = "Running setup command..."
-            logger.info("Running setup command `$setupCommand` in $path on $hostname...")
-            try {
-                exec(setupCommand)
-            } catch (ex: Exception) {
-                if (!ignoreSetupFailure) {
-                    throw ex
-                }
-            }
-            indicator.text = "Connecting..."
-        } else {
-            logger.info("No setup command to run on $hostname")
-        }
-
-        val sshConfig =
-            SshConfig(true).apply {
-                setHost(hostname)
-                setUsername("coder")
-                port = 22
-                authType = AuthType.OPEN_SSH
-            }
-
-        // This is the configuration that tells JetBrains to connect to the IDE
-        // stored at this path.  It will spawn the IDE and handle reconnections,
-        // but it will not respawn the IDE if it goes away.
-        // TODO: We will need to handle the respawn ourselves.
-        return HostDeployInputs.FullySpecified(
-            remoteProjectPath = projectPath,
-            deployTarget =
-            DeployTargetInfo.NoDeploy(
-                path,
-                IdeInfo(
-                    product = this.ideProductCode,
-                    buildNumber = this.ideBuildNumber,
-                ),
-            ),
-            remoteInfo =
-            HostDeployInputs.WithDeployedWorker(
-                accessor,
-                HostDeployInputs.WithHostInfo(sshConfig),
-            ),
-        )
-    }
-
-    /**
-     * Deploy the IDE if necessary and return the path to its location on disk.
-     */
-    private suspend fun doDeploy(
-        accessor: HighLevelHostAccessor,
-        indicator: ProgressIndicator,
-        timeout: Duration,
-    ): String {
-        // The backend might already exist at the provided path.
-        if (!idePathOnHost.isNullOrBlank()) {
-            indicator.text = "Verifying $ideName installation..."
-            logger.info("Verifying $ideName exists at $idePathOnHost on $hostname")
-            val validatedPath = validateIDEInstallPath(idePathOnHost, accessor).pathOrNull
-            if (validatedPath != null) {
-                logger.info("$ideName exists at ${validatedPath.toRawString()} on $hostname")
-                return validatedPath.toRawString()
-            }
-        }
-
-        // The backend might already be installed somewhere on the system.
-        indicator.text = "Searching for $ideName installation..."
-        logger.info("Searching for $ideName on $hostname")
-        val installed =
-            accessor.getInstalledIDEs().find {
-                it.product == ideProductCode && it.buildNumber == ideBuildNumber
-            }
-        if (installed != null) {
-            logger.info("$ideName found at ${installed.pathToIde} on $hostname")
-            return installed.pathToIde
-        }
-
-        // Otherwise we have to download it.
-        if (downloadSource.isNullOrBlank()) {
-            throw Exception("The IDE could not be found on the remote and no download source was provided")
-        }
-
-        // TODO: Should we download to idePathOnHost if set?  That would require
-        //       symlinking instead of creating the sentinel file if the path is
-        //       outside the default dist directory.
-        val distDir = accessor.getDefaultDistDir()
-
-        // HighLevelHostAccessor.downloadFile does NOT create the directory.
-        indicator.text = "Creating $distDir..."
-        accessor.createPathOnRemote(distDir)
-
-        // Download the IDE.
-        val fileName = downloadSource.split("/").last()
-        val downloadPath = distDir.join(listOf(ShellArgument.PlainText(fileName)))
-        indicator.text = "Downloading $ideName..."
-        indicator.text2 = downloadSource
-        logger.info("Downloading $ideName to ${downloadPath.toRawString()} from $downloadSource on $hostname")
-        accessor.downloadFile(
-            indicator,
-            URI(downloadSource),
-            downloadPath,
-            object : TransferProgressTracker {
-                override var isCancelled: Boolean = false
-
-                override fun updateProgress(
-                    transferred: Long,
-                    speed: Long?,
-                ) {
-                    // Since there is no total size, this is useless.
-                }
-            },
-        )
-
-        // Extract the IDE to its final resting place.
-        val ideDir = distDir.join(listOf(ShellArgument.PlainText(ideName)))
-        indicator.text = "Extracting $ideName..."
-        logger.info("Extracting $ideName to ${ideDir.toRawString()} on $hostname")
-        accessor.removePathOnRemote(ideDir)
-        accessor.expandArchive(downloadPath, ideDir, timeout.toMillis())
-        accessor.removePathOnRemote(downloadPath)
-
-        // Without this file it does not show up in the installed IDE list.
-        val sentinelFile = ideDir.join(listOf(ShellArgument.PlainText(".expandSucceeded"))).toRawString()
-        logger.info("Creating $sentinelFile on $hostname")
-        accessor.fileAccessor.uploadFileFromLocalStream(
-            sentinelFile,
-            "".byteInputStream(),
-            null,
-        )
-
-        logger.info("Successfully installed ${ideProductCode.productCode}-$ideBuildNumber on $hostname")
-        indicator.text = "Connecting..."
-        indicator.text2 = ""
-
-        return ideDir.toRawString()
-    }
-
-    /**
-     * Execute a command in the IDE's bin directory.
-     */
-    private fun exec(command: String): String {
-        return ProcessExecutor()
-            .command("ssh", "-t", hostname, "cd '$idePathOnHost' ; cd bin ; $command")
-            .exitValues(0)
-            .readOutput(true)
-            .execute()
-            .outputUTF8()
     }
 
     /**

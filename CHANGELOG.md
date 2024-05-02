@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- Automatically restart and reconnect to the IDE backend when it disappears.
+
 ## 2.11.4 - 2024-05-01
 
 ### Fixed
