@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.11.6 - 2024-05-08
+
 ### Fixed
 
 - Multiple clients being launched when a backend was already running.
