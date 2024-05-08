@@ -145,7 +145,7 @@ class CoderRemoteConnectionHandle {
         setupCommand: String,
         ignoreSetupFailure: Boolean,
         timeout: Duration = Duration.ofMinutes(10),
-    ): Unit {
+    ) {
         workspace.lastOpened = localTimeFormatter.format(LocalDateTime.now())
 
         // This establishes an SSH connection to a remote worker binary.
@@ -168,6 +168,7 @@ class CoderRemoteConnectionHandle {
         this.setup(workspace, indicator, setupCommand, ignoreSetupFailure)
 
         // Wait for the IDE to come up.
+        indicator.text = "Waiting for ${workspace.ideName} backend..."
         var status: UnattendedHostStatus? = null
         val remoteProjectPath = accessor.makeRemotePath(ShellArgument.PlainText(workspace.projectPath))
         val logsDir = accessor.getLogsDir(workspace.ideProductCode.productCode, remoteProjectPath)
@@ -374,7 +375,8 @@ class CoderRemoteConnectionHandle {
     }
 
     /**
-     * Ensure the backend is started.  Link is null if not ready to join.
+     * Ensure the backend is started.  Status and/or links may be null if the
+     * backend has not started.
      */
     private suspend fun ensureIDEBackend(
         workspace: WorkspaceProjectIDE,
@@ -385,23 +387,39 @@ class CoderRemoteConnectionHandle {
         lifetime: LifetimeDefinition,
         currentStatus: UnattendedHostStatus?,
     ): UnattendedHostStatus? {
+        val details = "${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}"
         return try {
-            // Start the backend if not running.
-            val currentPid = currentStatus?.appPid
-            if (currentPid == null || !accessor.isPidAlive(currentPid.toInt())) {
-                logger.info("Starting ${workspace.ideName} backend from ${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}, logs=${logsDir.toRawString()}")
-                // This appears to be idempotent.
-                accessor.startHostIdeInBackgroundAndDetach(lifetime, ideDir, remoteProjectPath, logsDir)
-            } else if (!currentStatus.joinLink.isNullOrBlank()) {
-                // We already have a valid join link.
+            if (currentStatus?.appPid != null &&
+                !currentStatus.joinLink.isNullOrBlank() &&
+                accessor.isPidAlive(currentStatus.appPid.toInt())
+            ) {
+                // If the PID is alive, assume the join link we have is still
+                // valid.  The join link seems to change even if it is the same
+                // backend running, so if we always fetched the link the client
+                // would relaunch over and over.
                 return currentStatus
             }
-            // Get new PID and join link.
+
+            // See if there is already a backend running.  Weirdly, there is
+            // always a PID, even if there is no backend running, and
+            // backendUnresponsive is always false, but the links are null so
+            // hopefully that is an accurate indicator that the IDE is up.
             val status = accessor.getHostIdeStatus(ideDir, remoteProjectPath)
-            logger.info("Got ${workspace.ideName} status from ${workspace.hostname}:${ideDir.toRawString()}, pid=${status.appPid} project=${remoteProjectPath.toRawString()} joinLink=${status.joinLink}")
-            status
+            if (!status.joinLink.isNullOrBlank()) {
+                logger.info("Found existing ${workspace.ideName} backend on $details")
+                return status
+            }
+
+            // Otherwise, spawn a new backend.  This does not seem to spawn a
+            // second backend if one is already running, yet it does somehow
+            // cause a second client to launch.  So only run this if we are
+            // really sure we have to launch a new backend.
+            logger.info("Starting ${workspace.ideName} backend on $details")
+            accessor.startHostIdeInBackgroundAndDetach(lifetime, ideDir, remoteProjectPath, logsDir)
+            // Get the newly spawned PID and join link.
+            return accessor.getHostIdeStatus(ideDir, remoteProjectPath)
         } catch (ex: Exception) {
-            logger.info("Failed to get ${workspace.ideName} status from ${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}", ex)
+            logger.info("Failed to get ${workspace.ideName} status from $details", ex)
             currentStatus
         }
     }
