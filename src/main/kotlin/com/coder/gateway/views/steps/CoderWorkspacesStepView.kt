@@ -652,8 +652,9 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * poller and it has not been stopped.
      */
     private fun triggerWorkspacePolling(fetchNow: Boolean) {
-        if (poller != null && poller?.isCancelled != true) {
-            throw Exception("Poller was not canceled before starting a new one")
+        if (poller?.isActive == true) {
+            logger.info("Refusing to start already-started poller")
+            return
         }
         poller =
             cs.launch {
