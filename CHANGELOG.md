@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.11.7 - 2024-05-22
+
 ### Fixed
 
 - Polling and workspace action buttons when running from File > Remote
