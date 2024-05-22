@@ -23,6 +23,8 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAwareAction
@@ -57,6 +59,7 @@ import kotlinx.coroutines.withContext
 import java.awt.Component
 import java.awt.Dimension
 import java.util.Locale
+import java.util.UUID
 import javax.swing.JComponent
 import javax.swing.event.DocumentEvent
 
@@ -77,6 +80,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     private val settings = service<CoderSettingsService>()
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
+    private val jobs: MutableMap<UUID, Job> = mutableMapOf()
 
     private val recentWorkspacesContentPanel = JBScrollPane()
 
@@ -209,9 +213,19 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                     CoderIcons.RUN,
                                 ) {
                                     override fun actionPerformed(e: AnActionEvent) {
-                                        withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
-                                            client.startWorkspace(ws.workspace)
-                                            cs.launch { fetchWorkspaces() }
+                                        withoutNull(workspaceWithAgent?.workspace, deployment?.client) { workspace, client ->
+                                            jobs[workspace.id]?.cancel()
+                                            jobs[workspace.id] =
+                                                cs.launch(ModalityState.current().asContextElement()) {
+                                                    withContext(Dispatchers.IO) {
+                                                        try {
+                                                            client.startWorkspace(workspace)
+                                                            fetchWorkspaces()
+                                                        } catch (e: Exception) {
+                                                            logger.error("Could not start workspace ${workspace.name}", e)
+                                                        }
+                                                    }
+                                                }
                                         }
                                     }
                                 },
@@ -230,9 +244,19 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                     CoderIcons.STOP,
                                 ) {
                                     override fun actionPerformed(e: AnActionEvent) {
-                                        withoutNull(workspaceWithAgent, deployment?.client) { ws, client ->
-                                            client.stopWorkspace(ws.workspace)
-                                            cs.launch { fetchWorkspaces() }
+                                        withoutNull(workspaceWithAgent?.workspace, deployment?.client) { workspace, client ->
+                                            jobs[workspace.id]?.cancel()
+                                            jobs[workspace.id] =
+                                                cs.launch(ModalityState.current().asContextElement()) {
+                                                    withContext(Dispatchers.IO) {
+                                                        try {
+                                                            client.stopWorkspace(workspace)
+                                                            fetchWorkspaces()
+                                                        } catch (e: Exception) {
+                                                            logger.error("Could not stop workspace ${workspace.name}", e)
+                                                        }
+                                                    }
+                                                }
                                         }
                                     }
                                 },
@@ -348,9 +372,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
 
         logger.info("Starting poll loop")
         poller =
-            cs.launch {
+            cs.launch(ModalityState.current().asContextElement()) {
                 while (isActive) {
                     if (recentWorkspacesContentPanel.isShowing) {
+                        logger.info("View still visible; fetching workspaces")
                         fetchWorkspaces()
                     } else {
                         logger.info("View not visible; aborting poll")
@@ -413,9 +438,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     // check for visibility if you want to avoid work while the panel is not
     // displaying.
     override fun dispose() {
-        logger.info("Disposing recent view")
         cs.cancel()
         poller?.cancel()
+        jobs.forEach { it.value.cancel() }
+        jobs.clear()
     }
 
     companion object {

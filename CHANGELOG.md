@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- Polling and workspace action buttons when running from File > Remote
+  Development within a local IDE.
+
 ## 2.11.6 - 2024-05-08
 
 ### Fixed

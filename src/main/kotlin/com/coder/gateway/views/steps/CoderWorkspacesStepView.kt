@@ -29,6 +29,8 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
@@ -302,13 +304,13 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] =
-                    cs.launch {
+                    cs.launch(ModalityState.current().asContextElement()) {
                         withContext(Dispatchers.IO) {
                             try {
                                 c.startWorkspace(workspace)
                                 loadWorkspaces()
                             } catch (e: Exception) {
-                                logger.error("Could not start workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not start workspace ${workspace.name}", e)
                             }
                         }
                     }
@@ -326,7 +328,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] =
-                    cs.launch {
+                    cs.launch(ModalityState.current().asContextElement()) {
                         withContext(Dispatchers.IO) {
                             try {
                                 // Stop the workspace first if it is running.
@@ -374,7 +376,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                                     loadWorkspaces()
                                 }
                             } catch (e: Exception) {
-                                logger.error("Could not update workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not update workspace ${workspace.name}", e)
                             }
                         }
                     }
@@ -392,13 +394,13 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
             withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] =
-                    cs.launch {
+                    cs.launch(ModalityState.current().asContextElement()) {
                         withContext(Dispatchers.IO) {
                             try {
                                 c.stopWorkspace(workspace)
                                 loadWorkspaces()
                             } catch (e: Exception) {
-                                logger.error("Could not stop workspace ${workspace.name}, reason: $e")
+                                logger.error("Could not stop workspace ${workspace.name}", e)
                             }
                         }
                     }
@@ -426,13 +428,12 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
      * Authorize the client and start polling for workspaces if we can.
      */
     fun init() {
-        // If we already have a client, start polling.  Otherwise try to set one
+        // After each poll, the workspace list will be updated.
+        triggerWorkspacePolling()
+        // If we already have a client, we are done.  Otherwise try to set one
         // up from storage or config and automatically connect.  Place the
         // values in the fields, so they can be seen and edited if necessary.
-        if (client != null && cliManager != null) {
-            // If there is a client then the fields are already filled.
-            triggerWorkspacePolling(true)
-        } else {
+        if (client == null || cliManager == null) {
             // Try finding a URL and matching token to use.
             val lastUrl = appPropertiesService.getValue(CODER_URL_KEY)
             val lastToken = appPropertiesService.getValue(SESSION_TOKEN_KEY)
@@ -565,8 +566,6 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         cliManager = null
         client = null
 
-        stop()
-
         // Authenticate and load in a background process with progress.
         return LifetimeDefinition().launchUnderBackgroundProgress(
             CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.cli.downloader.dialog.title"),
@@ -609,7 +608,6 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
 
                 this.indicator.text = "Retrieving workspaces..."
                 loadWorkspaces()
-                triggerWorkspacePolling(false)
             } catch (e: Exception) {
                 if (isCancellation(e)) {
                     tfUrlComment?.text =
@@ -640,7 +638,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     logger.error(msg, e)
 
                     if (e is APIResponseException && e.isUnauthorized && onAuthFailure != null) {
-                        cs.launch { onAuthFailure.invoke() }
+                        onAuthFailure.invoke()
                     }
                 }
             }
@@ -648,22 +646,18 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 
     /**
-     * Start polling for workspace changes.  Throw if there is an existing
-     * poller and it has not been stopped.
+     * Start polling for workspace changes if not already started.
      */
-    private fun triggerWorkspacePolling(fetchNow: Boolean) {
+    private fun triggerWorkspacePolling() {
         if (poller?.isActive == true) {
             logger.info("Refusing to start already-started poller")
             return
         }
         poller =
-            cs.launch {
-                if (fetchNow) {
-                    loadWorkspaces()
-                }
+            cs.launch(ModalityState.current().asContextElement()) {
                 while (isActive) {
-                    delay(5000)
                     loadWorkspaces()
+                    delay(5000)
                 }
             }
     }
@@ -738,7 +732,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                     logger.info("Retrieving the workspaces took: ${timeAfterRequestingWorkspaces - timeBeforeRequestingWorkspaces} millis")
                     return@withContext ams
                 } catch (e: Exception) {
-                    logger.error("Could not retrieve workspaces for ${clientNow.me.username} on ${clientNow.url}. Reason: $e")
+                    logger.error("Could not retrieve workspaces for ${clientNow.me.username} on ${clientNow.url}", e)
                     emptySet()
                 }
             }
