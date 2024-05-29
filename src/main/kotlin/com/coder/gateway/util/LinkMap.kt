@@ -1,4 +1,4 @@
-package com.coder.gateway.models
+package com.coder.gateway.util
 
 // These are keys that we support in our Gateway links and must not be changed.
 private const val TYPE = "type"

@@ -1,7 +1,6 @@
 package com.coder.gateway.views.steps
 
 import com.coder.gateway.CoderGatewayBundle
-import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.CoderSupportedVersions
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
@@ -19,6 +18,7 @@ import com.coder.gateway.settings.Source
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.askToken
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
@@ -515,7 +515,7 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
         val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
             val pastedToken =
-                CoderRemoteConnectionHandle.askToken(
+                askToken(
                     newURL,
                     // If this is a new URL there is no point in trying to use the same
                     // token.
@@ -583,8 +583,9 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
                         deploymentURL,
                         authedClient.buildVersion,
                         settings,
-                        this.indicator,
-                    )
+                    ) {
+                        this.indicator.text = it
+                    }
 
                 // We only need to log the cli in if we have token-based auth.
                 // Otherwise, we assume it is set up in the same way the plugin

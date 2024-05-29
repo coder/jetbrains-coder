@@ -1,13 +1,44 @@
-package com.coder.gateway
+package com.coder.gateway.util
 
 import com.coder.gateway.sdk.DataGen
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
+import java.net.HttpURLConnection
+import java.net.InetSocketAddress
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-internal class CoderGatewayConnectionProviderTest {
+internal class LinkHandlerTest {
+    /**
+     * Create, start, and return a server that uses the provided handler.
+     */
+    private fun mockServer(handler: HttpHandler): Pair<HttpServer, String> {
+        val srv = HttpServer.create(InetSocketAddress(0), 0)
+        srv.createContext("/", handler)
+        srv.start()
+        return Pair(srv, "http://localhost:" + srv.address.port)
+    }
+
+    /**
+     * Create, start, and return a server that mocks redirects.
+     */
+    private fun mockRedirectServer(
+        location: String,
+        temp: Boolean,
+    ): Pair<HttpServer, String> {
+        return mockServer { exchange ->
+            exchange.responseHeaders.set("Location", location)
+            exchange.sendResponseHeaders(
+                if (temp) HttpURLConnection.HTTP_MOVED_TEMP else HttpURLConnection.HTTP_MOVED_PERM,
+                -1,
+            )
+            exchange.close()
+        }
+    }
+
     private val agents =
         mapOf(
             "agent_name_3" to "b0e4c54d-9ba9-4413-8512-11ca1e826a24",
@@ -95,7 +126,13 @@ internal class CoderGatewayConnectionProviderTest {
             )
 
         tests.forEach {
-            assertEquals(UUID.fromString("b0e4c54d-9ba9-4413-8512-11ca1e826a24"), getMatchingAgent(it, ws).id)
+            assertEquals(
+                UUID.fromString("b0e4c54d-9ba9-4413-8512-11ca1e826a24"),
+                getMatchingAgent(
+                    it,
+                    ws,
+                ).id,
+            )
         }
     }
 
@@ -142,5 +179,34 @@ internal class CoderGatewayConnectionProviderTest {
                 )
             assertContains(ex.message.toString(), it.third)
         }
+    }
+
+    @Test
+    fun followsRedirects() {
+        val (srv1, url1) =
+            mockServer { exchange ->
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, -1)
+                exchange.close()
+            }
+        val (srv2, url2) = mockRedirectServer(url1, false)
+        val (srv3, url3) = mockRedirectServer(url2, true)
+
+        assertEquals(url1.toURL(), resolveRedirects(java.net.URL(url3)))
+
+        srv1.stop(0)
+        srv2.stop(0)
+        srv3.stop(0)
+    }
+
+    @Test
+    fun followsMaximumRedirects() {
+        val (srv, url) = mockRedirectServer(".", true)
+
+        assertFailsWith(
+            exceptionClass = Exception::class,
+            block = { resolveRedirects(java.net.URL(url)) },
+        )
+
+        srv.stop(0)
     }
 }

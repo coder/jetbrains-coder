@@ -6,32 +6,19 @@ import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toRawString
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderSettingsService
-import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.settings.Source
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.util.withPath
-import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.remoteDev.hostStatus.UnattendedHostStatus
-import com.intellij.ui.AppIcon
-import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.dialog
-import com.intellij.ui.dsl.builder.RowLayout
-import com.intellij.ui.dsl.builder.panel
-import com.intellij.util.applyIf
-import com.intellij.util.ui.UIUtil
 import com.jetbrains.gateway.ssh.ClientOverSshTunnelConnector
 import com.jetbrains.gateway.ssh.HighLevelHostAccessor
 import com.jetbrains.gateway.ssh.SshHostTunnelConnector
@@ -48,15 +35,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import org.zeroturnaround.exec.ProcessExecutor
-import java.awt.Dimension
-import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeoutException
-import javax.net.ssl.SSLHandshakeException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -426,231 +409,5 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
-
-        /**
-         * Generic function to ask for consent.
-         */
-        fun confirm(
-            title: String,
-            comment: String,
-            details: String,
-        ): Boolean {
-            var inputFromUser = false
-            ApplicationManager.getApplication().invokeAndWait({
-                val panel =
-                    panel {
-                        row {
-                            label(comment)
-                        }
-                        row {
-                            label(details)
-                        }
-                    }
-                AppIcon.getInstance().requestAttention(null, true)
-                if (!dialog(
-                        title = title,
-                        panel = panel,
-                    ).showAndGet()
-                ) {
-                    return@invokeAndWait
-                }
-                inputFromUser = true
-            }, ModalityState.defaultModalityState())
-            return inputFromUser
-        }
-
-        /**
-         * Generic function to ask for input.
-         */
-        @JvmStatic
-        fun ask(
-            comment: String,
-            isError: Boolean = false,
-            link: Pair<String, String>? = null,
-            default: String? = null,
-        ): String? {
-            var inputFromUser: String? = null
-            ApplicationManager.getApplication().invokeAndWait({
-                lateinit var inputTextField: JBTextField
-                val panel =
-                    panel {
-                        row {
-                            if (link != null) browserLink(link.first, link.second)
-                            inputTextField =
-                                textField()
-                                    .applyToComponent {
-                                        text = default ?: ""
-                                        minimumSize = Dimension(520, -1)
-                                    }.component
-                        }.layout(RowLayout.PARENT_GRID)
-                        row {
-                            cell() // To align with the text box.
-                            cell(
-                                ComponentPanelBuilder.createCommentComponent(comment, false, -1, true)
-                                    .applyIf(isError) {
-                                        apply {
-                                            foreground = UIUtil.getErrorForeground()
-                                        }
-                                    },
-                            )
-                        }.layout(RowLayout.PARENT_GRID)
-                    }
-                AppIcon.getInstance().requestAttention(null, true)
-                if (!dialog(
-                        CoderGatewayBundle.message("gateway.connector.view.login.token.dialog"),
-                        panel = panel,
-                        focusedComponent = inputTextField,
-                    ).showAndGet()
-                ) {
-                    return@invokeAndWait
-                }
-                inputFromUser = inputTextField.text
-            }, ModalityState.any())
-            return inputFromUser
-        }
-
-        /**
-         * Open a dialog for providing the token.  Show any existing token so
-         * the user can validate it if a previous connection failed.
-         *
-         * If we are not retrying and the user has not checked the existing
-         * token box then also open a browser to the auth page.
-         *
-         * If the user has checked the existing token box then return the token
-         * on disk immediately and skip the dialog (this will overwrite any
-         * other existing token) unless this is a retry to avoid clobbering the
-         * token that just failed.
-         */
-        @JvmStatic
-        fun askToken(
-            url: URL,
-            token: Pair<String, Source>?,
-            isRetry: Boolean,
-            useExisting: Boolean,
-            settings: CoderSettings,
-        ): Pair<String, Source>? {
-            var (existingToken, tokenSource) = token ?: Pair("", Source.USER)
-            val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
-
-            // On the first run either open a browser to generate a new token
-            // or, if using an existing token, use the token on disk if it
-            // exists otherwise assume the user already copied an existing
-            // token and they will paste in.
-            if (!isRetry) {
-                if (!useExisting) {
-                    BrowserUtil.browse(getTokenUrl)
-                } else {
-                    // Look on disk in case we already have a token, either in
-                    // the deployment's config or the global config.
-                    val tryToken = settings.token(url)
-                    if (tryToken != null && tryToken.first != existingToken) {
-                        logger.info("Injecting token for $url from ${tryToken.second}")
-                        return tryToken
-                    }
-                }
-            }
-
-            // On subsequent tries or if not using an existing token, ask the user
-            // for the token.
-            val tokenFromUser =
-                ask(
-                    CoderGatewayBundle.message(
-                        if (isRetry) {
-                            "gateway.connector.view.workspaces.token.rejected"
-                        } else if (tokenSource == Source.CONFIG) {
-                            "gateway.connector.view.workspaces.token.injected-global"
-                        } else if (tokenSource == Source.DEPLOYMENT_CONFIG) {
-                            "gateway.connector.view.workspaces.token.injected"
-                        } else if (tokenSource == Source.LAST_USED) {
-                            "gateway.connector.view.workspaces.token.last-used"
-                        } else if (tokenSource == Source.QUERY) {
-                            "gateway.connector.view.workspaces.token.query"
-                        } else if (existingToken.isNotBlank()) {
-                            "gateway.connector.view.workspaces.token.comment"
-                        } else {
-                            "gateway.connector.view.workspaces.token.none"
-                        },
-                        url.host,
-                    ),
-                    isRetry,
-                    Pair(
-                        CoderGatewayBundle.message("gateway.connector.view.login.token.label"),
-                        getTokenUrl.toString(),
-                    ),
-                    existingToken,
-                )
-            if (tokenFromUser.isNullOrBlank()) {
-                return null
-            }
-            if (tokenFromUser != existingToken) {
-                tokenSource = Source.USER
-            }
-            return Pair(tokenFromUser, tokenSource)
-        }
-
-        /**
-         * Return if the URL is allowlisted, https, and the URL and its final
-         * destination, if it is a different host.
-         */
-        @JvmStatic
-        fun isAllowlisted(url: URL): Triple<Boolean, Boolean, String> {
-            // TODO: Setting for the allowlist, and remember previously allowed
-            //  domains.
-            val domainAllowlist = listOf("intellij.net", "jetbrains.com")
-
-            // Resolve any redirects.
-            val finalUrl =
-                try {
-                    resolveRedirects(url)
-                } catch (e: Exception) {
-                    when (e) {
-                        is SSLHandshakeException ->
-                            throw Exception(
-                                CoderGatewayBundle.message(
-                                    "gateway.connector.view.workspaces.connect.ssl-error",
-                                    url.host,
-                                    e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason"),
-                                ),
-                            )
-                        else -> throw e
-                    }
-                }
-
-            var linkWithRedirect = url.toString()
-            if (finalUrl.host != url.host) {
-                linkWithRedirect = "$linkWithRedirect (redirects to to $finalUrl)"
-            }
-
-            val allowlisted =
-                domainAllowlist.any { url.host == it || url.host.endsWith(".$it") } &&
-                    domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
-            val https = url.protocol == "https" && finalUrl.protocol == "https"
-            return Triple(allowlisted, https, linkWithRedirect)
-        }
-
-        /**
-         * Follow a URL's redirects to its final destination.
-         */
-        @JvmStatic
-        fun resolveRedirects(url: URL): URL {
-            var location = url
-            val maxRedirects = 10
-            for (i in 1..maxRedirects) {
-                val conn = location.openConnection() as HttpURLConnection
-                conn.instanceFollowRedirects = false
-                conn.connect()
-                val code = conn.responseCode
-                val nextLocation = conn.getHeaderField("Location")
-                conn.disconnect()
-                // Redirects are triggered by any code starting with 3 plus a
-                // location header.
-                if (code < 300 || code >= 400 || nextLocation.isNullOrBlank()) {
-                    return location
-                }
-                // Location headers might be relative.
-                location = URL(location, nextLocation)
-            }
-            throw Exception("Too many redirects")
-        }
     }
 }

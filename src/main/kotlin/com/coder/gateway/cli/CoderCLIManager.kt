@@ -17,7 +17,6 @@ import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProgressIndicator
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
@@ -59,7 +58,7 @@ fun ensureCLI(
     deploymentURL: URL,
     buildVersion: String,
     settings: CoderSettings,
-    indicator: ProgressIndicator? = null,
+    indicator: ((t: String) -> Unit)? = null,
 ): CoderCLIManager {
     val cli = CoderCLIManager(deploymentURL, settings)
 
@@ -75,7 +74,7 @@ fun ensureCLI(
 
     // If downloads are enabled download the new version.
     if (settings.enableDownloads) {
-        indicator?.text = "Downloading Coder CLI..."
+        indicator?.invoke("Downloading Coder CLI...")
         try {
             cli.download()
             return cli
@@ -97,7 +96,7 @@ fun ensureCLI(
     }
 
     if (settings.enableDownloads) {
-        indicator?.text = "Downloading Coder CLI..."
+        indicator?.invoke("Downloading Coder CLI...")
         dataCLI.download()
         return dataCLI
     }
