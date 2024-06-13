@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixed
+
+- The version column now displays "Up to date" or "Outdated" instead of
+  duplicating the status column.
+
 ## 2.11.7 - 2024-05-22
 
 ### Fixed

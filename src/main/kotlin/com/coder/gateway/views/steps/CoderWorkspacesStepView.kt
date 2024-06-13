@@ -893,7 +893,13 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
 
     private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentListModel?): String? {
-            return workspace?.status?.label
+            return if (workspace == null) {
+                "Unknown"
+            } else if (workspace.workspace.outdated) {
+                "Outdated"
+            } else {
+                "Up to date"
+            }
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
