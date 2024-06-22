@@ -256,6 +256,7 @@ class CoderCLIManager(
         val isRemoving = workspaceNames.isEmpty()
         val proxyArgs =
             listOfNotNull(
+                "CODER_SSH_USAGE_APP=jetbrains",
                 escape(localBinaryPath.toString()),
                 "--global-config",
                 escape(coderConfigPath.toString()),
