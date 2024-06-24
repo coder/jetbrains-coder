@@ -281,7 +281,15 @@ class CoderCLIManager(
                 transform = {
                     """
                     Host ${getHostName(deploymentURL, it)}
-                      ProxyCommand ${proxyArgs.joinToString(" ")} $it
+                      ProxyCommand CODER_SSH_USAGE_APP=jetbrains ${proxyArgs.joinToString(" ")} $it
+                      ConnectTimeout 0
+                      StrictHostKeyChecking no
+                      UserKnownHostsFile /dev/null
+                      LogLevel ERROR
+                      SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+
+                    Host ${getBackgroundHostName(deploymentURL, it)}
+                      ProxyCommand CODER_SSH_USAGE_APP=disable ${proxyArgs.joinToString(" ")} $it
                       ConnectTimeout 0
                       StrictHostKeyChecking no
                       UserKnownHostsFile /dev/null
@@ -464,6 +472,14 @@ class CoderCLIManager(
             workspaceName: String,
         ): String {
             return "coder-jetbrains--$workspaceName--${url.safeHost()}"
+        }
+
+        @JvmStatic
+        fun getBackgroundHostName(
+            url: URL,
+            workspaceName: String,
+        ): String {
+            return getHostName(url, workspaceName) + "--bg"
         }
     }
 }

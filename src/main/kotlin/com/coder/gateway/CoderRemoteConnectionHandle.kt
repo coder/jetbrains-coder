@@ -141,7 +141,13 @@ class CoderRemoteConnectionHandle {
             port = 22
             authType = AuthType.OPEN_SSH
         }
-        val accessor = HighLevelHostAccessor.create(credentials, true)
+        val backgroundCredentials = RemoteCredentialsHolder().apply {
+            setHost(workspace.hostname)
+            userName = "coder"
+            port = 22
+            authType = AuthType.OPEN_SSH
+        }
+        val accessor = HighLevelHostAccessor.create(backgroundCredentials, true)
 
         // Deploy if we need to.
         val ideDir = this.deploy(workspace, accessor, indicator, timeout)
