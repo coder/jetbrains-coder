@@ -289,7 +289,6 @@ class CoderCLIManager(
                       SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                     """.trimIndent()
                         .plus(extraConfig)
-                        .plus(System.lineSeparator())
                         .plus(
                             """
                             Host ${getBackgroundHostName(deploymentURL, it)}
@@ -300,8 +299,8 @@ class CoderCLIManager(
                               LogLevel ERROR
                               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                             """.trimIndent()
+                                .plus(extraConfig)
                         )
-                        .plus(extraConfig)
                         .replace("\n", System.lineSeparator())
                 },
             )
