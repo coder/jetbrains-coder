@@ -287,7 +287,6 @@ class CoderCLIManager(
                       UserKnownHostsFile /dev/null
                       LogLevel ERROR
                       SetEnv CODER_SSH_SESSION_TYPE=JetBrains
-
                     Host ${getBackgroundHostName(deploymentURL, it)}
                       ProxyCommand CODER_SSH_USAGE_APP=disable ${proxyArgs.joinToString(" ")} $it
                       ConnectTimeout 0
