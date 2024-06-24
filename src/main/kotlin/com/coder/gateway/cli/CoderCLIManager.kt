@@ -289,18 +289,19 @@ class CoderCLIManager(
                       SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                     """.trimIndent()
                         .plus(extraConfig)
+                        .plus(System.lineSeparator())
                         .plus(
-                        """
-                        Host ${getBackgroundHostName(deploymentURL, it)}
-                            ProxyCommand CODER_SSH_USAGE_APP=disable ${proxyArgs.joinToString(" ")} $it
-                            ConnectTimeout 0
-                            StrictHostKeyChecking no
-                            UserKnownHostsFile /dev/null
-                            LogLevel ERROR
-                            SetEnv CODER_SSH_SESSION_TYPE=JetBrains
-                        """.trimIndent()
-                            .plus(extraConfig)
+                            """
+                            Host ${getBackgroundHostName(deploymentURL, it)}
+                              ProxyCommand CODER_SSH_USAGE_APP=disable ${proxyArgs.joinToString(" ")} $it
+                              ConnectTimeout 0
+                              StrictHostKeyChecking no
+                              UserKnownHostsFile /dev/null
+                              LogLevel ERROR
+                              SetEnv CODER_SSH_SESSION_TYPE=JetBrains
+                            """.trimIndent()
                         )
+                        .plus(extraConfig)
                         .replace("\n", System.lineSeparator())
                 },
             )
