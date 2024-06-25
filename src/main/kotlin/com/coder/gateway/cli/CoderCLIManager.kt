@@ -292,7 +292,7 @@ class CoderCLIManager(
                         .plus(
                             """
                             Host ${getBackgroundHostName(deploymentURL, it)}
-                              ProxyCommand CODER_SSH_USAGE_APP=disable ${proxyArgs.joinToString(" ")} $it
+                              ProxyCommand ${proxyArgs.joinToString(" ")} $it
                               ConnectTimeout 0
                               StrictHostKeyChecking no
                               UserKnownHostsFile /dev/null
@@ -484,6 +484,13 @@ class CoderCLIManager(
             workspaceName: String,
         ): String {
             return getHostName(url, workspaceName) + "--bg"
+        }
+
+        @JvmStatic
+        fun getBackgroundHostName(
+            hostname: String,
+        ): String {
+            return hostname + "--bg"
         }
     }
 }
