@@ -357,7 +357,7 @@ class CoderRemoteConnectionHandle {
     private fun exec(workspace: WorkspaceProjectIDE, command: String): String {
         logger.info("Running command `$command` in ${workspace.hostname}:${workspace.idePathOnHost}/bin...")
         return ProcessExecutor()
-            .command("ssh", "-t", workspace.hostname, "cd '${workspace.idePathOnHost}' ; cd bin ; $command")
+            .command("ssh", "-t", CoderCLIManager.getBackgroundHostName(workspace.hostname), "cd '${workspace.idePathOnHost}' ; cd bin ; $command")
             .exitValues(0)
             .readOutput(true)
             .execute()
