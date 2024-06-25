@@ -214,7 +214,7 @@ class CoderWorkspaceProjectIDEStepView(
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
-                                val executor = createRemoteExecutor(CoderCLIManager.getHostName(data.client.url, name))
+                                val executor = createRemoteExecutor(CoderCLIManager.getBackgroundHostName(data.client.url, name))
 
                                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                                     logger.info("Installing remote path validator...")

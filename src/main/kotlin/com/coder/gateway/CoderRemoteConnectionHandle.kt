@@ -10,6 +10,7 @@ import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
+import com.coder.gateway.cli.CoderCLIManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -141,7 +142,13 @@ class CoderRemoteConnectionHandle {
             port = 22
             authType = AuthType.OPEN_SSH
         }
-        val accessor = HighLevelHostAccessor.create(credentials, true)
+        val backgroundCredentials = RemoteCredentialsHolder().apply {
+            setHost(CoderCLIManager.getBackgroundHostName(workspace.hostname))
+            userName = "coder"
+            port = 22
+            authType = AuthType.OPEN_SSH
+        }
+        val accessor = HighLevelHostAccessor.create(backgroundCredentials, true)
 
         // Deploy if we need to.
         val ideDir = this.deploy(workspace, accessor, indicator, timeout)
@@ -350,7 +357,7 @@ class CoderRemoteConnectionHandle {
     private fun exec(workspace: WorkspaceProjectIDE, command: String): String {
         logger.info("Running command `$command` in ${workspace.hostname}:${workspace.idePathOnHost}/bin...")
         return ProcessExecutor()
-            .command("ssh", "-t", workspace.hostname, "cd '${workspace.idePathOnHost}' ; cd bin ; $command")
+            .command("ssh", "-t", CoderCLIManager.getBackgroundHostName(workspace.hostname), "cd '${workspace.idePathOnHost}' ; cd bin ; $command")
             .exitValues(0)
             .readOutput(true)
             .execute()
