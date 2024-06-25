@@ -345,6 +345,7 @@ internal class CoderCLIManagerTest {
                 },
                 SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true)),
                 SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false)),
+                SSHTest(listOf("foo"), null, "report-usage", "blank", "", true, Features(false, true)),
                 SSHTest(
                     listOf("extra"),
                     null,
@@ -721,7 +722,8 @@ internal class CoderCLIManagerTest {
         val tests =
             listOf(
                 Pair("2.5.0", Features(true)),
-                Pair("4.9.0", Features(true)),
+                Pair("2.13.0", Features(true, true)),
+                Pair("4.9.0", Features(true, true)),
                 Pair("2.4.9", Features(false)),
                 Pair("1.0.1", Features(false)),
             )
