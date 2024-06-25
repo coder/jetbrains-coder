@@ -255,7 +255,7 @@ class CoderCLIManager(
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
         val isRemoving = workspaceNames.isEmpty()
-        val proxyArgs =
+        val baseArgs =
             listOfNotNull(
                 escape(localBinaryPath.toString()),
                 "--global-config",
@@ -265,8 +265,9 @@ class CoderCLIManager(
                 "ssh",
                 "--stdio",
                 if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null,
-                if (feats.reportWorkspaceUsage) "--usage-app=jetbrains" else null,
             )
+        val proxyArgs = baseArgs + listOfNotNull(if (feats.reportWorkspaceUsage) "--usage-app=jetbrains" else null)
+        val backgroundProxyArgs = baseArgs + listOfNotNull(if (feats.reportWorkspaceUsage) "--usage-app=disable" else null)
         val extraConfig =
             if (settings.sshConfigOptions.isNotBlank()) {
                 "\n" + settings.sshConfigOptions.prependIndent("  ")
@@ -293,7 +294,7 @@ class CoderCLIManager(
                         .plus(
                             """
                             Host ${getBackgroundHostName(deploymentURL, it)}
-                              ProxyCommand ${proxyArgs.joinToString(" ")} $it
+                              ProxyCommand ${backgroundProxyArgs.joinToString(" ")} $it
                               ConnectTimeout 0
                               StrictHostKeyChecking no
                               UserKnownHostsFile /dev/null
