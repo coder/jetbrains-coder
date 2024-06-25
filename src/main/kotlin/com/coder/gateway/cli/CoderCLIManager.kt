@@ -281,7 +281,7 @@ class CoderCLIManager(
                 transform = {
                     """
                     Host ${getHostName(deploymentURL, it)}
-                      ProxyCommand CODER_SSH_USAGE_APP=jetbrains ${proxyArgs.joinToString(" ")} $it
+                      ProxyCommand ${proxyArgs.joinToString(" ")} $it
                       ConnectTimeout 0
                       StrictHostKeyChecking no
                       UserKnownHostsFile /dev/null
@@ -300,8 +300,7 @@ class CoderCLIManager(
                               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                             """.trimIndent()
                                 .plus(extraConfig)
-                        )
-                        .replace("\n", System.lineSeparator())
+                        ).replace("\n", System.lineSeparator())
                 },
             )
 
