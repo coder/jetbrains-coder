@@ -289,6 +289,7 @@ class CoderCLIManager(
                       SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                     """.trimIndent()
                         .plus(extraConfig)
+                        .plus("\n")
                         .plus(
                             """
                             Host ${getBackgroundHostName(deploymentURL, it)}
