@@ -111,6 +111,7 @@ fun ensureCLI(
  */
 data class Features(
     val disableAutostart: Boolean = false,
+    val reportWorkspaceUsage: Boolean = false,
 )
 
 /**
@@ -256,7 +257,6 @@ class CoderCLIManager(
         val isRemoving = workspaceNames.isEmpty()
         val proxyArgs =
             listOfNotNull(
-                "CODER_SSH_USAGE_APP=jetbrains",
                 escape(localBinaryPath.toString()),
                 "--global-config",
                 escape(coderConfigPath.toString()),
@@ -265,6 +265,7 @@ class CoderCLIManager(
                 "ssh",
                 "--stdio",
                 if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null,
+                if (feats.reportWorkspaceUsage) "--usage-app=jetbrains" else null,
             )
         val extraConfig =
             if (settings.sshConfigOptions.isNotBlank()) {
@@ -447,6 +448,7 @@ class CoderCLIManager(
                 Features(
                     // Autostart with SSH was added in 2.5.0.
                     disableAutostart = version >= SemVer(2, 5, 0),
+                    reportWorkspaceUsage = version >= SemVer(2, 13, 0),
                 )
             }
         }

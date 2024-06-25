@@ -345,6 +345,7 @@ internal class CoderCLIManagerTest {
                 },
                 SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true)),
                 SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false)),
+                SSHTest(listOf("foo"), null, "report-usage", "blank", "", true, Features(false, true)),
                 SSHTest(
                     listOf("extra"),
                     null,
