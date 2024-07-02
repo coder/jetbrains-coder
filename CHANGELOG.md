@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+### Added
+
+- Set `--usage-app` on the proxy command if the Coder CLI supports it
+  (>=2.13.0). To make use of this, you must add the connection again through the
+  "Connect to Coder" flow or by using the dashboard link (the recents
+  connections do not reconfigure SSH).
+
+### Changed
+
+- Add support for latest Gateway 242.* EAP.
+
 ### Fixed
 
 - The version column now displays "Up to date" or "Outdated" instead of
