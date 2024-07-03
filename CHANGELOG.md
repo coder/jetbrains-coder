@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.12.0 - 2024-07-02
+
 ### Added
 
 - Set `--usage-app` on the proxy command if the Coder CLI supports it
