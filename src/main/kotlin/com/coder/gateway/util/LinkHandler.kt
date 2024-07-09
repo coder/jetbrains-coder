@@ -80,10 +80,10 @@ fun handleLink(
     if (status.pending()) {
         // TODO: Wait for the agent to be ready.
         throw IllegalArgumentException(
-            "The agent \"${agent.name}\" is ${status.toString().lowercase()}; please wait then try again",
+            "The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; please wait then try again",
         )
     } else if (!status.ready()) {
-        throw IllegalArgumentException("The agent \"${agent.name}\" is ${status.toString().lowercase()}; unable to connect")
+        throw IllegalArgumentException("The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; unable to connect")
     }
 
     val cli =

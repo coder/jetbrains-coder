@@ -54,7 +54,7 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
     fun statusColor(): JBColor =
         when (this) {
             READY, AGENT_STARTING_READY, START_TIMEOUT_READY -> JBColor.GREEN
-            START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
+            CREATED, START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
             FAILED, DISCONNECTED, TIMEOUT, SHUTDOWN_ERROR -> JBColor.RED
             else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
         }
@@ -63,7 +63,12 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
      * Return true if the agent is in a connectable state.
      */
     fun ready(): Boolean {
-        return listOf(READY, START_ERROR, AGENT_STARTING_READY, START_TIMEOUT_READY)
+        // It seems that the agent can get stuck in a `created` state if the
+        // workspace is updated and the agent is restarted (presumably because
+        // lifecycle scripts are not running again).  This feels like either a
+        // Coder or template bug, but `coder ssh` and the VS Code plugin will
+        // still connect so do the same here to not be the odd one out.
+        return listOf(READY, START_ERROR, AGENT_STARTING_READY, START_TIMEOUT_READY, CREATED)
             .contains(this)
     }
 
@@ -71,7 +76,8 @@ enum class WorkspaceAndAgentStatus(val icon: Icon, val label: String, val descri
      * Return true if the agent might soon be in a connectable state.
      */
     fun pending(): Boolean {
-        return listOf(CONNECTING, TIMEOUT, CREATED, AGENT_STARTING, START_TIMEOUT)
+        // See ready() for why `CREATED` is not in this list.
+        return listOf(CONNECTING, TIMEOUT, AGENT_STARTING, START_TIMEOUT)
             .contains(this)
     }
 

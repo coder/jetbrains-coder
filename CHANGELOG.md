@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+### Changed
+
+- Allow connecting when the agent state is "connected" but the lifecycle state
+  is "created". This may resolve issues when trying to connect to an updated
+  workspace where the agent has restarted but lifecycle scripts have not been
+  ran again.
+
 ## 2.12.0 - 2024-07-02
 
 ### Added
