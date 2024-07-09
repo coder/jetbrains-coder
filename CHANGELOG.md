@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.12.1 - 2024-07-09
+
 ### Changed
 
 - Allow connecting when the agent state is "connected" but the lifecycle state
