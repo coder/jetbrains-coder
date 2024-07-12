@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### Fixed
+
+- On Windows, expand the home directory when paths use `/` separators (for
+  example `~/foo/bar` or `$HOME/foo/bar`). This results in something like
+  `c:\users\coder/foo/bar`, but Windows appears to be fine with the mixed
+  separators. As before, you can still use `\` separators (for example
+  `~\foo\bar` or `$HOME\foo\bar`.
+
 ## 2.12.1 - 2024-07-09
 
 ### Changed
