@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.12.2 - 2024-07-12
+
 ### Fixed
 
 - On Windows, expand the home directory when paths use `/` separators (for
