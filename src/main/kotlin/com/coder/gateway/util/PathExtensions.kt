@@ -31,13 +31,16 @@ fun expand(path: String): String {
     if (path == "~" || path == "\$HOME" || path == "\${user.home}") {
         return System.getProperty("user.home")
     }
-    if (path.startsWith("~" + File.separator)) {
+    // On Windows also allow /.  Windows seems to work fine with mixed slashes
+    // like c:\users\coder/my/path/here.
+    val os = getOS()
+    if (path.startsWith("~" + File.separator) || (os == OS.WINDOWS && path.startsWith("~/"))) {
         return Path.of(System.getProperty("user.home"), path.substring(1)).toString()
     }
-    if (path.startsWith("\$HOME" + File.separator)) {
+    if (path.startsWith("\$HOME" + File.separator) || (os == OS.WINDOWS && path.startsWith("\$HOME/"))) {
         return Path.of(System.getProperty("user.home"), path.substring(5)).toString()
     }
-    if (path.startsWith("\${user.home}" + File.separator)) {
+    if (path.startsWith("\${user.home}" + File.separator) || (os == OS.WINDOWS && path.startsWith("\${user.home}/"))) {
         return Path.of(System.getProperty("user.home"), path.substring(12)).toString()
     }
     return path

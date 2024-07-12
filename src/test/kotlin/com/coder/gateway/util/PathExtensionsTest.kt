@@ -108,7 +108,14 @@ internal class PathExtensionsTest {
             // Do not replace if part of a larger string.
             assertEquals(home, expand(it))
             assertEquals(home, expand(it + File.separator))
+            if (isWindows) {
+                assertEquals(home, expand(it + "/"))
+            } else {
+                assertEquals(it + "\\", expand(it + "\\"))
+            }
             assertEquals(it + "hello", expand(it + "hello"))
+            assertEquals(it + "hello/foo", expand(it + "hello/foo"))
+            assertEquals(it + "hello\\foo", expand(it + "hello\\foo"))
         }
     }
 }
