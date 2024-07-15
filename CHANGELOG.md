@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Added
+
+- When using a recent workspace connection, check if there is an update to the
+  IDE and prompt to upgrade if an upgrade exists.
+
 ## 2.12.2 - 2024-07-12
 
 ### Fixed

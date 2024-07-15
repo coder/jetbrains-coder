@@ -2,15 +2,19 @@
 
 package com.coder.gateway
 
+import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.toRawString
+import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.confirm
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
 import com.coder.gateway.util.suspendingRetryWithExponentialBackOff
-import com.coder.gateway.cli.CoderCLIManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -20,8 +24,12 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.remote.AuthType
 import com.intellij.remote.RemoteCredentialsHolder
 import com.intellij.remoteDev.hostStatus.UnattendedHostStatus
+import com.jetbrains.gateway.ssh.CachingProductsJsonWrapper
 import com.jetbrains.gateway.ssh.ClientOverSshTunnelConnector
 import com.jetbrains.gateway.ssh.HighLevelHostAccessor
+import com.jetbrains.gateway.ssh.IdeWithStatus
+import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
+import com.jetbrains.gateway.ssh.ReleaseType
 import com.jetbrains.gateway.ssh.SshHostTunnelConnector
 import com.jetbrains.gateway.ssh.deploy.DeployException
 import com.jetbrains.gateway.ssh.deploy.ShellArgument
@@ -58,23 +66,70 @@ class CoderRemoteConnectionHandle {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {
-                val parameters = getParameters(indicator)
+                var parameters = getParameters(indicator)
+                var oldParameters: WorkspaceProjectIDE? = null
                 logger.debug("Creating connection handle", parameters)
                 indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting")
                 suspendingRetryWithExponentialBackOff(
                     action = { attempt ->
-                        logger.info("Connecting... (attempt $attempt)")
+                        logger.info("Connecting to remote worker on ${parameters.hostname}... (attempt $attempt)")
                         if (attempt > 1) {
                             // indicator.text is the text above the progress bar.
                             indicator.text = CoderGatewayBundle.message("gateway.connector.coder.connecting.retry", attempt)
+                        } else {
+                            indicator.text = "Connecting to remote worker..."
+                        }
+                        // This establishes an SSH connection to a remote worker binary.
+                        // TODO: Can/should accessors to the same host be shared?
+                        val accessor = HighLevelHostAccessor.create(
+                            RemoteCredentialsHolder().apply {
+                                setHost(CoderCLIManager.getBackgroundHostName(parameters.hostname))
+                                userName = "coder"
+                                port = 22
+                                authType = AuthType.OPEN_SSH
+                            },
+                            true,
+                        )
+                        if (attempt == 1) {
+                            // See if there is a newer (non-EAP) version of the IDE available.
+                            checkUpdate(accessor, parameters, indicator)?.let { update ->
+                                // Store the old IDE to delete later.
+                                oldParameters = parameters
+                                // Continue with the new IDE.
+                                parameters = update.withWorkspaceProject(
+                                    name = parameters.name,
+                                    hostname = parameters.hostname,
+                                    projectPath = parameters.projectPath,
+                                    deploymentURL = parameters.deploymentURL,
+                                )
+                            }
                         }
                         doConnect(
+                            accessor,
                             parameters,
                             indicator,
                             clientLifetime,
                             settings.setupCommand,
                             settings.ignoreSetupFailure,
                         )
+                        // If successful, delete the old IDE and connection.
+                        oldParameters?.let {
+                            indicator.text = "Deleting ${it.ideName} backend..."
+                            try {
+                                it.idePathOnHost?.let { path ->
+                                    accessor.removePathOnRemote(accessor.makeRemotePath(ShellArgument.PlainText(path)))
+                                }
+                                recentConnectionsService.removeConnection(it.toRecentWorkspaceConnection())
+                            } catch (ex: Exception) {
+                                logger.error("Failed to delete old IDE or connection", ex)
+                            }
+                        }
+                        indicator.text = "Connecting ${parameters.ideName} client..."
+                        // The presence handler runs a good deal earlier than the client
+                        // actually appears, which results in some dead space where it can look
+                        // like opening the client silently failed.  This delay janks around
+                        // that, so we can keep the progress indicator open a bit longer.
+                        delay(5000)
                     },
                     retryIf = {
                         it is ConnectionException ||
@@ -122,9 +177,38 @@ class CoderRemoteConnectionHandle {
     }
 
     /**
-     * Deploy (if needed), connect to the IDE, and update the last opened date.
+     * Return a new (non-EAP) IDE if we should update.
+     */
+    private suspend fun checkUpdate(
+        accessor: HighLevelHostAccessor,
+        workspace: WorkspaceProjectIDE,
+        indicator: ProgressIndicator,
+    ): IdeWithStatus? {
+        indicator.text = "Checking for updates..."
+        val workspaceOS = accessor.guessOs()
+        logger.info("Got $workspaceOS for ${workspace.hostname}")
+        val latest = CachingProductsJsonWrapper.getInstance().getAvailableIdes(
+            IntelliJPlatformProduct.fromProductCode(workspace.ideProduct.productCode)
+                ?: throw Exception("invalid product code ${workspace.ideProduct.productCode}"),
+            workspaceOS,
+        )
+            .filter { it.releaseType == ReleaseType.RELEASE }
+            .minOfOrNull { it.toIdeWithStatus() }
+        if (latest != null && SemVer.parse(latest.buildNumber) > SemVer.parse(workspace.ideBuildNumber)) {
+            logger.info("Got newer version: ${latest.buildNumber} versus current ${workspace.ideBuildNumber}")
+            if (confirm("Update IDE", "There is a new version of this IDE: ${latest.buildNumber}", "Would you like to update?")) {
+                return latest
+            }
+        }
+        return null
+    }
+
+    /**
+     * Check for updates, deploy (if needed), connect to the IDE, and update the
+     * last opened date.
      */
     private suspend fun doConnect(
+        accessor: HighLevelHostAccessor,
         workspace: WorkspaceProjectIDE,
         indicator: ProgressIndicator,
         lifetime: LifetimeDefinition,
@@ -134,30 +218,12 @@ class CoderRemoteConnectionHandle {
     ) {
         workspace.lastOpened = localTimeFormatter.format(LocalDateTime.now())
 
-        // This establishes an SSH connection to a remote worker binary.
-        // TODO: Can/should accessors to the same host be shared?
-        indicator.text = "Connecting to remote worker..."
-        logger.info("Connecting to remote worker on ${workspace.hostname}")
-        val credentials = RemoteCredentialsHolder().apply {
-            setHost(workspace.hostname)
-            userName = "coder"
-            port = 22
-            authType = AuthType.OPEN_SSH
-        }
-        val backgroundCredentials = RemoteCredentialsHolder().apply {
-            setHost(CoderCLIManager.getBackgroundHostName(workspace.hostname))
-            userName = "coder"
-            port = 22
-            authType = AuthType.OPEN_SSH
-        }
-        val accessor = HighLevelHostAccessor.create(backgroundCredentials, true)
-
         // Deploy if we need to.
-        val ideDir = this.deploy(workspace, accessor, indicator, timeout)
+        val ideDir = deploy(accessor, workspace, indicator, timeout)
         workspace.idePathOnHost = ideDir.toRawString()
 
         // Run the setup command.
-        this.setup(workspace, indicator, setupCommand, ignoreSetupFailure)
+        setup(workspace, indicator, setupCommand, ignoreSetupFailure)
 
         // Wait for the IDE to come up.
         indicator.text = "Waiting for ${workspace.ideName} backend..."
@@ -165,7 +231,7 @@ class CoderRemoteConnectionHandle {
         val remoteProjectPath = accessor.makeRemotePath(ShellArgument.PlainText(workspace.projectPath))
         val logsDir = accessor.getLogsDir(workspace.ideProduct.productCode, remoteProjectPath)
         while (lifetime.status == LifetimeStatus.Alive) {
-            status = ensureIDEBackend(workspace, accessor, ideDir, remoteProjectPath, logsDir, lifetime, null)
+            status = ensureIDEBackend(accessor, workspace, ideDir, remoteProjectPath, logsDir, lifetime, null)
             if (!status?.joinLink.isNullOrBlank()) {
                 break
             }
@@ -182,7 +248,17 @@ class CoderRemoteConnectionHandle {
         // Make the initial connection.
         indicator.text = "Connecting ${workspace.ideName} client..."
         logger.info("Connecting ${workspace.ideName} client to coder@${workspace.hostname}:22")
-        val client = ClientOverSshTunnelConnector(lifetime, SshHostTunnelConnector(credentials))
+        val client = ClientOverSshTunnelConnector(
+            lifetime,
+            SshHostTunnelConnector(
+                RemoteCredentialsHolder().apply {
+                    setHost(workspace.hostname)
+                    userName = "coder"
+                    port = 22
+                    authType = AuthType.OPEN_SSH
+                },
+            ),
+        )
         val handle = client.connect(URI(joinLink)) // Downloads the client too, if needed.
 
         // Reconnect if the join link changes.
@@ -190,7 +266,7 @@ class CoderRemoteConnectionHandle {
         lifetime.coroutineScope.launch {
             while (isActive) {
                 delay(5000)
-                val newStatus = ensureIDEBackend(workspace, accessor, ideDir, remoteProjectPath, logsDir, lifetime, status)
+                val newStatus = ensureIDEBackend(accessor, workspace, ideDir, remoteProjectPath, logsDir, lifetime, status)
                 val newLink = newStatus?.joinLink
                 if (newLink != null && newLink != status?.joinLink) {
                     logger.info("${workspace.ideName} backend join link changed; updating")
@@ -231,20 +307,14 @@ class CoderRemoteConnectionHandle {
                 }
             }
         }
-
-        // The presence handler runs a good deal earlier than the client
-        // actually appears, which results in some dead space where it can look
-        // like opening the client silently failed.  This delay janks around
-        // that, so we can keep the progress indicator open a bit longer.
-        delay(5000)
     }
 
     /**
      * Deploy the IDE if necessary and return the path to its location on disk.
      */
     private suspend fun deploy(
-        workspace: WorkspaceProjectIDE,
         accessor: HighLevelHostAccessor,
+        workspace: WorkspaceProjectIDE,
         indicator: ProgressIndicator,
         timeout: Duration,
     ): ShellArgument.RemotePath {
@@ -371,8 +441,8 @@ class CoderRemoteConnectionHandle {
      * backend has not started.
      */
     private suspend fun ensureIDEBackend(
-        workspace: WorkspaceProjectIDE,
         accessor: HighLevelHostAccessor,
+        workspace: WorkspaceProjectIDE,
         ideDir: ShellArgument.RemotePath,
         remoteProjectPath: ShellArgument.RemotePath,
         logsDir: ShellArgument.RemotePath,
