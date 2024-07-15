@@ -4,6 +4,7 @@ import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
@@ -351,35 +352,14 @@ class CoderWorkspaceProjectIDEStepView(
         logger.info("Resolved OS and Arch for $name is: $workspaceOS")
         val installedIdesJob =
             cs.async(Dispatchers.IO) {
-                executor.getInstalledIDEs().map { ide ->
-                    IdeWithStatus(
-                        ide.product,
-                        ide.buildNumber,
-                        IdeStatus.ALREADY_INSTALLED,
-                        null,
-                        ide.pathToIde,
-                        ide.presentableVersion,
-                        ide.remoteDevType,
-                    )
-                }
+                executor.getInstalledIDEs().map { it.toIdeWithStatus() }
             }
         val idesWithStatusJob =
             cs.async(Dispatchers.IO) {
                 IntelliJPlatformProduct.entries
                     .filter { it.showInGateway }
                     .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
-                    .map {
-                            ide ->
-                        IdeWithStatus(
-                            ide.product,
-                            ide.buildNumber,
-                            IdeStatus.DOWNLOAD,
-                            ide.download,
-                            null,
-                            ide.presentableVersion,
-                            ide.remoteDevType,
-                        )
-                    }
+                    .map { it.toIdeWithStatus() }
             }
 
         val installedIdes = installedIdesJob.await().sorted()

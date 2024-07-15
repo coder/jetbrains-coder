@@ -1,7 +1,10 @@
 package com.coder.gateway.models
 
 import com.intellij.openapi.diagnostic.Logger
+import com.jetbrains.gateway.ssh.AvailableIde
+import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
+import com.jetbrains.gateway.ssh.InstalledIdeUIEx
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import com.jetbrains.gateway.ssh.deploy.ShellArgument
 import java.net.URL
@@ -175,6 +178,32 @@ fun IdeWithStatus.withWorkspaceProject(
     idePathOnHost = this.pathOnHost,
     deploymentURL = deploymentURL,
     lastOpened = null,
+)
+
+/**
+ * Convert an available IDE to an IDE with status.
+ */
+fun AvailableIde.toIdeWithStatus(): IdeWithStatus = IdeWithStatus(
+    product = product,
+    buildNumber = buildNumber,
+    status = IdeStatus.DOWNLOAD,
+    download = download,
+    pathOnHost = null,
+    presentableVersion = presentableVersion,
+    remoteDevType = remoteDevType,
+)
+
+/**
+ * Convert an installed IDE to an IDE with status.
+ */
+fun InstalledIdeUIEx.toIdeWithStatus(): IdeWithStatus = IdeWithStatus(
+    product = product,
+    buildNumber = buildNumber,
+    status = IdeStatus.ALREADY_INSTALLED,
+    download = null,
+    pathOnHost = pathToIde,
+    presentableVersion = presentableVersion,
+    remoteDevType = remoteDevType,
 )
 
 val remotePathRe = Regex("^[^(]+\\((.+)\\)$")
