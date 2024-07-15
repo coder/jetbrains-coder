@@ -33,10 +33,10 @@ class CoderSettingsService : CoderSettings(service<CoderSettingsStateService>())
     name = "CoderSettingsState",
     storages = [Storage("coder-settings.xml", roamingType = RoamingType.DISABLED, exportable = true)],
 )
-class CoderSettingsStateService : CoderSettingsState(), PersistentStateComponent<CoderSettingsStateService> {
-    override fun getState(): CoderSettingsStateService {
-        return this
-    }
+class CoderSettingsStateService :
+    CoderSettingsState(),
+    PersistentStateComponent<CoderSettingsStateService> {
+    override fun getState(): CoderSettingsStateService = this
 
     override fun loadState(state: CoderSettingsStateService) {
         XmlSerializerUtil.copyBean(state, this)

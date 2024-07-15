@@ -150,8 +150,6 @@ fun toRetinaAwareIcon(image: BufferedImage): Icon {
         private val isJreHiDPI: Boolean
             get() = JreHiDpiUtil.isJreHiDPI(sysScale)
 
-        override fun toString(): String {
-            return "TemplateIconDownloader.toRetinaAwareIcon for $image"
-        }
+        override fun toString(): String = "TemplateIconDownloader.toRetinaAwareIcon for $image"
     }
 }

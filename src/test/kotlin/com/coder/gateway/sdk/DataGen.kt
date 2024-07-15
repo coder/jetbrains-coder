@@ -29,24 +29,22 @@ class DataGen {
         fun resource(
             agentName: String,
             agentId: String,
-        ): WorkspaceResource {
-            return WorkspaceResource(
-                agents =
-                listOf(
-                    WorkspaceAgent(
-                        id = UUID.fromString(agentId),
-                        status = WorkspaceAgentStatus.CONNECTED,
-                        name = agentName,
-                        architecture = Arch.from("amd64"),
-                        operatingSystem = OS.from("linux"),
-                        directory = null,
-                        expandedDirectory = null,
-                        lifecycleState = WorkspaceAgentLifecycleState.READY,
-                        loginBeforeReady = false,
-                    ),
+        ): WorkspaceResource = WorkspaceResource(
+            agents =
+            listOf(
+                WorkspaceAgent(
+                    id = UUID.fromString(agentId),
+                    status = WorkspaceAgentStatus.CONNECTED,
+                    name = agentName,
+                    architecture = Arch.from("amd64"),
+                    operatingSystem = OS.from("linux"),
+                    directory = null,
+                    expandedDirectory = null,
+                    lifecycleState = WorkspaceAgentLifecycleState.READY,
+                    loginBeforeReady = false,
                 ),
-            )
-        }
+            ),
+        )
 
         fun workspace(
             name: String,
@@ -72,25 +70,19 @@ class DataGen {
         fun build(
             templateVersionID: UUID = UUID.randomUUID(),
             resources: List<WorkspaceResource> = emptyList(),
-        ): WorkspaceBuild {
-            return WorkspaceBuild(
-                templateVersionID = templateVersionID,
-                resources = resources,
-                status = WorkspaceStatus.RUNNING,
-            )
-        }
+        ): WorkspaceBuild = WorkspaceBuild(
+            templateVersionID = templateVersionID,
+            resources = resources,
+            status = WorkspaceStatus.RUNNING,
+        )
 
-        fun template(): Template {
-            return Template(
-                id = UUID.randomUUID(),
-                activeVersionID = UUID.randomUUID(),
-            )
-        }
+        fun template(): Template = Template(
+            id = UUID.randomUUID(),
+            activeVersionID = UUID.randomUUID(),
+        )
 
-        fun user(): User {
-            return User(
-                "tester",
-            )
-        }
+        fun user(): User = User(
+            "tester",
+        )
     }
 }

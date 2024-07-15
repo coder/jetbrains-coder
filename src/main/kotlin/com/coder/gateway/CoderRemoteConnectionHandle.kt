@@ -77,8 +77,10 @@ class CoderRemoteConnectionHandle {
                         )
                     },
                     retryIf = {
-                        it is ConnectionException || it is TimeoutException ||
-                            it is SSHException || it is DeployException
+                        it is ConnectionException ||
+                            it is TimeoutException ||
+                            it is SSHException ||
+                            it is DeployException
                     },
                     onException = { attempt, nextMs, e ->
                         logger.error("Failed to connect (attempt $attempt; will retry in $nextMs ms)")

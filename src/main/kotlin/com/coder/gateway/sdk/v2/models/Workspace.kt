@@ -25,10 +25,8 @@ data class Workspace(
  * Return a list of agents combined with this workspace to display in the list.
  * If the workspace has no agents, return just itself with a null agent.
  */
-fun Workspace.toAgentList(resources: List<WorkspaceResource> = this.latestBuild.resources): List<WorkspaceAgentListModel> {
-    return resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-        WorkspaceAgentListModel(this, agent)
-    }.ifEmpty {
-        listOf(WorkspaceAgentListModel(this))
-    }
+fun Workspace.toAgentList(resources: List<WorkspaceResource> = this.latestBuild.resources): List<WorkspaceAgentListModel> = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
+    WorkspaceAgentListModel(this, agent)
+}.ifEmpty {
+    listOf(WorkspaceAgentListModel(this))
 }

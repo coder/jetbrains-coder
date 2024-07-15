@@ -111,9 +111,10 @@ data class CoderWorkspacesStepSelection(
  * A list of agents/workspaces belonging to a deployment.  Has inputs for
  * connecting and authorizing to different deployments.
  */
-class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
-    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
-) {
+class CoderWorkspacesStepView :
+    CoderWizardStep<CoderWorkspacesStepSelection>(
+        CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
+    ) {
     private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
     private val jobs: MutableMap<UUID, Job> = mutableMapOf()
@@ -778,31 +779,26 @@ class CoderWorkspacesStepView : CoderWizardStep<CoderWorkspacesStepSelection>(
     }
 }
 
-class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
-    WorkspaceIconColumnInfo(""),
-    WorkspaceNameColumnInfo("Name"),
-    WorkspaceTemplateNameColumnInfo("Template"),
-    WorkspaceVersionColumnInfo("Version"),
-    WorkspaceStatusColumnInfo("Status"),
-) {
+class WorkspacesTableModel :
+    ListTableModel<WorkspaceAgentListModel>(
+        WorkspaceIconColumnInfo(""),
+        WorkspaceNameColumnInfo("Name"),
+        WorkspaceTemplateNameColumnInfo("Template"),
+        WorkspaceVersionColumnInfo("Version"),
+        WorkspaceStatusColumnInfo("Status"),
+    ) {
     private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
-        override fun valueOf(item: WorkspaceAgentListModel?): String? {
-            return item?.workspace?.templateName
-        }
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
             return object : IconTableCellRenderer<String>() {
-                override fun getText(): String {
-                    return ""
-                }
+                override fun getText(): String = ""
 
                 override fun getIcon(
                     value: String,
                     table: JTable?,
                     row: Int,
-                ): Icon {
-                    return item?.icon ?: CoderIcons.UNKNOWN
-                }
+                ): Icon = item?.icon ?: CoderIcons.UNKNOWN
 
                 override fun isCenterAlignment() = true
 
@@ -824,14 +820,10 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
     }
 
     private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
-        override fun valueOf(item: WorkspaceAgentListModel?): String? {
-            return item?.name
-        }
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.name
 
-        override fun getComparator(): Comparator<WorkspaceAgentListModel> {
-            return Comparator { a, b ->
-                a.name.compareTo(b.name, ignoreCase = true)
-            }
+        override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
+            a.name.compareTo(b.name, ignoreCase = true)
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
@@ -857,16 +849,11 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
         }
     }
 
-    private class WorkspaceTemplateNameColumnInfo(columnName: String) :
-        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
-        override fun valueOf(item: WorkspaceAgentListModel?): String? {
-            return item?.workspace?.templateName
-        }
+    private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> {
-            return Comparator { a, b ->
-                a.workspace.templateName.compareTo(b.workspace.templateName, ignoreCase = true)
-            }
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
+            a.workspace.templateName.compareTo(b.workspace.templateName, ignoreCase = true)
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
@@ -892,14 +879,12 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
     }
 
     private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
-        override fun valueOf(workspace: WorkspaceAgentListModel?): String? {
-            return if (workspace == null) {
-                "Unknown"
-            } else if (workspace.workspace.outdated) {
-                "Outdated"
-            } else {
-                "Up to date"
-            }
+        override fun valueOf(workspace: WorkspaceAgentListModel?): String? = if (workspace == null) {
+            "Unknown"
+        } else if (workspace.workspace.outdated) {
+            "Outdated"
+        } else {
+            "Up to date"
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
@@ -925,14 +910,10 @@ class WorkspacesTableModel : ListTableModel<WorkspaceAgentListModel>(
     }
 
     private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
-        override fun valueOf(item: WorkspaceAgentListModel?): String? {
-            return item?.status?.label
-        }
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.status?.label
 
-        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> {
-            return Comparator { a, b ->
-                a.status.label.compareTo(b.status.label, ignoreCase = true)
-            }
+        override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
+            a.status.label.compareTo(b.status.label, ignoreCase = true)
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {

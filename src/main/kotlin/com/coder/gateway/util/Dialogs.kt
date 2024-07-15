@@ -57,13 +57,9 @@ private class CoderWorkspaceStepDialog(
         return null
     }
 
-    override fun createContentPaneBorder(): Border {
-        return JBUI.Borders.empty()
-    }
+    override fun createContentPaneBorder(): Border = JBUI.Borders.empty()
 
-    override fun createCenterPanel(): JComponent {
-        return view
-    }
+    override fun createCenterPanel(): JComponent = view
 
     override fun createSouthPanel(): JComponent {
         // The plugin provides its own buttons.

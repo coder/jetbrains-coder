@@ -7,9 +7,7 @@ class SemVer(private val major: Long = 0, private val minor: Long = 0, private v
         require(patch >= 0) { "Coder minor version must be a positive number" }
     }
 
-    override fun toString(): String {
-        return "CoderSemVer(major=$major, minor=$minor, patch=$patch)"
-    }
+    override fun toString(): String = "CoderSemVer(major=$major, minor=$minor, patch=$patch)"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -56,19 +56,21 @@ class LazyBrowserLink(
     }
 }
 
-private class CopyLinkAction(val url: String) : DumbAwareAction(
-    IdeBundle.messagePointer("action.text.copy.link.address"),
-    AllIcons.Actions.Copy,
-) {
+private class CopyLinkAction(val url: String) :
+    DumbAwareAction(
+        IdeBundle.messagePointer("action.text.copy.link.address"),
+        AllIcons.Actions.Copy,
+    ) {
     override fun actionPerformed(event: AnActionEvent) {
         CopyPasteManager.getInstance().setContents(StringSelection(url))
     }
 }
 
-private class OpenLinkInBrowser(val url: String) : DumbAwareAction(
-    IdeBundle.messagePointer("action.text.open.link.in.browser"),
-    AllIcons.Nodes.PpWeb,
-) {
+private class OpenLinkInBrowser(val url: String) :
+    DumbAwareAction(
+        IdeBundle.messagePointer("action.text.open.link.in.browser"),
+        AllIcons.Nodes.PpWeb,
+    ) {
     override fun actionPerformed(event: AnActionEvent) {
         BrowserUtil.browse(url)
     }

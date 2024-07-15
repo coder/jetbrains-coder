@@ -13,8 +13,7 @@ class InstantConverter {
     @ToJson fun toJson(src: Instant?): String = FORMATTER.format(src)
 
     @FromJson fun fromJson(src: String): Instant? =
-        FORMATTER.parse(src) {
-                temporal: TemporalAccessor? ->
+        FORMATTER.parse(src) { temporal: TemporalAccessor? ->
             Instant.from(temporal)
         }
 

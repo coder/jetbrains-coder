@@ -233,8 +233,10 @@ class CoderWorkspaceProjectIDEStepView(
                                 retrieveIDEs(executor, data.workspace, data.agent)
                             },
                             retryIf = {
-                                it is ConnectionException || it is TimeoutException ||
-                                    it is SSHException || it is DeployException
+                                it is ConnectionException ||
+                                    it is TimeoutException ||
+                                    it is SSHException ||
+                                    it is DeployException
                             },
                             onException = { attempt, nextMs, e ->
                                 logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
@@ -317,17 +319,15 @@ class CoderWorkspaceProjectIDEStepView(
     /**
      * Connect to the remote worker via SSH.
      */
-    private suspend fun createRemoteExecutor(host: String): HighLevelHostAccessor {
-        return HighLevelHostAccessor.create(
-            RemoteCredentialsHolder().apply {
-                setHost(host)
-                userName = "coder"
-                port = 22
-                authType = AuthType.OPEN_SSH
-            },
-            true,
-        )
-    }
+    private suspend fun createRemoteExecutor(host: String): HighLevelHostAccessor = HighLevelHostAccessor.create(
+        RemoteCredentialsHolder().apply {
+            setHost(host)
+            userName = "coder"
+            port = 22
+            authType = AuthType.OPEN_SSH
+        },
+        true,
+    )
 
     /**
      * Get a list of available IDEs.
@@ -351,8 +351,7 @@ class CoderWorkspaceProjectIDEStepView(
         logger.info("Resolved OS and Arch for $name is: $workspaceOS")
         val installedIdesJob =
             cs.async(Dispatchers.IO) {
-                executor.getInstalledIDEs().map {
-                        ide ->
+                executor.getInstalledIDEs().map { ide ->
                     IdeWithStatus(
                         ide.product,
                         ide.buildNumber,
@@ -397,44 +396,40 @@ class CoderWorkspaceProjectIDEStepView(
     private fun toDeployedOS(
         os: OS,
         arch: Arch,
-    ): DeployTargetOS {
-        return when (os) {
-            OS.LINUX ->
-                when (arch) {
-                    Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
-                    Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.ARM_64)
-                    Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.UNKNOWN)
-                }
+    ): DeployTargetOS = when (os) {
+        OS.LINUX ->
+            when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.Linux, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Linux, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Linux, OSArch.UNKNOWN)
+            }
 
-            OS.WINDOWS ->
-                when (arch) {
-                    Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
-                    Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.ARM_64)
-                    Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.UNKNOWN)
-                }
+        OS.WINDOWS ->
+            when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.Windows, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.Windows, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.Windows, OSArch.UNKNOWN)
+            }
 
-            OS.MAC ->
-                when (arch) {
-                    Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
-                    Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.ARM_64)
-                    Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.UNKNOWN)
-                }
-        }
+        OS.MAC ->
+            when (arch) {
+                Arch.AMD64 -> DeployTargetOS(OSKind.MacOs, OSArch.X86_64)
+                Arch.ARM64 -> DeployTargetOS(OSKind.MacOs, OSArch.ARM_64)
+                Arch.ARMV7 -> DeployTargetOS(OSKind.MacOs, OSArch.UNKNOWN)
+            }
     }
 
     /**
      * Return the selected parameters.  Throw if not configured.
      */
-    override fun data(): WorkspaceProjectIDE {
-        return withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
-            val name = "${state.workspace.name}.${state.agent.name}"
-            selectedIDE.withWorkspaceProject(
-                name = name,
-                hostname = CoderCLIManager.getHostName(state.client.url, name),
-                projectPath = tfProject.text,
-                deploymentURL = state.client.url,
-            )
-        }
+    override fun data(): WorkspaceProjectIDE = withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
+        val name = "${state.workspace.name}.${state.agent.name}"
+        selectedIDE.withWorkspaceProject(
+            name = name,
+            hostname = CoderCLIManager.getHostName(state.client.url, name),
+            projectPath = tfProject.text,
+            deploymentURL = state.client.url,
+        )
     }
 
     override fun stop() {
@@ -451,9 +446,7 @@ class CoderWorkspaceProjectIDEStepView(
             putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         }
 
-        override fun getSelectedItem(): IdeWithStatus? {
-            return super.getSelectedItem() as IdeWithStatus?
-        }
+        override fun getSelectedItem(): IdeWithStatus? = super.getSelectedItem() as IdeWithStatus?
     }
 
     private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) : ListCellRenderer<IdeWithStatus> {
@@ -478,27 +471,25 @@ class CoderWorkspaceProjectIDEStepView(
             index: Int,
             isSelected: Boolean,
             cellHasFocus: Boolean,
-        ): Component {
-            return if (ideWithStatus == null && index == -1) {
-                loadingComponentRenderer.getListCellRendererComponent(list, null, -1, isSelected, cellHasFocus)
-            } else if (ideWithStatus != null) {
-                JPanel().apply {
-                    layout = FlowLayout(FlowLayout.LEFT)
-                    add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
-                    add(
-                        JLabel(
-                            "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
-                                Locale.getDefault(),
-                            )}",
-                        ).apply {
-                            foreground = UIUtil.getLabelDisabledForeground()
-                        },
-                    )
-                    background = UIUtil.getListBackground(isSelected, cellHasFocus)
-                }
-            } else {
-                panel { }
+        ): Component = if (ideWithStatus == null && index == -1) {
+            loadingComponentRenderer.getListCellRendererComponent(list, null, -1, isSelected, cellHasFocus)
+        } else if (ideWithStatus != null) {
+            JPanel().apply {
+                layout = FlowLayout(FlowLayout.LEFT)
+                add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
+                add(
+                    JLabel(
+                        "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
+                            Locale.getDefault(),
+                        )}",
+                    ).apply {
+                        foreground = UIUtil.getLabelDisabledForeground()
+                    },
+                )
+                background = UIUtil.getListBackground(isSelected, cellHasFocus)
             }
+        } else {
+            panel { }
         }
     }
 

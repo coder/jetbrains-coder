@@ -37,21 +37,17 @@ internal class CoderCLIManagerTest {
     /**
      * Return the contents of a script that contains the string.
      */
-    private fun mkbin(str: String): String {
-        return if (getOS() == OS.WINDOWS) {
-            // Must use a .bat extension for this to work.
-            listOf("@echo off", str)
-        } else {
-            listOf("#!/bin/sh", str)
-        }.joinToString(System.lineSeparator())
-    }
+    private fun mkbin(str: String): String = if (getOS() == OS.WINDOWS) {
+        // Must use a .bat extension for this to work.
+        listOf("@echo off", str)
+    } else {
+        listOf("#!/bin/sh", str)
+    }.joinToString(System.lineSeparator())
 
     /**
      * Return the contents of a script that outputs JSON containing the version.
      */
-    private fun mkbinVersion(version: String): String {
-        return mkbin(echo("""{"version": "$version"}"""))
-    }
+    private fun mkbinVersion(version: String): String = mkbin(echo("""{"version": "$version"}"""))
 
     private fun mockServer(
         errorCode: Int = 0,
@@ -333,7 +329,7 @@ internal class CoderCLIManagerTest {
                         "header-command-windows",
                         "blank",
                         """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""",
-                        features = Features(false, true)
+                        features = Features(false, true),
                     )
                 } else {
                     SSHTest(
@@ -342,7 +338,7 @@ internal class CoderCLIManagerTest {
                         "header-command",
                         "blank",
                         "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'",
-                        features = Features(false, true)
+                        features = Features(false, true),
                     )
                 },
                 SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true, true)),
@@ -354,7 +350,7 @@ internal class CoderCLIManagerTest {
                     "extra-config",
                     "blank",
                     extraConfig = extraConfig,
-                    features = Features(false, true)
+                    features = Features(false, true),
                 ),
                 SSHTest(
                     listOf("extra"),
@@ -362,7 +358,7 @@ internal class CoderCLIManagerTest {
                     "extra-config",
                     "blank",
                     env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to extraConfig)),
-                    features = Features(false, true)
+                    features = Features(false, true),
                 ),
             )
 
@@ -476,23 +472,19 @@ internal class CoderCLIManagerTest {
     /**
      * Return an echo command for the OS.
      */
-    private fun echo(str: String): String {
-        return if (getOS() == OS.WINDOWS) {
-            "echo $str"
-        } else {
-            "echo '$str'"
-        }
+    private fun echo(str: String): String = if (getOS() == OS.WINDOWS) {
+        "echo $str"
+    } else {
+        "echo '$str'"
     }
 
     /**
      * Return an exit command for the OS.
      */
-    private fun exit(code: Number): String {
-        return if (getOS() == OS.WINDOWS) {
-            "exit /b $code"
-        } else {
-            "exit $code"
-        }
+    private fun exit(code: Number): String = if (getOS() == OS.WINDOWS) {
+        "exit /b $code"
+    } else {
+        "exit $code"
     }
 
     @Test

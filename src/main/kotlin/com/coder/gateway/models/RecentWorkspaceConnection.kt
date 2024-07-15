@@ -22,7 +22,8 @@ class RecentWorkspaceConnection(
     configDirectory: String? = null,
     name: String? = null,
     deploymentURL: String? = null,
-) : BaseState(), Comparable<RecentWorkspaceConnection> {
+) : BaseState(),
+    Comparable<RecentWorkspaceConnection> {
     @get:Attribute
     var coderWorkspaceHostname by string()
 

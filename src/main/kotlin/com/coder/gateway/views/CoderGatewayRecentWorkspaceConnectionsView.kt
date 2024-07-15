@@ -76,7 +76,9 @@ data class DeploymentInfo(
     var error: String? = null,
 )
 
-class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) : GatewayRecentConnections, Disposable {
+class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) :
+    GatewayRecentConnections,
+    Disposable {
     private val settings = service<CoderSettingsService>()
     private val recentConnectionsService = service<CoderRecentWorkspaceConnectionsService>()
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -98,48 +100,46 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     private var deployments: MutableMap<String, DeploymentInfo> = mutableMapOf()
     private var poller: Job? = null
 
-    override fun createRecentsView(lifetime: Lifetime): JComponent {
-        return panel {
-            indent {
-                row {
-                    label(CoderGatewayBundle.message("gateway.connector.recent-connections.title")).applyToComponent {
-                        font = JBFont.h3().asBold()
-                    }
-                    searchBar =
-                        cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
-                            minimumSize = Dimension(350, -1)
-                            textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
-                            addDocumentListener(
-                                object : DocumentAdapter() {
-                                    override fun textChanged(e: DocumentEvent) {
-                                        filterString = this@applyToComponent.text.trim()
-                                        updateContentView()
-                                    }
-                                },
-                            )
-                        }.component
-                    actionButton(
-                        object : DumbAwareAction(
-                            CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"),
-                            null,
-                            AllIcons.General.Add,
-                        ) {
-                            override fun actionPerformed(e: AnActionEvent) {
-                                setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
-                            }
-                        },
-                    ).gap(RightGap.SMALL)
-                }.bottomGap(BottomGap.SMALL)
-                separator(background = WelcomeScreenUIManager.getSeparatorColor())
-                row {
-                    resizableRow()
-                    cell(recentWorkspacesContentPanel).resizableColumn().align(AlignX.FILL).align(AlignY.FILL).component
+    override fun createRecentsView(lifetime: Lifetime): JComponent = panel {
+        indent {
+            row {
+                label(CoderGatewayBundle.message("gateway.connector.recent-connections.title")).applyToComponent {
+                    font = JBFont.h3().asBold()
                 }
+                searchBar =
+                    cell(SearchTextField(false)).resizableColumn().align(AlignX.FILL).applyToComponent {
+                        minimumSize = Dimension(350, -1)
+                        textEditor.border = JBUI.Borders.empty(2, 5, 2, 0)
+                        addDocumentListener(
+                            object : DocumentAdapter() {
+                                override fun textChanged(e: DocumentEvent) {
+                                    filterString = this@applyToComponent.text.trim()
+                                    updateContentView()
+                                }
+                            },
+                        )
+                    }.component
+                actionButton(
+                    object : DumbAwareAction(
+                        CoderGatewayBundle.message("gateway.connector.recent-connections.new.wizard.button.tooltip"),
+                        null,
+                        AllIcons.General.Add,
+                    ) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            setContentCallback(CoderGatewayConnectorWizardWrapperView().component)
+                        }
+                    },
+                ).gap(RightGap.SMALL)
+            }.bottomGap(BottomGap.SMALL)
+            separator(background = WelcomeScreenUIManager.getSeparatorColor())
+            row {
+                resizableRow()
+                cell(recentWorkspacesContentPanel).resizableColumn().align(AlignX.FILL).align(AlignY.FILL).component
             }
-        }.apply {
-            background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
-            border = JBUI.Borders.empty(12, 0, 0, 12)
         }
+    }.apply {
+        background = WelcomeScreenUIManager.getMainAssociatedComponentBackground()
+        border = JBUI.Borders.empty(12, 0, 0, 12)
     }
 
     override fun getRecentsTitle() = CoderGatewayBundle.message("gateway.connector.title")
@@ -328,37 +328,33 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     /**
      * Get valid connections grouped by deployment and workspace.
      */
-    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> {
-        return recentConnectionsService.getAllRecentConnections()
-            // Validate and parse connections.
-            .mapNotNull {
-                try {
-                    it.toWorkspaceProjectIDE()
-                } catch (e: Exception) {
-                    logger.warn("Removing invalid recent connection $it", e)
-                    recentConnectionsService.removeConnection(it)
-                    null
-                }
+    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> = recentConnectionsService.getAllRecentConnections()
+        // Validate and parse connections.
+        .mapNotNull {
+            try {
+                it.toWorkspaceProjectIDE()
+            } catch (e: Exception) {
+                logger.warn("Removing invalid recent connection $it", e)
+                recentConnectionsService.removeConnection(it)
+                null
             }
-            .filter { !filter || matchesFilter(it) }
-            // Group by the deployment.
-            .groupBy { it.deploymentURL.toString() }
-            // Group the connections in each deployment by workspace.
-            .mapValues { (_, connections) ->
-                connections
-                    .groupBy { it.name.split(".", limit = 2).first() }
-            }
-    }
+        }
+        .filter { !filter || matchesFilter(it) }
+        // Group by the deployment.
+        .groupBy { it.deploymentURL.toString() }
+        // Group the connections in each deployment by workspace.
+        .mapValues { (_, connections) ->
+            connections
+                .groupBy { it.name.split(".", limit = 2).first() }
+        }
 
     /**
      * Return true if the connection matches the current filter.
      */
-    private fun matchesFilter(connection: WorkspaceProjectIDE): Boolean {
-        return filterString.let {
-            it.isNullOrBlank() ||
-                connection.hostname.lowercase(Locale.getDefault()).contains(it) ||
-                connection.projectPath.lowercase(Locale.getDefault()).contains(it)
-        }
+    private fun matchesFilter(connection: WorkspaceProjectIDE): Boolean = filterString.let {
+        it.isNullOrBlank() ||
+            connection.hostname.lowercase(Locale.getDefault()).contains(it) ||
+            connection.projectPath.lowercase(Locale.getDefault()).contains(it)
     }
 
     /**

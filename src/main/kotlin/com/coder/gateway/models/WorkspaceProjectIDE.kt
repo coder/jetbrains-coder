@@ -48,19 +48,17 @@ class WorkspaceProjectIDE(
     /**
      * Convert parameters into a recent workspace connection (for storage).
      */
-    fun toRecentWorkspaceConnection(): RecentWorkspaceConnection {
-        return RecentWorkspaceConnection(
-            name = name,
-            coderWorkspaceHostname = hostname,
-            projectPath = projectPath,
-            ideProductCode = ideProduct.productCode,
-            ideBuildNumber = ideBuildNumber,
-            downloadSource = downloadSource,
-            idePathOnHost = idePathOnHost,
-            deploymentURL = deploymentURL.toString(),
-            lastOpened = lastOpened,
-        )
-    }
+    fun toRecentWorkspaceConnection(): RecentWorkspaceConnection = RecentWorkspaceConnection(
+        name = name,
+        coderWorkspaceHostname = hostname,
+        projectPath = projectPath,
+        ideProductCode = ideProduct.productCode,
+        ideBuildNumber = ideBuildNumber,
+        downloadSource = downloadSource,
+        idePathOnHost = idePathOnHost,
+        deploymentURL = deploymentURL.toString(),
+        lastOpened = lastOpened,
+    )
 
     companion object {
         val logger = Logger.getInstance(WorkspaceProjectIDE::class.java.simpleName)
@@ -167,19 +165,17 @@ fun IdeWithStatus.withWorkspaceProject(
     hostname: String,
     projectPath: String,
     deploymentURL: URL,
-): WorkspaceProjectIDE {
-    return WorkspaceProjectIDE(
-        name = name,
-        hostname = hostname,
-        projectPath = projectPath,
-        ideProduct = this.product,
-        ideBuildNumber = this.buildNumber,
-        downloadSource = this.download?.link,
-        idePathOnHost = this.pathOnHost,
-        deploymentURL = deploymentURL,
-        lastOpened = null,
-    )
-}
+): WorkspaceProjectIDE = WorkspaceProjectIDE(
+    name = name,
+    hostname = hostname,
+    projectPath = projectPath,
+    ideProduct = this.product,
+    ideBuildNumber = this.buildNumber,
+    downloadSource = this.download?.link,
+    idePathOnHost = this.pathOnHost,
+    deploymentURL = deploymentURL,
+    lastOpened = null,
+)
 
 val remotePathRe = Regex("^[^(]+\\((.+)\\)$")
 

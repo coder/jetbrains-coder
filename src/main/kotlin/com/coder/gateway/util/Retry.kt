@@ -90,15 +90,11 @@ fun humanizeDuration(durationMs: Long): String {
  * cause (IllegalStateException) is useless.  The error also includes a very
  * long useless tmp path.  Return true if the error looks like this timeout.
  */
-fun isWorkerTimeout(e: Throwable): Boolean {
-    return e is DeployException && e.message.contains("Worker binary deploy failed")
-}
+fun isWorkerTimeout(e: Throwable): Boolean = e is DeployException && e.message.contains("Worker binary deploy failed")
 
 /**
  * Return true if the exception is some kind of cancellation.
  */
-fun isCancellation(e: Throwable): Boolean {
-    return e is InterruptedException ||
-        e is CancellationException ||
-        e is ProcessCanceledException
-}
+fun isCancellation(e: Throwable): Boolean = e is InterruptedException ||
+    e is CancellationException ||
+    e is ProcessCanceledException

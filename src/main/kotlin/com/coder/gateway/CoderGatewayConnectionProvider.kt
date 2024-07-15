@@ -29,9 +29,7 @@ class CoderGatewayConnectionProvider : GatewayConnectionProvider {
         return null
     }
 
-    override fun isApplicable(parameters: Map<String, String>): Boolean {
-        return parameters.isCoder()
-    }
+    override fun isApplicable(parameters: Map<String, String>): Boolean = parameters.isCoder()
 
     companion object {
         val logger = Logger.getInstance(CoderGatewayConnectionProvider::class.java.simpleName)

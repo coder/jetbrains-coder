@@ -505,9 +505,7 @@ class CoderRestClientTest {
                     "bar",
                     true,
                     object : ProxySelector() {
-                        override fun select(uri: URI): List<Proxy> {
-                            return listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("localhost", srv2.address.port)))
-                        }
+                        override fun select(uri: URI): List<Proxy> = listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("localhost", srv2.address.port)))
 
                         override fun connectFailed(
                             uri: URI,

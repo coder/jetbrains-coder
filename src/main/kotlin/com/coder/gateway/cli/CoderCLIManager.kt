@@ -189,15 +189,13 @@ class CoderCLIManager(
     /**
      * Return the entity tag for the binary on disk, if any.
      */
-    private fun getBinaryETag(): String? {
-        return try {
-            sha1(FileInputStream(localBinaryPath.toFile()))
-        } catch (e: FileNotFoundException) {
-            null
-        } catch (e: Exception) {
-            logger.warn("Unable to calculate hash for $localBinaryPath", e)
-            null
-        }
+    private fun getBinaryETag(): String? = try {
+        sha1(FileInputStream(localBinaryPath.toFile()))
+    } catch (e: FileNotFoundException) {
+        null
+    } catch (e: Exception) {
+        logger.warn("Unable to calculate hash for $localBinaryPath", e)
+        null
     }
 
     /**
@@ -230,12 +228,10 @@ class CoderCLIManager(
     /**
      * Return the contents of the SSH config or null if it does not exist.
      */
-    private fun readSSHConfig(): String? {
-        return try {
-            settings.sshConfigPath.toFile().readText()
-        } catch (e: FileNotFoundException) {
-            null
-        }
+    private fun readSSHConfig(): String? = try {
+        settings.sshConfigPath.toFile().readText()
+    } catch (e: FileNotFoundException) {
+        null
     }
 
     /**
@@ -301,7 +297,7 @@ class CoderCLIManager(
                               LogLevel ERROR
                               SetEnv CODER_SSH_SESSION_TYPE=JetBrains
                             """.trimIndent()
-                                .plus(extraConfig)
+                                .plus(extraConfig),
                         ).replace("\n", System.lineSeparator())
                 },
             )
@@ -398,23 +394,21 @@ class CoderCLIManager(
     /**
      * Like version(), but logs errors instead of throwing them.
      */
-    private fun tryVersion(): SemVer? {
-        return try {
-            version()
-        } catch (e: Exception) {
-            when (e) {
-                is InvalidVersionException -> {
-                    logger.info("Got invalid version from $localBinaryPath: ${e.message}")
-                }
-                else -> {
-                    // An error here most likely means the CLI does not exist or
-                    // it executed successfully but output no version which
-                    // suggests it is not the right binary.
-                    logger.info("Unable to determine $localBinaryPath version: ${e.message}")
-                }
+    private fun tryVersion(): SemVer? = try {
+        version()
+    } catch (e: Exception) {
+        when (e) {
+            is InvalidVersionException -> {
+                logger.info("Got invalid version from $localBinaryPath: ${e.message}")
             }
-            null
+            else -> {
+                // An error here most likely means the CLI does not exist or
+                // it executed successfully but output no version which
+                // suggests it is not the right binary.
+                logger.info("Unable to determine $localBinaryPath version: ${e.message}")
+            }
         }
+        null
     }
 
     /**
@@ -475,23 +469,17 @@ class CoderCLIManager(
         fun getHostName(
             url: URL,
             workspaceName: String,
-        ): String {
-            return "coder-jetbrains--$workspaceName--${url.safeHost()}"
-        }
+        ): String = "coder-jetbrains--$workspaceName--${url.safeHost()}"
 
         @JvmStatic
         fun getBackgroundHostName(
             url: URL,
             workspaceName: String,
-        ): String {
-            return getHostName(url, workspaceName) + "--bg"
-        }
+        ): String = getHostName(url, workspaceName) + "--bg"
 
         @JvmStatic
         fun getBackgroundHostName(
             hostname: String,
-        ): String {
-            return hostname + "--bg"
-        }
+        ): String = hostname + "--bg"
     }
 }

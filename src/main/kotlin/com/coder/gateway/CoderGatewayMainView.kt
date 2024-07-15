@@ -19,33 +19,19 @@ class CoderGatewayMainView : GatewayConnector {
     override val icon: Icon
         get() = CoderIcons.LOGO
 
-    override fun createView(lifetime: Lifetime): GatewayConnectorView {
-        return CoderGatewayConnectorWizardWrapperView()
+    override fun createView(lifetime: Lifetime): GatewayConnectorView = CoderGatewayConnectorWizardWrapperView()
+
+    override fun getActionText(): String = CoderGatewayBundle.message("gateway.connector.action.text")
+
+    override fun getDescription(): String = CoderGatewayBundle.message("gateway.connector.description")
+
+    override fun getDocumentationAction(): GatewayConnectorDocumentation = GatewayConnectorDocumentation(true) {
+        HelpManager.getInstance().invokeHelp(ABOUT_HELP_TOPIC)
     }
 
-    override fun getActionText(): String {
-        return CoderGatewayBundle.message("gateway.connector.action.text")
-    }
+    override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections = CoderGatewayRecentWorkspaceConnectionsView(setContentCallback)
 
-    override fun getDescription(): String {
-        return CoderGatewayBundle.message("gateway.connector.description")
-    }
+    override fun getTitle(): String = CoderGatewayBundle.message("gateway.connector.title")
 
-    override fun getDocumentationAction(): GatewayConnectorDocumentation {
-        return GatewayConnectorDocumentation(true) {
-            HelpManager.getInstance().invokeHelp(ABOUT_HELP_TOPIC)
-        }
-    }
-
-    override fun getRecentConnections(setContentCallback: (Component) -> Unit): GatewayRecentConnections {
-        return CoderGatewayRecentWorkspaceConnectionsView(setContentCallback)
-    }
-
-    override fun getTitle(): String {
-        return CoderGatewayBundle.message("gateway.connector.title")
-    }
-
-    override fun isAvailable(): Boolean {
-        return true
-    }
+    override fun isAvailable(): Boolean = true
 }

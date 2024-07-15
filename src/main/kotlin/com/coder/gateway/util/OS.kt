@@ -2,13 +2,9 @@ package com.coder.gateway.util
 
 import java.util.Locale
 
-fun getOS(): OS? {
-    return OS.from(System.getProperty("os.name"))
-}
+fun getOS(): OS? = OS.from(System.getProperty("os.name"))
 
-fun getArch(): Arch? {
-    return Arch.from(System.getProperty("os.arch").lowercase(Locale.getDefault()))
-}
+fun getArch(): Arch? = Arch.from(System.getProperty("os.arch").lowercase(Locale.getDefault()))
 
 enum class OS {
     WINDOWS,
@@ -17,22 +13,20 @@ enum class OS {
     ;
 
     companion object {
-        fun from(os: String): OS? {
-            return when {
-                os.contains("win", true) -> {
-                    WINDOWS
-                }
-
-                os.contains("nix", true) || os.contains("nux", true) || os.contains("aix", true) -> {
-                    LINUX
-                }
-
-                os.contains("mac", true) || os.contains("darwin", true) -> {
-                    MAC
-                }
-
-                else -> null
+        fun from(os: String): OS? = when {
+            os.contains("win", true) -> {
+                WINDOWS
             }
+
+            os.contains("nix", true) || os.contains("nux", true) || os.contains("aix", true) -> {
+                LINUX
+            }
+
+            os.contains("mac", true) || os.contains("darwin", true) -> {
+                MAC
+            }
+
+            else -> null
         }
     }
 }
@@ -44,13 +38,11 @@ enum class Arch {
     ;
 
     companion object {
-        fun from(arch: String): Arch? {
-            return when {
-                arch.contains("amd64", true) || arch.contains("x86_64", true) -> AMD64
-                arch.contains("arm64", true) || arch.contains("aarch64", true) -> ARM64
-                arch.contains("armv7", true) -> ARMV7
-                else -> null
-            }
+        fun from(arch: String): Arch? = when {
+            arch.contains("amd64", true) || arch.contains("x86_64", true) -> AMD64
+            arch.contains("arm64", true) || arch.contains("aarch64", true) -> ARM64
+            arch.contains("armv7", true) -> ARMV7
+            else -> null
         }
     }
 }

@@ -5,7 +5,5 @@ package com.coder.gateway.settings
  * Exists only so we can override the environment in tests.
  */
 class Environment(private val env: Map<String, String> = emptyMap()) {
-    fun get(name: String): String {
-        return env[name] ?: System.getenv(name) ?: ""
-    }
+    fun get(name: String): String = env[name] ?: System.getenv(name) ?: ""
 }

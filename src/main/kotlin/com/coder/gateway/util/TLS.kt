@@ -113,13 +113,9 @@ fun coderTrustManagers(tlsCAPath: String): Array<TrustManager> {
 }
 
 class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, private val alternateName: String) : SSLSocketFactory() {
-    override fun getDefaultCipherSuites(): Array<String> {
-        return delegate.defaultCipherSuites
-    }
+    override fun getDefaultCipherSuites(): Array<String> = delegate.defaultCipherSuites
 
-    override fun getSupportedCipherSuites(): Array<String> {
-        return delegate.supportedCipherSuites
-    }
+    override fun getSupportedCipherSuites(): Array<String> = delegate.supportedCipherSuites
 
     override fun createSocket(): Socket {
         val socket = delegate.createSocket() as SSLSocket
@@ -248,7 +244,5 @@ class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) :
         }
     }
 
-    override fun getAcceptedIssuers(): Array<X509Certificate> {
-        return otherTrustManager.acceptedIssuers + systemTrustManager.acceptedIssuers
-    }
+    override fun getAcceptedIssuers(): Array<X509Certificate> = otherTrustManager.acceptedIssuers + systemTrustManager.acceptedIssuers
 }

@@ -28,15 +28,13 @@ internal class LinkHandlerTest {
     private fun mockRedirectServer(
         location: String,
         temp: Boolean,
-    ): Pair<HttpServer, String> {
-        return mockServer { exchange ->
-            exchange.responseHeaders.set("Location", location)
-            exchange.sendResponseHeaders(
-                if (temp) HttpURLConnection.HTTP_MOVED_TEMP else HttpURLConnection.HTTP_MOVED_PERM,
-                -1,
-            )
-            exchange.close()
-        }
+    ): Pair<HttpServer, String> = mockServer { exchange ->
+        exchange.responseHeaders.set("Location", location)
+        exchange.sendResponseHeaders(
+            if (temp) HttpURLConnection.HTTP_MOVED_TEMP else HttpURLConnection.HTTP_MOVED_PERM,
+            -1,
+        )
+        exchange.close()
     }
 
     private val agents =

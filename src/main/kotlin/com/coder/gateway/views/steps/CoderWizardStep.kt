@@ -14,7 +14,8 @@ import javax.swing.JButton
 
 sealed class CoderWizardStep<T>(
     nextActionText: String,
-) : BorderLayoutPanel(), Disposable {
+) : BorderLayoutPanel(),
+    Disposable {
     var onPrevious: (() -> Unit)? = null
     var onNext: ((data: T) -> Unit)? = null
 
