@@ -161,7 +161,7 @@ class CoderRemoteConnectionHandle {
         indicator.text = "Waiting for ${workspace.ideName} backend..."
         var status: UnattendedHostStatus? = null
         val remoteProjectPath = accessor.makeRemotePath(ShellArgument.PlainText(workspace.projectPath))
-        val logsDir = accessor.getLogsDir(workspace.ideProductCode.productCode, remoteProjectPath)
+        val logsDir = accessor.getLogsDir(workspace.ideProduct.productCode, remoteProjectPath)
         while (lifetime.status == LifetimeStatus.Alive) {
             status = ensureIDEBackend(workspace, accessor, ideDir, remoteProjectPath, logsDir, lifetime, null)
             if (!status?.joinLink.isNullOrBlank()) {
@@ -262,7 +262,7 @@ class CoderRemoteConnectionHandle {
         logger.info("Searching for ${workspace.ideName} on ${workspace.hostname}")
         val installed =
             accessor.getInstalledIDEs().find {
-                it.product == workspace.ideProductCode && it.buildNumber == workspace.ideBuildNumber
+                it.product == workspace.ideProduct && it.buildNumber == workspace.ideBuildNumber
             }
         if (installed != null) {
             logger.info("${workspace.ideName} found at ${workspace.hostname}:${installed.pathToIde}")

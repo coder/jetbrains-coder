@@ -287,7 +287,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         }
                         connections.forEach { workspaceProjectIDE ->
                             row {
-                                icon(workspaceProjectIDE.ideProductCode.icon)
+                                icon(workspaceProjectIDE.ideProduct.icon)
                                 cell(
                                     ActionLink(workspaceProjectIDE.projectPathDisplay) {
                                         CoderRemoteConnectionHandle().connect { workspaceProjectIDE }

@@ -16,7 +16,7 @@ class WorkspaceProjectIDE(
     val name: String,
     val hostname: String,
     val projectPath: String,
-    val ideProductCode: IntelliJPlatformProduct,
+    val ideProduct: IntelliJPlatformProduct,
     val ideBuildNumber: String,
     // One of these must exist; enforced by the constructor.
     var idePathOnHost: String?,
@@ -25,7 +25,7 @@ class WorkspaceProjectIDE(
     val deploymentURL: URL,
     var lastOpened: String?, // Null if never opened.
 ) {
-    val ideName = "${ideProductCode.productCode}-$ideBuildNumber"
+    val ideName = "${ideProduct.productCode}-$ideBuildNumber"
 
     private val maxDisplayLength = 35
 
@@ -53,7 +53,7 @@ class WorkspaceProjectIDE(
             name = name,
             coderWorkspaceHostname = hostname,
             projectPath = projectPath,
-            ideProductCode = ideProductCode.productCode,
+            ideProductCode = ideProduct.productCode,
             ideBuildNumber = ideBuildNumber,
             downloadSource = downloadSource,
             idePathOnHost = idePathOnHost,
@@ -98,7 +98,7 @@ class WorkspaceProjectIDE(
                 name = name,
                 hostname = hostname,
                 projectPath = projectPath,
-                ideProductCode = IntelliJPlatformProduct.fromProductCode(ideProductCode) ?: throw Exception("invalid product code"),
+                ideProduct = IntelliJPlatformProduct.fromProductCode(ideProductCode) ?: throw Exception("invalid product code"),
                 ideBuildNumber = ideBuildNumber,
                 idePathOnHost = idePathOnHost,
                 downloadSource = downloadSource,
@@ -172,7 +172,7 @@ fun IdeWithStatus.withWorkspaceProject(
         name = name,
         hostname = hostname,
         projectPath = projectPath,
-        ideProductCode = this.product,
+        ideProduct = this.product,
         ideBuildNumber = this.buildNumber,
         downloadSource = this.download?.link,
         idePathOnHost = this.pathOnHost,
