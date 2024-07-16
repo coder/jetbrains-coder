@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.13.0 - 2024-07-16
+
 ### Added
 
 - When using a recent workspace connection, check if there is an update to the
