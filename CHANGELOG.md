@@ -4,6 +4,18 @@
 
 ## Unreleased
 
+### Changed
+
+- Previously, the plugin would try to respawn the IDE if we fail to get a join
+  link after five seconds. However, it seems sometimes we do not get a join link
+  that quickly. Now the plugin will wait indefinitely for a join link as long as
+  the process is still alive.  If the process never comes alive after 30 seconds
+  or it dies after coming alive, the plugin will attempt to respawn the IDE.
+
+### Added
+
+- Extra logging around the IDE spawn to help debugging.
+
 ## 2.13.0 - 2024-07-16
 
 ### Added

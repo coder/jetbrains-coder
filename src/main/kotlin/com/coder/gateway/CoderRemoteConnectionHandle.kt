@@ -48,6 +48,7 @@ import java.net.URI
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -227,16 +228,9 @@ class CoderRemoteConnectionHandle {
 
         // Wait for the IDE to come up.
         indicator.text = "Waiting for ${workspace.ideName} backend..."
-        var status: UnattendedHostStatus? = null
         val remoteProjectPath = accessor.makeRemotePath(ShellArgument.PlainText(workspace.projectPath))
         val logsDir = accessor.getLogsDir(workspace.ideProduct.productCode, remoteProjectPath)
-        while (lifetime.status == LifetimeStatus.Alive) {
-            status = ensureIDEBackend(accessor, workspace, ideDir, remoteProjectPath, logsDir, lifetime, null)
-            if (!status?.joinLink.isNullOrBlank()) {
-                break
-            }
-            delay(5000)
-        }
+        var status = ensureIDEBackend(accessor, workspace, ideDir, remoteProjectPath, logsDir, lifetime, null)
 
         // We wait for non-null, so this only happens on cancellation.
         val joinLink = status?.joinLink
@@ -302,6 +296,7 @@ class CoderRemoteConnectionHandle {
             }
             // Continue once the client is present.
             handle.onClientPresenceChanged.advise(lifetime) {
+                logger.info("${workspace.ideName} client to ${workspace.hostname} presence: ${handle.clientPresent}")
                 if (handle.clientPresent && continuation.isActive) {
                     continuation.resume(true)
                 }
@@ -437,8 +432,8 @@ class CoderRemoteConnectionHandle {
     }
 
     /**
-     * Ensure the backend is started.  Status and/or links may be null if the
-     * backend has not started.
+     * Ensure the backend is started.  It will not return until a join link is
+     * received or the lifetime expires.
      */
     private suspend fun ensureIDEBackend(
         accessor: HighLevelHostAccessor,
@@ -449,41 +444,74 @@ class CoderRemoteConnectionHandle {
         lifetime: LifetimeDefinition,
         currentStatus: UnattendedHostStatus?,
     ): UnattendedHostStatus? {
-        val details = "${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}"
-        return try {
-            if (currentStatus?.appPid != null &&
-                !currentStatus.joinLink.isNullOrBlank() &&
-                accessor.isPidAlive(currentStatus.appPid.toInt())
-            ) {
-                // If the PID is alive, assume the join link we have is still
-                // valid.  The join link seems to change even if it is the same
-                // backend running, so if we always fetched the link the client
-                // would relaunch over and over.
-                return currentStatus
-            }
+        val details = "$${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}"
+        val wait = TimeUnit.SECONDS.toMillis(5)
 
-            // See if there is already a backend running.  Weirdly, there is
-            // always a PID, even if there is no backend running, and
-            // backendUnresponsive is always false, but the links are null so
-            // hopefully that is an accurate indicator that the IDE is up.
-            val status = accessor.getHostIdeStatus(ideDir, remoteProjectPath)
-            if (!status.joinLink.isNullOrBlank()) {
-                logger.info("Found existing ${workspace.ideName} backend on $details")
-                return status
+        // Check if the current IDE is alive.
+        if (currentStatus != null) {
+            while (lifetime.status == LifetimeStatus.Alive) {
+                try {
+                    val isAlive = accessor.isPidAlive(currentStatus.appPid.toInt())
+                    logger.info("${workspace.ideName} status: pid=${currentStatus.appPid}, alive=$isAlive")
+                    if (isAlive) {
+                        // Use the current status and join link.
+                        return currentStatus
+                    } else {
+                        logger.info("Relaunching ${workspace.ideName} since it is not alive...")
+                        break
+                    }
+                } catch (ex: Exception) {
+                    logger.info("Failed to check if ${workspace.ideName} is alive on $details; waiting $wait ms to try again: pid=${currentStatus.appPid}", ex)
+                }
+                delay(wait)
             }
-
-            // Otherwise, spawn a new backend.  This does not seem to spawn a
-            // second backend if one is already running, yet it does somehow
-            // cause a second client to launch.  So only run this if we are
-            // really sure we have to launch a new backend.
-            logger.info("Starting ${workspace.ideName} backend on $details")
-            accessor.startHostIdeInBackgroundAndDetach(lifetime, ideDir, remoteProjectPath, logsDir)
-            // Get the newly spawned PID and join link.
-            return accessor.getHostIdeStatus(ideDir, remoteProjectPath)
-        } catch (ex: Exception) {
-            logger.info("Failed to get ${workspace.ideName} status from $details", ex)
-            currentStatus
+        } else {
+            logger.info("Launching ${workspace.ideName} for the first time on ${workspace.hostname}...")
         }
+
+        // This means we broke out because the user canceled or closed the IDE.
+        if (lifetime.status != LifetimeStatus.Alive) {
+            return null
+        }
+
+        // If the PID is not alive, spawn a new backend.  This may not be
+        // idempotent, so only call if we are really sure we need to.
+        accessor.startHostIdeInBackgroundAndDetach(lifetime, ideDir, remoteProjectPath, logsDir)
+
+        // Get the newly spawned PID and join link.
+        var attempts = 0
+        val maxAttempts = 6
+        while (lifetime.status == LifetimeStatus.Alive) {
+            try {
+                attempts++
+                val status = accessor.getHostIdeStatus(ideDir, remoteProjectPath)
+                if (!status.joinLink.isNullOrBlank()) {
+                    logger.info("Found join link for ${workspace.ideName}; proceeding to connect: pid=${status.appPid}")
+                    return status
+                }
+                // If we did not get a join link, see if the IDE is alive in
+                // case it died and we need to respawn.
+                val isAlive = status.appPid > 0 && accessor.isPidAlive(status.appPid.toInt())
+                logger.info("${workspace.ideName} status: pid=${status.appPid}, alive=$isAlive, unresponsive=${status.backendUnresponsive}, attempt=$attempts")
+                // It is not clear whether the PID can be trusted because we get
+                // one even when there is no backend at all.  For now give it
+                // some time and if it is still dead, only then try to respawn.
+                if (!isAlive && attempts >= maxAttempts) {
+                    logger.info("${workspace.ideName} is still not alive after $attempts checks, respawning backend and waiting $wait ms to try again")
+                    accessor.startHostIdeInBackgroundAndDetach(lifetime, ideDir, remoteProjectPath, logsDir)
+                    attempts = 0
+                } else {
+                    logger.info("No join link found in status; waiting $wait ms to try again")
+                }
+            } catch (ex: Exception) {
+                logger.info("Failed to get ${workspace.ideName} status from $details; waiting $wait ms to try again", ex)
+            }
+            delay(wait)
+        }
+
+        // This means the lifetime is no longer alive.
+        logger.info("Connection to ${workspace.ideName} on $details aborted by user")
+        return null
     }
 
     companion object {
