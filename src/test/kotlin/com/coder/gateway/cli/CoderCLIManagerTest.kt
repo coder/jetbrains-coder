@@ -295,9 +295,14 @@ internal class CoderCLIManagerTest {
         val remove: String,
         val headerCommand: String = "",
         val disableAutostart: Boolean = false,
-        val features: Features = Features(),
+        // Default to the most common feature settings.
+        val features: Features = Features(
+            disableAutostart = false,
+            reportWorkspaceUsage = true,
+        ),
         val extraConfig: String = "",
         val env: Environment = Environment(),
+        val sshLogDirectory: Path? = null,
     )
 
     @Test
@@ -309,19 +314,19 @@ internal class CoderCLIManagerTest {
             ).joinToString(System.lineSeparator())
         val tests =
             listOf(
-                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank", features = Features(false, true)),
-                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks", features = Features(false, true)),
-                SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks", features = Features(false, true)),
+                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+                SSHTest(listOf("foo", "bar"), null, "multiple-workspaces", "blank"),
+                SSHTest(listOf("foo-bar"), "blank", "append-blank", "blank"),
+                SSHTest(listOf("foo-bar"), "blank-newlines", "append-blank-newlines", "blank"),
+                SSHTest(listOf("foo-bar"), "existing-end", "replace-end", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-end-no-newline", "replace-end-no-newline", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-middle", "replace-middle", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-middle-and-unrelated", "replace-middle-ignore-unrelated", "no-related-blocks"),
+                SSHTest(listOf("foo-bar"), "existing-only", "replace-only", "blank"),
+                SSHTest(listOf("foo-bar"), "existing-start", "replace-start", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "no-blocks", "append-no-blocks", "no-blocks"),
+                SSHTest(listOf("foo-bar"), "no-related-blocks", "append-no-related-blocks", "no-related-blocks"),
+                SSHTest(listOf("foo-bar"), "no-newline", "append-no-newline", "no-blocks"),
                 if (getOS() == OS.WINDOWS) {
                     SSHTest(
                         listOf("header"),
@@ -329,7 +334,6 @@ internal class CoderCLIManagerTest {
                         "header-command-windows",
                         "blank",
                         """"C:\Program Files\My Header Command\HeaderCommand.exe" --url="%CODER_URL%" --test="foo bar"""",
-                        features = Features(false, true),
                     )
                 } else {
                     SSHTest(
@@ -338,19 +342,39 @@ internal class CoderCLIManagerTest {
                         "header-command",
                         "blank",
                         "my-header-command --url=\"\$CODER_URL\" --test=\"foo bar\" --literal='\$CODER_URL'",
-                        features = Features(false, true),
                     )
                 },
-                SSHTest(listOf("foo"), null, "disable-autostart", "blank", "", true, Features(true, true)),
-                SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", "", true, Features(false, true)),
-                SSHTest(listOf("foo"), null, "no-report-usage", "blank", "", true, Features(false, false)),
+                SSHTest(
+                    listOf("foo"),
+                    null,
+                    "disable-autostart",
+                    "blank",
+                    "",
+                    true,
+                    Features(
+                        disableAutostart = true,
+                        reportWorkspaceUsage = true,
+                    ),
+                ),
+                SSHTest(listOf("foo"), null, "no-disable-autostart", "blank", ""),
+                SSHTest(
+                    listOf("foo"),
+                    null,
+                    "no-report-usage",
+                    "blank",
+                    "",
+                    true,
+                    Features(
+                        disableAutostart = false,
+                        reportWorkspaceUsage = false,
+                    ),
+                ),
                 SSHTest(
                     listOf("extra"),
                     null,
                     "extra-config",
                     "blank",
                     extraConfig = extraConfig,
-                    features = Features(false, true),
                 ),
                 SSHTest(
                     listOf("extra"),
@@ -358,7 +382,13 @@ internal class CoderCLIManagerTest {
                     "extra-config",
                     "blank",
                     env = Environment(mapOf(CODER_SSH_CONFIG_OPTIONS to extraConfig)),
-                    features = Features(false, true),
+                ),
+                SSHTest(
+                    listOf("foo"),
+                    null,
+                    "log-dir",
+                    "blank",
+                    sshLogDirectory = tmpdir.resolve("ssh-logs"),
                 ),
             )
 
@@ -372,6 +402,7 @@ internal class CoderCLIManagerTest {
                         dataDirectory = tmpdir.resolve("configure-ssh").toString(),
                         headerCommand = it.headerCommand,
                         sshConfigOptions = it.extraConfig,
+                        sshLogDirectory = it.sshLogDirectory?.toString() ?: "",
                     ),
                     sshConfigPath = tmpdir.resolve(it.input + "_to_" + it.output + ".conf"),
                     env = it.env,
@@ -395,11 +426,23 @@ internal class CoderCLIManagerTest {
                     .replace(newlineRe, System.lineSeparator())
                     .replace("/tmp/coder-gateway/test.coder.invalid/config", escape(coderConfigPath.toString()))
                     .replace("/tmp/coder-gateway/test.coder.invalid/coder-linux-amd64", escape(ccm.localBinaryPath.toString()))
+                    .let { conf ->
+                        if (it.sshLogDirectory != null) {
+                            conf.replace("/tmp/coder-gateway/test.coder.invalid/logs", it.sshLogDirectory.toString())
+                        } else {
+                            conf
+                        }
+                    }
 
             // Add workspaces.
             ccm.configSsh(it.workspaces.toSet(), it.features)
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
+
+            // SSH log directory should have been created.
+            if (it.sshLogDirectory != null) {
+                assertTrue(it.sshLogDirectory.toFile().exists())
+            }
 
             // Remove configuration.
             ccm.configSsh(emptySet(), it.features)

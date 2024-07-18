@@ -15,6 +15,8 @@
 ### Added
 
 - Extra logging around the IDE spawn to help debugging.
+- Add setting to enable logging connection diagnostics from the Coder CLI for
+  debugging connectivity issues.
 
 ## 2.13.0 - 2024-07-16
 

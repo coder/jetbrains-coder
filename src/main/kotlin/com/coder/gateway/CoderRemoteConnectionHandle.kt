@@ -45,6 +45,7 @@ import net.schmizz.sshj.common.SSHException
 import net.schmizz.sshj.connection.ConnectionException
 import org.zeroturnaround.exec.ProcessExecutor
 import java.net.URI
+import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -239,6 +240,11 @@ class CoderRemoteConnectionHandle {
             return
         }
 
+        // Makes sure the ssh log directory exists.
+        if (settings.sshLogDirectory.isNotBlank()) {
+            Path.of(settings.sshLogDirectory).toFile().mkdirs()
+        }
+
         // Make the initial connection.
         indicator.text = "Connecting ${workspace.ideName} client..."
         logger.info("Connecting ${workspace.ideName} client to coder@${workspace.hostname}:22")
@@ -286,7 +292,7 @@ class CoderRemoteConnectionHandle {
             }
             // Kill the lifetime if the client is closed by the user.
             handle.clientClosed.advise(lifetime) {
-                logger.info("${workspace.ideName} client ${workspace.hostname} closed")
+                logger.info("${workspace.ideName} client to ${workspace.hostname} closed")
                 if (lifetime.status == LifetimeStatus.Alive) {
                     if (continuation.isActive) {
                         continuation.resumeWithException(Exception("${workspace.ideName} client was closed"))

@@ -82,6 +82,8 @@ open class CoderSettingsState(
     open var ignoreSetupFailure: Boolean = false,
     // Default URL to show in the connection window.
     open var defaultURL: String = "",
+    // Value for --log-dir.
+    open var sshLogDirectory: String = "",
 )
 
 /**
@@ -174,6 +176,9 @@ open class CoderSettings(
         }
         return null
     }
+
+    val sshLogDirectory: String
+        get() = state.sshLogDirectory
 
     /**
      * Given a deployment URL, try to find a token for it if required.

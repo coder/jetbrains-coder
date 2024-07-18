@@ -139,6 +139,11 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.default-url.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.ssh-log-directory.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::sshLogDirectory)
+                    .comment(CoderGatewayBundle.message("gateway.connector.settings.ssh-log-directory.comment"))
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 

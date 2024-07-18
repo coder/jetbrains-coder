@@ -262,7 +262,11 @@ class CoderCLIManager(
                 "--stdio",
                 if (settings.disableAutostart && feats.disableAutostart) "--disable-autostart" else null,
             )
-        val proxyArgs = baseArgs + listOfNotNull(if (feats.reportWorkspaceUsage) "--usage-app=jetbrains" else null)
+        val proxyArgs = baseArgs + listOfNotNull(
+            if (settings.sshLogDirectory.isNotBlank()) "--log-dir" else null,
+            if (settings.sshLogDirectory.isNotBlank()) escape(settings.sshLogDirectory) else null,
+            if (feats.reportWorkspaceUsage) "--usage-app=jetbrains" else null,
+        )
         val backgroundProxyArgs = baseArgs + listOfNotNull(if (feats.reportWorkspaceUsage) "--usage-app=disable" else null)
         val extraConfig =
             if (settings.sshConfigOptions.isNotBlank()) {
@@ -368,6 +372,10 @@ class CoderCLIManager(
         if (contents != null) {
             settings.sshConfigPath.parent.toFile().mkdirs()
             settings.sshConfigPath.toFile().writeText(contents)
+            // The Coder cli will *not* create the log directory.
+            if (settings.sshLogDirectory.isNotBlank()) {
+                Path.of(settings.sshLogDirectory).toFile().mkdirs()
+            }
         }
     }
 
@@ -453,7 +461,6 @@ class CoderCLIManager(
                 Features()
             } else {
                 Features(
-                    // Autostart with SSH was added in 2.5.0.
                     disableAutostart = version >= SemVer(2, 5, 0),
                     reportWorkspaceUsage = version >= SemVer(2, 13, 0),
                 )

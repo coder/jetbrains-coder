@@ -302,7 +302,7 @@ internal class CoderSettingsTest {
         val tmp = Path.of(System.getProperty("java.io.tmpdir"))
         val url = URL("http://test.deployment.coder.com")
         val dir = tmp.resolve("coder-gateway-test/test-default-token")
-        var env =
+        val env =
             Environment(
                 mapOf(
                     "CODER_CONFIG_DIR" to dir.toString(),
@@ -386,6 +386,7 @@ internal class CoderSettingsTest {
                     disableAutostart = getOS() != OS.MAC,
                     setupCommand = "test setup",
                     ignoreSetupFailure = true,
+                    sshLogDirectory = "test ssh log directory",
                 ),
             )
 
@@ -399,5 +400,6 @@ internal class CoderSettingsTest {
         assertEquals(getOS() != OS.MAC, settings.disableAutostart)
         assertEquals("test setup", settings.setupCommand)
         assertEquals(true, settings.ignoreSetupFailure)
+        assertEquals("test ssh log directory", settings.sshLogDirectory)
     }
 }
