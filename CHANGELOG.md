@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.13.1 - 2024-07-19
+
 ### Changed
 
 - Previously, the plugin would try to respawn the IDE if we fail to get a join
