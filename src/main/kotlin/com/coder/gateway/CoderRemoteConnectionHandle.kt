@@ -450,7 +450,7 @@ class CoderRemoteConnectionHandle {
         lifetime: LifetimeDefinition,
         currentStatus: UnattendedHostStatus?,
     ): UnattendedHostStatus? {
-        val details = "$${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}"
+        val details = "${workspace.hostname}:${ideDir.toRawString()}, project=${remoteProjectPath.toRawString()}"
         val wait = TimeUnit.SECONDS.toMillis(5)
 
         // Check if the current IDE is alive.
