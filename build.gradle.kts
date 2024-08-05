@@ -17,7 +17,7 @@ plugins {
     // Gradle Qodana Plugin
     id("org.jetbrains.qodana") version "0.1.13"
     // Generate Moshi adapters.
-    id("com.google.devtools.ksp") version "1.9.23-1.0.20"
+    id("com.google.devtools.ksp") version "2.0.0-1.0.24"
 }
 
 group = properties("pluginGroup")
