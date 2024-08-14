@@ -7,6 +7,7 @@ import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
+import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toWorkspaceProjectIDE
 import com.coder.gateway.sdk.CoderRestClient
@@ -193,11 +194,11 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 TopGap.MEDIUM
                             }
                         row {
-                            icon(status.first).applyToComponent {
-                                foreground = status.second
-                            }.align(AlignX.LEFT).gap(RightGap.SMALL).applyToComponent {
-                                size = Dimension(JBUI.scale(16), JBUI.scale(16))
-                            }
+//                            icon(status.first).applyToComponent {
+//                                foreground = status.second
+//                            }.align(AlignX.LEFT).gap(RightGap.SMALL).applyToComponent {
+//                                size = Dimension(JBUI.scale(16), JBUI.scale(16))
+//                            }
                             label(workspaceName).applyToComponent {
                                 font = JBFont.h3().asBold()
                             }.align(AlignX.LEFT).gap(RightGap.SMALL)
@@ -280,41 +281,47 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         if (deploymentError == null || showError) {
                             row {
                                 // There must be a way to make this properly wrap?
+                                if (status.first == CoderIcons.PENDING) {
+                                    icon(status.first)
+                                }
                                 label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
                                     foreground = status.second
                                 }
                             }
                         }
-                        connections.forEach { workspaceProjectIDE ->
-                            row {
-                                icon(workspaceProjectIDE.ideProduct.icon)
-                                cell(
-                                    ActionLink(workspaceProjectIDE.projectPathDisplay) {
-                                        CoderRemoteConnectionHandle().connect { workspaceProjectIDE }
-                                        GatewayUI.getInstance().reset()
-                                    },
-                                )
-                                label("").resizableColumn().align(AlignX.FILL)
-                                label(workspaceProjectIDE.ideName).applyToComponent {
-                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                    font = ComponentPanelBuilder.getCommentFont(font)
+                        if (workspaceWithAgent?.workspace?.latestBuild?.status == WorkspaceStatus.RUNNING && workspaceWithAgent.status == WorkspaceAndAgentStatus.READY) {
+                            row { label("Select a project to launch.") }
+                            connections.forEach { workspaceProjectIDE ->
+                                row {
+                                    icon(workspaceProjectIDE.ideProduct.icon)
+                                    cell(
+                                        ActionLink(workspaceProjectIDE.projectPathDisplay) {
+                                            CoderRemoteConnectionHandle().connect { workspaceProjectIDE }
+                                            GatewayUI.getInstance().reset()
+                                        },
+                                    )
+                                    label("").resizableColumn().align(AlignX.FILL)
+                                    label(workspaceProjectIDE.ideName).applyToComponent {
+                                        foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                        font = ComponentPanelBuilder.getCommentFont(font)
+                                    }
+                                    label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
+                                        foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                        font = ComponentPanelBuilder.getCommentFont(font)
+                                    }
+                                    actionButton(
+                                        object : DumbAwareAction(
+                                            CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"),
+                                            "",
+                                            CoderIcons.DELETE,
+                                        ) {
+                                            override fun actionPerformed(e: AnActionEvent) {
+                                                recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
+                                                updateRecentView()
+                                            }
+                                        },
+                                    )
                                 }
-                                label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
-                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                    font = ComponentPanelBuilder.getCommentFont(font)
-                                }
-                                actionButton(
-                                    object : DumbAwareAction(
-                                        CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"),
-                                        "",
-                                        CoderIcons.DELETE,
-                                    ) {
-                                        override fun actionPerformed(e: AnActionEvent) {
-                                            recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
-                                            updateRecentView()
-                                        }
-                                    },
-                                )
                             }
                         }
                     }
