@@ -282,7 +282,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             row {
                                 // There must be a way to make this properly wrap?
                                 if (status.first == CoderIcons.PENDING) {
-                                    icon(status.first)
+                                    icon(AnimatedIcon.Default())
                                 }
                                 label("<html><body style='width:350px;'>" + status.third + "</html>").applyToComponent {
                                     foreground = status.second
