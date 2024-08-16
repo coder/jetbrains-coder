@@ -174,15 +174,14 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
                         val status =
                             if (deploymentError != null) {
-                                Triple(UIUtil.getBalloonErrorIcon(), UIUtil.getErrorForeground(), deploymentError)
+                                Pair(UIUtil.getErrorForeground(), deploymentError)
                             } else if (workspaceWithAgent != null) {
-                                Triple(
-                                    workspaceWithAgent.status.icon,
+                                Pair(
                                     workspaceWithAgent.status.statusColor(),
                                     workspaceWithAgent.status.description,
                                 )
                             } else {
-                                Triple(AnimatedIcon.Default.INSTANCE, UIUtil.getContextHelpForeground(), "Querying workspace status...")
+                                Pair(UIUtil.getContextHelpForeground(), "Querying workspace status...")
                             }
                         val gap =
                             if (top) {
@@ -210,7 +209,9 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 if (inLoadingState) {
                                     icon(AnimatedIcon.Default())
                                 }
-                                label(workspaceWithAgent?.status?.description.orEmpty())
+                                label("<html><body style='width:350px;'>" + status.second + "</html>").applyToComponent {
+                                    foreground = status.first
+                                }
                             }
 
                             row {
