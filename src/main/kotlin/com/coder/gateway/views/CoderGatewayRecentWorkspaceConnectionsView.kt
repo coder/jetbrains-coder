@@ -203,38 +203,35 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 foreground = UIUtil.getContextHelpForeground()
                                 font = ComponentPanelBuilder.getCommentFont(font)
                             }
-                            label("").resizableColumn().align(AlignX.FILL)                        }.topGap(gap)
+                            label("").resizableColumn().align(AlignX.FILL)
+                        }.topGap(gap)
 
-                            row { label("Select a project to launch.") }
                             connections.forEach { workspaceProjectIDE ->
+                                val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
 
                                 val actionLink = ActionLink(workspaceProjectIDE.projectPathDisplay) {
-                                    if (workspaceWithAgent?.workspace?.latestBuild?.status == WorkspaceStatus.RUNNING && workspaceWithAgent.status == WorkspaceAndAgentStatus.READY) {
-                                        CoderRemoteConnectionHandle().connect { workspaceProjectIDE }
-                                        GatewayUI.getInstance().reset()
-                                    } else {
-                                        // Start the workspace
-                                        withoutNull(workspaceWithAgent?.workspace, deployment?.client) { workspace, client ->
-                                            jobs[workspace.id]?.cancel()
-                                            jobs[workspace.id] =
-                                                cs.launch(ModalityState.current().asContextElement()) {
-                                                    withContext(Dispatchers.IO) {
-                                                        try {
-                                                            client.startWorkspace(workspace)
-                                                            fetchWorkspaces()
-                                                        } catch (e: Exception) {
-                                                            logger.error("Could not start workspace ${workspace.name}", e)
-                                                        }
-                                                    }
-                                                }
-                                            cs.launch {
-                                                jobs[workspace.id]?.join()
-                                                CoderRemoteConnectionHandle().connect { workspaceProjectIDE }
-                                                GatewayUI.getInstance().reset()
+                                    withoutNull(deployment?.client, workspaceWithAgent?.workspace) { client, workspace ->
+                                        CoderRemoteConnectionHandle().connect {
+                                            if (listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED).contains(workspace.latestBuild.status)) {
+                                                client.startWorkspace(workspace)
                                             }
+                                            workspaceProjectIDE
                                         }
-
+                                        GatewayUI.getInstance().reset()
                                     }
+                                }
+
+                                if (!enableLinks) {
+                                        actionLink.foreground = Color.GRAY
+                                        actionLink.actionListeners.forEach { actionLink.removeActionListener(it) }
+                                }
+
+                                row {
+                                    if (inLoadingState) {
+                                        icon(AnimatedIcon.Default())
+                                    }
+                                    label(workspaceWithAgent?.status?.description.orEmpty())
                                 }
 
                                 row {

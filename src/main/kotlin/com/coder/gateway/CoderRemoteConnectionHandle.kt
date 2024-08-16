@@ -7,6 +7,9 @@ import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.toRawString
 import com.coder.gateway.models.withWorkspaceProject
+import com.coder.gateway.sdk.CoderRestClient
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.SemVer
@@ -65,6 +68,7 @@ class CoderRemoteConnectionHandle {
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
 
     fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
+
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {
