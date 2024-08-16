@@ -7,7 +7,6 @@ import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
-import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toWorkspaceProjectIDE
 import com.coder.gateway.sdk.CoderRestClient
@@ -18,10 +17,8 @@ import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.toURL
-import com.coder.gateway.util.withPath
 import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
-import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ModalityState
@@ -33,7 +30,6 @@ import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBScrollPane
@@ -206,63 +202,61 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             label("").resizableColumn().align(AlignX.FILL)
                         }.topGap(gap)
 
-                            connections.forEach { workspaceProjectIDE ->
-                                val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
-                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                        connections.forEach { workspaceProjectIDE ->
+                            val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                            val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
 
-                                val actionLink = ActionLink(workspaceProjectIDE.projectPathDisplay) {
-                                    withoutNull(deployment?.client, workspaceWithAgent?.workspace) { client, workspace ->
-                                        CoderRemoteConnectionHandle().connect {
-                                            if (listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED).contains(workspace.latestBuild.status)) {
-                                                client.startWorkspace(workspace)
-                                            }
-                                            workspaceProjectIDE
-                                        }
-                                        GatewayUI.getInstance().reset()
-                                    }
+                            row {
+                                if (inLoadingState) {
+                                    icon(AnimatedIcon.Default())
                                 }
+                                label(workspaceWithAgent?.status?.description.orEmpty())
+                            }
 
-                                if (!enableLinks) {
-                                        actionLink.foreground = Color.GRAY
-                                        actionLink.actionListeners.forEach { actionLink.removeActionListener(it) }
-                                }
-
-                                row {
-                                    if (inLoadingState) {
-                                        icon(AnimatedIcon.Default())
-                                    }
-                                    label(workspaceWithAgent?.status?.description.orEmpty())
-                                }
-
-                                row {
-                                    icon(workspaceProjectIDE.ideProduct.icon)
+                            row {
+                                icon(workspaceProjectIDE.ideProduct.icon)
+                                if (enableLinks) {
                                     cell(
-                                        actionLink,
-                                    )
-                                    label("").resizableColumn().align(AlignX.FILL)
-                                    label(workspaceProjectIDE.ideName).applyToComponent {
-                                        foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                        font = ComponentPanelBuilder.getCommentFont(font)
-                                    }
-                                    label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
-                                        foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
-                                        font = ComponentPanelBuilder.getCommentFont(font)
-                                    }
-                                    actionButton(
-                                        object : DumbAwareAction(
-                                            CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"),
-                                            "",
-                                            CoderIcons.DELETE,
-                                        ) {
-                                            override fun actionPerformed(e: AnActionEvent) {
-                                                recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
-                                                updateRecentView()
+                                        ActionLink(workspaceProjectIDE.projectPathDisplay) {
+                                            withoutNull(deployment?.client, workspaceWithAgent?.workspace) { client, workspace ->
+                                                CoderRemoteConnectionHandle().connect {
+                                                    if (listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED).contains(workspace.latestBuild.status)) {
+                                                        client.startWorkspace(workspace)
+                                                    }
+                                                    workspaceProjectIDE
+                                                }
+                                                GatewayUI.getInstance().reset()
                                             }
                                         },
                                     )
+                                } else {
+                                    label(workspaceProjectIDE.projectPathDisplay).applyToComponent {
+                                        foreground = Color.GRAY
+                                    }
                                 }
+                                label("").resizableColumn().align(AlignX.FILL)
+                                label(workspaceProjectIDE.ideName).applyToComponent {
+                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                    font = ComponentPanelBuilder.getCommentFont(font)
+                                }
+                                label(workspaceProjectIDE.lastOpened.toString()).applyToComponent {
+                                    foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
+                                    font = ComponentPanelBuilder.getCommentFont(font)
+                                }
+                                actionButton(
+                                    object : DumbAwareAction(
+                                        CoderGatewayBundle.message("gateway.connector.recent-connections.remove.button.tooltip"),
+                                        "",
+                                        CoderIcons.DELETE,
+                                    ) {
+                                        override fun actionPerformed(e: AnActionEvent) {
+                                            recentConnectionsService.removeConnection(workspaceProjectIDE.toRecentWorkspaceConnection())
+                                            updateRecentView()
+                                        }
+                                    },
+                                )
                             }
-
+                        }
                     }
                 }
             }.apply {
