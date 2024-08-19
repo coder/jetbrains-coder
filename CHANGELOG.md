@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+- The "Recents" view has been updated to have a new flow.
+  Before, there were separate controls for managing the workspace and then you
+  could click a link to launch a project (clicking a link would also start a stopped workspace automatically).
+  Now, there are no workspace controls, just links which start the workspace automatically when needed.
+  The links are enabled when the workspace is STOPPED, CANCELED, FAILED, STARTING, RUNNING. These states represent
+  valid times to start a workspace and connect, or to simply connect to a running one or one that's already starting.
+  We also use a spinner icon when workspaces are in a transition state (STARTING, CANCELING, DELETING, STOPPING) 
+  to give context for why a link might be disabled or a connection might take longer than usual to establish.
+
 ## 2.13.1 - 2024-07-19
 
 ### Changed
