@@ -213,8 +213,8 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         // We only display an API error on the first workspace rather than duplicating it on each workspace.
                         if (deploymentError == null || showError) {
                             row {
-                                if (status.third != null) {
-                                    icon(status.third!!)
+                                status.third?.let {
+                                    icon(it)
                                 }
                                 label("<html><body style='width:350px;'>" + status.second + "</html>").applyToComponent {
                                     foreground = status.first
