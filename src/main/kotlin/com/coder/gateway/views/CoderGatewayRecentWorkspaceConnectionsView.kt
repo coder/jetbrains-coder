@@ -179,7 +179,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 Triple(
                                     workspaceWithAgent.status.statusColor(),
                                     workspaceWithAgent.status.description,
-                                    null
+                                    null,
                                 )
                             } else {
                                 Triple(UIUtil.getContextHelpForeground(), "Querying workspace status...", AnimatedIcon.Default())
