@@ -174,14 +174,15 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
                         val status =
                             if (deploymentError != null) {
-                                Pair(UIUtil.getErrorForeground(), deploymentError)
+                                Triple(UIUtil.getErrorForeground(), deploymentError, UIUtil.getBalloonErrorIcon())
                             } else if (workspaceWithAgent != null) {
-                                Pair(
+                                Triple(
                                     workspaceWithAgent.status.statusColor(),
                                     workspaceWithAgent.status.description,
+                                    null
                                 )
                             } else {
-                                Pair(UIUtil.getContextHelpForeground(), "Querying workspace status...")
+                                Triple(UIUtil.getContextHelpForeground(), "Querying workspace status...", AnimatedIcon.Default())
                             }
                         val gap =
                             if (top) {
@@ -201,19 +202,25 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             label("").resizableColumn().align(AlignX.FILL)
                         }.topGap(gap)
 
-                        connections.forEach { workspaceProjectIDE ->
-                            val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
-                            val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                        val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                        val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
 
+                        // We only display an API error on the first workspace rather than duplicating it on each workspace.
+                        if (deploymentError == null || showError) {
                             row {
                                 if (inLoadingState) {
                                     icon(AnimatedIcon.Default())
+                                }
+                                if (status.third != null) {
+                                    icon(status.third!!)
                                 }
                                 label("<html><body style='width:350px;'>" + status.second + "</html>").applyToComponent {
                                     foreground = status.first
                                 }
                             }
+                        }
 
+                        connections.forEach { workspaceProjectIDE ->
                             row {
                                 icon(workspaceProjectIDE.ideProduct.icon)
                                 if (enableLinks) {
