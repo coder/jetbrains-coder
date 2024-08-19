@@ -176,10 +176,16 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             if (deploymentError != null) {
                                 Triple(UIUtil.getErrorForeground(), deploymentError, UIUtil.getBalloonErrorIcon())
                             } else if (workspaceWithAgent != null) {
+                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+
                                 Triple(
                                     workspaceWithAgent.status.statusColor(),
                                     workspaceWithAgent.status.description,
-                                    null,
+                                    if (inLoadingState) {
+                                        AnimatedIcon.Default()
+                                    } else {
+                                        null
+                                    },
                                 )
                             } else {
                                 Triple(UIUtil.getContextHelpForeground(), "Querying workspace status...", AnimatedIcon.Default())
@@ -203,14 +209,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         }.topGap(gap)
 
                         val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
-                        val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
 
                         // We only display an API error on the first workspace rather than duplicating it on each workspace.
                         if (deploymentError == null || showError) {
                             row {
-                                if (inLoadingState) {
-                                    icon(AnimatedIcon.Default())
-                                }
                                 if (status.third != null) {
                                     icon(status.third!!)
                                 }
