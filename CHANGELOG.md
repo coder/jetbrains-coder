@@ -4,13 +4,24 @@
 
 ## Unreleased
 
+### Fixed
+
+- When the `CODER_URL` environment variable is set but you connect to a
+  different URL in Gateway, force the Coder CLI used in the SSH proxy command to
+  use the current URL instead of `CODER_URL`. This fixes connection issues such
+  as "failed to retrieve IDEs". To aply this fix, you must add the connection
+  again through the "Connect to Coder" flow or by using the dashboard link (the
+  recent connections do not reconfigure SSH).
+
+### Changed
+
 - The "Recents" view has been updated to have a new flow.
   Before, there were separate controls for managing the workspace and then you
   could click a link to launch a project (clicking a link would also start a stopped workspace automatically).
   Now, there are no workspace controls, just links which start the workspace automatically when needed.
   The links are enabled when the workspace is STOPPED, CANCELED, FAILED, STARTING, RUNNING. These states represent
   valid times to start a workspace and connect, or to simply connect to a running one or one that's already starting.
-  We also use a spinner icon when workspaces are in a transition state (STARTING, CANCELING, DELETING, STOPPING) 
+  We also use a spinner icon when workspaces are in a transition state (STARTING, CANCELING, DELETING, STOPPING)
   to give context for why a link might be disabled or a connection might take longer than usual to establish.
 
 ## 2.13.1 - 2024-07-19

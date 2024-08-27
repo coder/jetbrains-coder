@@ -256,6 +256,11 @@ class CoderCLIManager(
                 escape(localBinaryPath.toString()),
                 "--global-config",
                 escape(coderConfigPath.toString()),
+                // CODER_URL might be set, and it will override the URL file in
+                // the config directory, so override that here to make sure we
+                // always use the correct URL.
+                "--url",
+                escape(deploymentURL.toString()),
                 if (settings.headerCommand.isNotBlank()) "--header-command" else null,
                 if (settings.headerCommand.isNotBlank()) escapeSubcommand(settings.headerCommand) else null,
                 "ssh",
