@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.14.0 - 2024-08-30
+
 ### Fixed
 
 - When the `CODER_URL` environment variable is set but you connect to a
