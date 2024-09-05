@@ -3,7 +3,8 @@
 package com.coder.gateway
 
 import com.coder.gateway.services.CoderSettingsService
-import com.coder.gateway.util.handleLink
+import com.coder.gateway.util.DialogUi
+import com.coder.gateway.util.LinkHandler
 import com.coder.gateway.util.isCoder
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
@@ -13,16 +14,16 @@ import com.jetbrains.gateway.api.GatewayConnectionProvider
 
 // CoderGatewayConnectionProvider handles connecting via a Gateway link such as
 // jetbrains-gateway://connect#type=coder.
-class CoderGatewayConnectionProvider : GatewayConnectionProvider {
-    private val settings: CoderSettingsService = service<CoderSettingsService>()
-
+class CoderGatewayConnectionProvider :
+    LinkHandler(service<CoderSettingsService>(), null, DialogUi(service<CoderSettingsService>())),
+    GatewayConnectionProvider {
     override suspend fun connect(
         parameters: Map<String, String>,
         requestor: ConnectionRequestor,
     ): GatewayConnectionHandle? {
         CoderRemoteConnectionHandle().connect { indicator ->
             logger.debug("Launched Coder link handler", parameters)
-            handleLink(parameters, settings) {
+            handle(parameters) {
                 indicator.text = it
             }
         }

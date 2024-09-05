@@ -9,8 +9,8 @@ import com.coder.gateway.models.toRawString
 import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.services.CoderRecentWorkspaceConnectionsService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.SemVer
-import com.coder.gateway.util.confirm
 import com.coder.gateway.util.humanizeDuration
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.isWorkerTimeout
@@ -63,6 +63,7 @@ class CoderRemoteConnectionHandle {
     private val settings = service<CoderSettingsService>()
 
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
+    private val dialogUi = DialogUi(settings)
 
     fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
         val clientLifetime = LifetimeDefinition()
@@ -198,7 +199,7 @@ class CoderRemoteConnectionHandle {
             .minOfOrNull { it.toIdeWithStatus() }
         if (latest != null && SemVer.parse(latest.buildNumber) > SemVer.parse(workspace.ideBuildNumber)) {
             logger.info("Got newer version: ${latest.buildNumber} versus current ${workspace.ideBuildNumber}")
-            if (confirm("Update IDE", "There is a new version of this IDE: ${latest.buildNumber}", "Would you like to update?")) {
+            if (dialogUi.confirm("Update IDE", "There is a new version of this IDE: ${latest.buildNumber}. Would you like to update?")) {
                 return latest
             }
         }

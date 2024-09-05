@@ -12,215 +12,218 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.Source
+import okhttp3.OkHttpClient
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * Given a set of URL parameters, prepare the CLI then return a workspace to
- * connect.
- *
- * Throw if required arguments are not supplied or the workspace is not in a
- * connectable state.
- */
-fun handleLink(
-    parameters: Map<String, String>,
-    settings: CoderSettings,
-    indicator: ((t: String) -> Unit)? = null,
-): WorkspaceProjectIDE {
-    val deploymentURL = parameters.url() ?: ask("Enter the full URL of your Coder deployment")
-    if (deploymentURL.isNullOrBlank()) {
-        throw MissingArgumentException("Query parameter \"$URL\" is missing")
-    }
+open class LinkHandler(
+    private val settings: CoderSettings,
+    private val httpClient: OkHttpClient?,
+    private val dialogUi: DialogUi,
+) {
+    /**
+     * Given a set of URL parameters, prepare the CLI then return a workspace to
+     * connect.
+     *
+     * Throw if required arguments are not supplied or the workspace is not in a
+     * connectable state.
+     */
+    fun handle(
+        parameters: Map<String, String>,
+        indicator: ((t: String) -> Unit)? = null,
+    ): WorkspaceProjectIDE {
+        val deploymentURL = parameters.url() ?: dialogUi.ask("Deployment URL", "Enter the full URL of your Coder deployment")
+        if (deploymentURL.isNullOrBlank()) {
+            throw MissingArgumentException("Query parameter \"$URL\" is missing")
+        }
 
-    val queryTokenRaw = parameters.token()
-    val queryToken = if (!queryTokenRaw.isNullOrBlank()) {
-        Pair(queryTokenRaw, Source.QUERY)
-    } else {
-        null
-    }
-    val client = try {
-        authenticate(deploymentURL, settings, queryToken)
-    } catch (ex: MissingArgumentException) {
-        throw MissingArgumentException("Query parameter \"$TOKEN\" is missing")
-    }
-
-    // TODO: Show a dropdown and ask for the workspace if missing.
-    val workspaceName = parameters.workspace() ?: throw MissingArgumentException("Query parameter \"$WORKSPACE\" is missing")
-
-    val workspaces = client.workspaces()
-    val workspace =
-        workspaces.firstOrNull {
-            it.name == workspaceName
-        } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
-
-    when (workspace.latestBuild.status) {
-        WorkspaceStatus.PENDING, WorkspaceStatus.STARTING ->
-            // TODO: Wait for the workspace to turn on.
-            throw IllegalArgumentException(
-                "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please wait then try again",
-            )
-        WorkspaceStatus.STOPPING, WorkspaceStatus.STOPPED,
-        WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-        ->
-            // TODO: Turn on the workspace.
-            throw IllegalArgumentException(
-                "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please start the workspace and try again",
-            )
-        WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED ->
-            throw IllegalArgumentException(
-                "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect",
-            )
-        WorkspaceStatus.RUNNING -> Unit // All is well
-    }
-
-    // TODO: Show a dropdown and ask for an agent if missing.
-    val agent = getMatchingAgent(parameters, workspace)
-    val status = WorkspaceAndAgentStatus.from(workspace, agent)
-
-    if (status.pending()) {
-        // TODO: Wait for the agent to be ready.
-        throw IllegalArgumentException(
-            "The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; please wait then try again",
-        )
-    } else if (!status.ready()) {
-        throw IllegalArgumentException("The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; unable to connect")
-    }
-
-    val cli =
-        ensureCLI(
-            deploymentURL.toURL(),
-            client.buildInfo().version,
-            settings,
-            indicator,
-        )
-
-    // We only need to log in if we are using token-based auth.
-    if (client.token != null) {
-        indicator?.invoke("Authenticating Coder CLI...")
-        cli.login(client.token)
-    }
-
-    indicator?.invoke("Configuring Coder CLI...")
-    cli.configSsh(client.agentNames(workspaces))
-
-    val name = "${workspace.name}.${agent.name}"
-    val openDialog =
-        parameters.ideProductCode().isNullOrBlank() ||
-            parameters.ideBuildNumber().isNullOrBlank() ||
-            (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
-            parameters.folder().isNullOrBlank()
-
-    return if (openDialog) {
-        askIDE(name, agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
-    } else {
-        // Check that both the domain and the redirected domain are
-        // allowlisted.  If not, check with the user whether to proceed.
-        verifyDownloadLink(parameters)
-        WorkspaceProjectIDE.fromInputs(
-            name = name,
-            hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), name),
-            projectPath = parameters.folder(),
-            ideProductCode = parameters.ideProductCode(),
-            ideBuildNumber = parameters.ideBuildNumber(),
-            idePathOnHost = parameters.idePathOnHost(),
-            downloadSource = parameters.ideDownloadLink(),
-            deploymentURL = deploymentURL,
-            lastOpened = null, // Have not opened yet.
-        )
-    }
-}
-
-/**
- * Return an authenticated Coder CLI, asking for the token as long as it
- * continues to result in an authentication failure and token authentication
- * is required.
- *
- * Throw MissingArgumentException if the user aborts.  Any network or invalid
- * token error may also be thrown.
- */
-private fun authenticate(
-    deploymentURL: String,
-    settings: CoderSettings,
-    tryToken: Pair<String, Source>?,
-    lastToken: Pair<String, Source>? = null,
-): CoderRestClient {
-    val token =
-        if (settings.requireTokenAuth) {
-            // Try the provided token, unless we already did.
-            val isRetry = lastToken != null
-            if (tryToken != null && !isRetry) {
-                tryToken
-            } else {
-                askToken(
-                    deploymentURL.toURL(),
-                    lastToken,
-                    isRetry,
-                    true,
-                    settings,
-                )
-            }
+        val queryTokenRaw = parameters.token()
+        val queryToken = if (!queryTokenRaw.isNullOrBlank()) {
+            Pair(queryTokenRaw, Source.QUERY)
         } else {
             null
         }
-    if (settings.requireTokenAuth && token == null) { // User aborted.
-        throw MissingArgumentException("Token is required")
-    }
-    val client = CoderRestClientService(deploymentURL.toURL(), token?.first)
-    return try {
-        client.authenticate()
-        client
-    } catch (ex: APIResponseException) {
-        // If doing token auth we can ask and try again.
-        if (settings.requireTokenAuth && ex.isUnauthorized) {
-            authenticate(deploymentURL, settings, tryToken, token)
+        val client = try {
+            authenticate(deploymentURL, queryToken)
+        } catch (ex: MissingArgumentException) {
+            throw MissingArgumentException("Query parameter \"$TOKEN\" is missing")
+        }
+
+        // TODO: Show a dropdown and ask for the workspace if missing.
+        val workspaceName = parameters.workspace() ?: throw MissingArgumentException("Query parameter \"$WORKSPACE\" is missing")
+
+        val workspaces = client.workspaces()
+        val workspace =
+            workspaces.firstOrNull {
+                it.name == workspaceName
+            } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
+
+        when (workspace.latestBuild.status) {
+            WorkspaceStatus.PENDING, WorkspaceStatus.STARTING ->
+                // TODO: Wait for the workspace to turn on.
+                throw IllegalArgumentException(
+                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please wait then try again",
+                )
+            WorkspaceStatus.STOPPING, WorkspaceStatus.STOPPED,
+            WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
+            ->
+                // TODO: Turn on the workspace.
+                throw IllegalArgumentException(
+                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please start the workspace and try again",
+                )
+            WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED ->
+                throw IllegalArgumentException(
+                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect",
+                )
+            WorkspaceStatus.RUNNING -> Unit // All is well
+        }
+
+        // TODO: Show a dropdown and ask for an agent if missing.
+        val agent = getMatchingAgent(parameters, workspace)
+        val status = WorkspaceAndAgentStatus.from(workspace, agent)
+
+        if (status.pending()) {
+            // TODO: Wait for the agent to be ready.
+            throw IllegalArgumentException(
+                "The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; please wait then try again",
+            )
+        } else if (!status.ready()) {
+            throw IllegalArgumentException("The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; unable to connect")
+        }
+
+        val cli =
+            ensureCLI(
+                deploymentURL.toURL(),
+                client.buildInfo().version,
+                settings,
+                indicator,
+            )
+
+        // We only need to log in if we are using token-based auth.
+        if (client.token != null) {
+            indicator?.invoke("Authenticating Coder CLI...")
+            cli.login(client.token)
+        }
+
+        indicator?.invoke("Configuring Coder CLI...")
+        cli.configSsh(client.agentNames(workspaces))
+
+        val name = "${workspace.name}.${agent.name}"
+        val openDialog =
+            parameters.ideProductCode().isNullOrBlank() ||
+                parameters.ideBuildNumber().isNullOrBlank() ||
+                (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
+                parameters.folder().isNullOrBlank()
+
+        return if (openDialog) {
+            askIDE(name, agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
         } else {
-            throw ex
+            // Check that both the domain and the redirected domain are
+            // allowlisted.  If not, check with the user whether to proceed.
+            verifyDownloadLink(parameters)
+            WorkspaceProjectIDE.fromInputs(
+                name = name,
+                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), name),
+                projectPath = parameters.folder(),
+                ideProductCode = parameters.ideProductCode(),
+                ideBuildNumber = parameters.ideBuildNumber(),
+                idePathOnHost = parameters.idePathOnHost(),
+                downloadSource = parameters.ideDownloadLink(),
+                deploymentURL = deploymentURL,
+                lastOpened = null, // Have not opened yet.
+            )
         }
     }
-}
 
-/**
- * Check that the link is allowlisted.  If not, confirm with the user.
- */
-private fun verifyDownloadLink(parameters: Map<String, String>) {
-    val link = parameters.ideDownloadLink()
-    if (link.isNullOrBlank()) {
-        return // Nothing to verify
+    /**
+     * Return an authenticated Coder CLI, asking for the token as long as it
+     * continues to result in an authentication failure and token authentication
+     * is required.
+     *
+     * Throw MissingArgumentException if the user aborts.  Any network or invalid
+     * token error may also be thrown.
+     */
+    private fun authenticate(
+        deploymentURL: String,
+        tryToken: Pair<String, Source>?,
+        lastToken: Pair<String, Source>? = null,
+    ): CoderRestClient {
+        val token =
+            if (settings.requireTokenAuth) {
+                // Try the provided token, unless we already did.
+                val isRetry = lastToken != null
+                if (tryToken != null && !isRetry) {
+                    tryToken
+                } else {
+                    dialogUi.askToken(
+                        deploymentURL.toURL(),
+                        lastToken,
+                        isRetry,
+                        true,
+                    )
+                }
+            } else {
+                null
+            }
+        if (settings.requireTokenAuth && token == null) { // User aborted.
+            throw MissingArgumentException("Token is required")
+        }
+        val client = CoderRestClientService(deploymentURL.toURL(), token?.first, httpClient = httpClient)
+        return try {
+            client.authenticate()
+            client
+        } catch (ex: APIResponseException) {
+            // If doing token auth we can ask and try again.
+            if (settings.requireTokenAuth && ex.isUnauthorized) {
+                authenticate(deploymentURL, tryToken, token)
+            } else {
+                throw ex
+            }
+        }
     }
 
-    val url =
-        try {
-            link.toURL()
-        } catch (ex: Exception) {
-            throw IllegalArgumentException("$link is not a valid URL")
+    /**
+     * Check that the link is allowlisted.  If not, confirm with the user.
+     */
+    private fun verifyDownloadLink(parameters: Map<String, String>) {
+        val link = parameters.ideDownloadLink()
+        if (link.isNullOrBlank()) {
+            return // Nothing to verify
         }
 
-    val (allowlisted, https, linkWithRedirect) =
-        try {
-            isAllowlisted(url)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Unable to verify $url: $e")
-        }
-    if (allowlisted && https) {
-        return
-    }
+        val url =
+            try {
+                link.toURL()
+            } catch (ex: Exception) {
+                throw IllegalArgumentException("$link is not a valid URL")
+            }
 
-    val comment =
-        if (allowlisted) {
-            "The download link is from a non-allowlisted URL"
-        } else if (https) {
-            "The download link is not using HTTPS"
-        } else {
-            "The download link is from a non-allowlisted URL and is not using HTTPS"
+        val (allowlisted, https, linkWithRedirect) =
+            try {
+                isAllowlisted(url)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Unable to verify $url: $e")
+            }
+        if (allowlisted && https) {
+            return
         }
 
-    if (!confirm(
-            "Confirm download URL",
-            "$comment. Would you like to proceed?",
-            linkWithRedirect,
-        )
-    ) {
-        throw IllegalArgumentException("$linkWithRedirect is not allowlisted")
+        val comment =
+            if (allowlisted) {
+                "The download link is from a non-allowlisted URL"
+            } else if (https) {
+                "The download link is not using HTTPS"
+            } else {
+                "The download link is from a non-allowlisted URL and is not using HTTPS"
+            }
+
+        if (!dialogUi.confirm(
+                "Confirm download URL",
+                "$comment. Would you like to proceed to $linkWithRedirect?",
+            )
+        ) {
+            throw IllegalArgumentException("$linkWithRedirect is not allowlisted")
+        }
     }
 }
 

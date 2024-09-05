@@ -15,10 +15,10 @@ import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.settings.Source
+import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
-import com.coder.gateway.util.askToken
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
@@ -116,6 +116,7 @@ class CoderWorkspacesStepView :
         CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
     ) {
     private val settings: CoderSettingsService = service<CoderSettingsService>()
+    private val dialogUi = DialogUi(settings)
     private val cs = CoroutineScope(Dispatchers.Main)
     private val jobs: MutableMap<UUID, Job> = mutableMapOf()
     private val appPropertiesService: PropertiesComponent = service()
@@ -516,14 +517,13 @@ class CoderWorkspacesStepView :
         val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
             val pastedToken =
-                askToken(
+                dialogUi.askToken(
                     newURL,
                     // If this is a new URL there is no point in trying to use the same
                     // token.
                     if (oldURL == newURL.toString()) fields.token else null,
                     isRetry,
                     fields.useExistingToken,
-                    settings,
                 ) ?: return // User aborted.
             fields.token = pastedToken
             connect(newURL, pastedToken.first) {
