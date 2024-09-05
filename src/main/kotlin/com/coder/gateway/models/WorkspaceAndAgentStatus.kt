@@ -5,7 +5,6 @@ import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentLifecycleState
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.intellij.ui.JBColor
 
 /**
  * WorkspaceAndAgentStatus represents the combined status of a single agent and
@@ -46,14 +45,6 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     OFF("Off", "The agent has shut down."),
     READY("Ready", "The agent is ready to accept connections."),
     ;
-
-    fun statusColor(): JBColor =
-        when (this) {
-            READY, AGENT_STARTING_READY, START_TIMEOUT_READY -> JBColor.GREEN
-            CREATED, START_ERROR, START_TIMEOUT, SHUTDOWN_TIMEOUT -> JBColor.YELLOW
-            FAILED, DISCONNECTED, TIMEOUT, SHUTDOWN_ERROR -> JBColor.RED
-            else -> if (JBColor.isBright()) JBColor.LIGHT_GRAY else JBColor.DARK_GRAY
-        }
 
     /**
      * Return true if the agent is in a connectable state.

@@ -1,94 +1,10 @@
 package com.coder.gateway.util
 
-import com.coder.gateway.CoderGatewayBundle
-import com.coder.gateway.cli.CoderCLIManager
-import com.coder.gateway.models.WorkspaceProjectIDE
-import com.coder.gateway.sdk.CoderRestClient
-import com.coder.gateway.sdk.v2.models.Workspace
-import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.Source
-import com.coder.gateway.views.steps.CoderWorkspaceProjectIDEStepView
-import com.coder.gateway.views.steps.CoderWorkspacesStepSelection
-import com.intellij.ide.BrowserUtil
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.ui.DialogWrapper
-import com.intellij.openapi.ui.panel.ComponentPanelBuilder
-import com.intellij.ui.AppIcon
-import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.dialog
-import com.intellij.ui.dsl.builder.RowLayout
-import com.intellij.ui.dsl.builder.panel
-import com.intellij.util.applyIf
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
-import java.awt.Dimension
+import com.jetbrains.toolbox.gateway.ui.TextType
+import com.jetbrains.toolbox.gateway.ui.ToolboxUi
 import java.net.URL
-import javax.swing.JComponent
-import javax.swing.border.Border
-
-/**
- * A dialog wrapper around CoderWorkspaceStepView.
- */
-private class CoderWorkspaceStepDialog(
-    name: String,
-    private val state: CoderWorkspacesStepSelection,
-) : DialogWrapper(true) {
-    private val view = CoderWorkspaceProjectIDEStepView(showTitle = false)
-
-    init {
-        init()
-        title = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
-    }
-
-    override fun show() {
-        view.init(state)
-        view.onPrevious = { close(1) }
-        view.onNext = { close(0) }
-        super.show()
-        view.dispose()
-    }
-
-    fun showAndGetData(): WorkspaceProjectIDE? {
-        if (showAndGet()) {
-            return view.data()
-        }
-        return null
-    }
-
-    override fun createContentPaneBorder(): Border = JBUI.Borders.empty()
-
-    override fun createCenterPanel(): JComponent = view
-
-    override fun createSouthPanel(): JComponent {
-        // The plugin provides its own buttons.
-        // TODO: Is it more idiomatic to handle buttons out here?
-        return panel {}.apply {
-            border = JBUI.Borders.empty()
-        }
-    }
-}
-
-fun askIDE(
-    name: String,
-    agent: WorkspaceAgent,
-    workspace: Workspace,
-    cli: CoderCLIManager,
-    client: CoderRestClient,
-    workspaces: List<Workspace>,
-): WorkspaceProjectIDE? {
-    var data: WorkspaceProjectIDE? = null
-    ApplicationManager.getApplication().invokeAndWait {
-        val dialog =
-            CoderWorkspaceStepDialog(
-                name,
-                CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces),
-            )
-        data = dialog.showAndGetData()
-    }
-    return data
-}
 
 /**
  * Dialog implementation for standalone Gateway.
@@ -97,74 +13,28 @@ fun askIDE(
  */
 class DialogUi(
     private val settings: CoderSettings,
+    private val ui: ToolboxUi,
 ) {
     fun confirm(title: String, description: String): Boolean {
-        var inputFromUser = false
-        ApplicationManager.getApplication().invokeAndWait({
-            AppIcon.getInstance().requestAttention(null, true)
-            if (!dialog(
-                    title = title,
-                    panel = panel {
-                        row {
-                            label(description)
-                        }
-                    },
-                ).showAndGet()
-            ) {
-                return@invokeAndWait
-            }
-            inputFromUser = true
-        }, ModalityState.defaultModalityState())
-        return inputFromUser
+        val f = ui.showOkCancelPopup(title, description, "Yes", "No")
+        return f.get()
     }
 
     fun ask(
         title: String,
         description: String,
         placeholder: String? = null,
+        // There is no link or error support in Toolbox so for now isError and
+        // link are unused.
         isError: Boolean = false,
         link: Pair<String, String>? = null,
     ): String? {
-        var inputFromUser: String? = null
-        ApplicationManager.getApplication().invokeAndWait({
-            lateinit var inputTextField: JBTextField
-            AppIcon.getInstance().requestAttention(null, true)
-            if (!dialog(
-                    title = title,
-                    panel = panel {
-                        row {
-                            if (link != null) browserLink(link.first, link.second)
-                            inputTextField =
-                                textField()
-                                    .applyToComponent {
-                                        this.text = placeholder
-                                        minimumSize = Dimension(520, -1)
-                                    }.component
-                        }.layout(RowLayout.PARENT_GRID)
-                        row {
-                            cell() // To align with the text box.
-                            cell(
-                                ComponentPanelBuilder.createCommentComponent(description, false, -1, true)
-                                    .applyIf(isError) {
-                                        apply {
-                                            foreground = UIUtil.getErrorForeground()
-                                        }
-                                    },
-                            )
-                        }.layout(RowLayout.PARENT_GRID)
-                    },
-                    focusedComponent = inputTextField,
-                ).showAndGet()
-            ) {
-                return@invokeAndWait
-            }
-            inputFromUser = inputTextField.text
-        }, ModalityState.any())
-        return inputFromUser
+        val f = ui.showTextInputPopup(title, description, placeholder, TextType.General, "OK", "Cancel")
+        return f.get()
     }
 
     private fun openUrl(url: URL) {
-        BrowserUtil.browse(url)
+        ui.openUrl(url.toString())
     }
 
     /**

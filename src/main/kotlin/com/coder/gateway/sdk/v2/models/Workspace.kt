@@ -1,6 +1,5 @@
 package com.coder.gateway.sdk.v2.models
 
-import com.coder.gateway.models.WorkspaceAgentListModel
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import java.util.UUID
@@ -20,13 +19,3 @@ data class Workspace(
     @Json(name = "outdated") val outdated: Boolean,
     @Json(name = "name") val name: String,
 )
-
-/**
- * Return a list of agents combined with this workspace to display in the list.
- * If the workspace has no agents, return just itself with a null agent.
- */
-fun Workspace.toAgentList(resources: List<WorkspaceResource> = this.latestBuild.resources): List<WorkspaceAgentListModel> = resources.filter { it.agents != null }.flatMap { it.agents!! }.map { agent ->
-    WorkspaceAgentListModel(this, agent)
-}.ifEmpty {
-    listOf(WorkspaceAgentListModel(this))
-}

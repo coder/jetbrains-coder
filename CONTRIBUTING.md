@@ -2,44 +2,30 @@
 
 ## Architecture
 
-The Coder Gateway plugin uses Gateway APIs to SSH into the remote machine,
-download the requested IDE backend, run the backend, then launches a client that
-connects to that backend using a port forward over SSH. If the backend goes down
-due to a crash or a workspace restart, it will restart the backend and relaunch
-the client.
+The Coder Toolbox Gateway plugins provides some login pages, after which
+it configures SSH and gives Toolbox a list of environments with their
+host names. Toolbox then handles everything else.
 
-There are three ways to get into a workspace:
+There are two ways to get into a workspace:
 
 1. Dashboard link.
-2. "Connect to Coder" button.
-3. Using a recent connection.
-
-Currently the first two will configure SSH but the third does not yet.
+2. Through Toolbox.
 
 ## Development
 
-To manually install a local build:
+You can get the latest build of Toolbox with Gateway support from our shared 
+Slack channel with JetBrains. Make sure you download the right version (check
+[./gradle/libs.versions.toml](./gradle/libs.versions.toml)).
 
-1. Install [Jetbrains Gateway](https://www.jetbrains.com/remote-development/gateway/)
-2. Run `./gradlew clean buildPlugin` to generate a zip distribution.
-3. Locate the zip file in the `build/distributions` folder and follow [these
-   instructions](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk)
-   on how to install a plugin from disk.
+To load the plugin into Toolbox, close Toolbox, run `./gradlew build copyPlugin`,
+then launch Toolbox again.
 
-Alternatively, `./gradlew clean runIde` will deploy a Gateway distribution (the
-one specified in `gradle.properties` - `platformVersion`) with the latest plugin
-changes deployed.
-
-To simulate opening a workspace from the dashboard pass the Gateway link via
-`--args`. For example:
+To simulate opening a workspace from the dashboard you can use something like
+`xdg-open` to launch a URL in this format:
 
 ```
-./gradlew clean runIDE --args="jetbrains-gateway://connect#type=coder&workspace=dev&agent=coder&folder=/home/coder&url=https://dev.coder.com&token=<redacted>&ide_product_code=IU&ide_build_number=223.8836.41&ide_download_link=https://download.jetbrains.com/idea/ideaIU-2022.3.3.tar.gz"
+jetbrains://gateway/com.coder.gateway/connect?workspace=dev&agent=coder&url=https://dev.coder.com&token=<redacted>
 ```
-
-Alternatively, if you have separately built the plugin and already installed it
-in a Gateway distribution you can launch that distribution with the URL as the
-first argument (no `--args` in this case).
 
 If your change is something users ought to be aware of, add an entry in the
 changelog.
@@ -48,41 +34,22 @@ Generally we prefer that PRs be squashed into `main` but you can rebase or merge
 if it is important to keep the individual commits (make sure to clean up the
 commits first if you are doing this).
 
+We are using `ktlint` to format but this is not currently enforced.
+
 ## Testing
 
 Run tests with `./gradlew test`. By default this will test against
 `https://dev.coder.com` but you can set `CODER_GATEWAY_TEST_DEPLOYMENT` to a URL
 of your choice or to `mock` to use mocks only.
 
-There are two ways of using the plugin: from standalone Gateway, and from within
-an IDE (`File` > `Remote Development`).  There are subtle differences so it
-makes usually sense to test both.  We should also be testing both the latest
-stable and latest EAP.
-
-## Plugin compatibility
-
-`./gradlew runPluginVerifier` can check the plugin compatibility against the specified Gateway. The integration with Github Actions is commented until [this gradle intellij plugin issue](https://github.com/JetBrains/gradle-intellij-plugin/issues/1027) is fixed.
+Some investigation is needed to see what options we have for testing code 
+directly tied to the UI, as currently that code is untested.
 
 ## Releasing
 
+We do not yet have a release workflow yet, but it will look like:
+
 1. Check that the changelog lists all the important changes.
-2. Update the gradle.properties version.
-3. Publish the resulting draft release after validating it.
-4. Merge the resulting changelog PR.
-
-## `main` vs `eap` branch
-
-Sometimes there can be API incompatibilities between the latest stable version
-of Gateway and EAP ones (Early Access Program).
-
-If this happens, use the `eap` branch to make a separate release. Once it
-becomes stable, update the versions in `main`.
-
-## Supported Coder versions
-
-`Coder Gateway` includes checks for compatibility with a specified version
-range. A warning is raised when the Coder deployment build version is outside of
-compatibility range.
-
-At the moment the upper range is 3.0.0 so the check essentially has no effect,
-but in the future we may want to keep this updated.
+2. Update the extension.json version and changelog header.
+3. Tag the commit made from the second step with the version.
+4. Publish the resulting draft release after validating it.

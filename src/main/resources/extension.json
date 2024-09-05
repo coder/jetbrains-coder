@@ -1,0 +1,20 @@
+{
+  "id": "com.coder.gateway",
+  "version": "0.0.1",
+  "meta": {
+    "readableName": "Coder Gateway",
+    "description": "This plugin connects your JetBrains IDE to Coder workspaces.",
+    "vendor": "Coder",
+    "url": "https://github.com/coder/jetbrains-coder",
+    "backgroundColors": {
+      "start": { "hex": "#fdb60d", "opacity": 0.6 },
+      "top": { "hex": "#ff318c", "opacity": 0.6 },
+      "end": { "hex": "#6b57ff", "opacity": 0.6 }
+    }
+  },
+  "apiVersion": "0.1.0",
+  "compatibleVersionRange": {
+    "from": "2.1.0",
+    "to": "2.2.0"
+  }
+}

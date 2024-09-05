@@ -1,0 +1,79 @@
+[
+  {
+    "name": "com.jetbrains.toolbox.gateway:gateway-api",
+    "version": "2.5.0.32871",
+    "url": "https://jetbrains.com/toolbox-app/",
+    "license": "The Apache Software License, Version 2.0",
+    "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  {
+    "name": "com.squareup.okhttp3:okhttp",
+    "version": "4.12.0",
+    "url": "https://square.github.io/okhttp/",
+    "license": "The Apache Software License, Version 2.0",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  {
+    "name": "com.squareup.retrofit2:converter-moshi",
+    "version": "2.8.2",
+    "url": "https://github.com/square/retrofit",
+    "license": "The Apache Software License, Version 2.0",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  {
+    "name": "com.squareup.retrofit2:retrofit",
+    "version": "2.8.2",
+    "url": "https://github.com/square/retrofit",
+    "license": "The Apache Software License, Version 2.0",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  {
+    "name": "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+    "version": "1.9.10",
+    "url": "https://kotlinlang.org/",
+    "license": "The Apache License, Version 2.0",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  {
+    "name": "org.jetbrains.kotlinx:kotlinx-coroutines-core",
+    "version": "1.7.3",
+    "url": null,
+    "license": null,
+    "licenseUrl": null
+  },
+  {
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-core",
+    "version": "1.5.0",
+    "url": null,
+    "license": null,
+    "licenseUrl": null
+  },
+  {
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-json",
+    "version": "1.5.0",
+    "url": null,
+    "license": null,
+    "licenseUrl": null
+  },
+  {
+    "name": "org.jetbrains.kotlinx:kotlinx-serialization-json-okio",
+    "version": "1.5.0",
+    "url": null,
+    "license": null,
+    "licenseUrl": null
+  },
+  {
+    "name": "org.slf4j:slf4j-api",
+    "version": "2.0.3",
+    "url": "http://www.slf4j.org",
+    "license": "MIT License",
+    "licenseUrl": "http://www.opensource.org/licenses/mit-license.php"
+  },
+  {
+    "name": "org.zeroturnaround:zt-exec",
+    "version": "1.12",
+    "url": "https://github.com/zeroturnaround/zt-exec",
+    "license": "The Apache Software License, Version 2.0",
+    "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  }
+]
