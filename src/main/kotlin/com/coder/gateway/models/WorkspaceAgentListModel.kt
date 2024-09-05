@@ -12,7 +12,7 @@ data class WorkspaceAgentListModel(
     val workspace: Workspace,
     // If this is missing, assume the workspace is off or has no agents.
     val agent: WorkspaceAgent? = null,
-    // The icon to display on the row.
+    // The icon of the template from which this workspace was created.
     var icon: Icon? = null,
     // The combined status of the workspace and agent to display on the row.
     val status: WorkspaceAndAgentStatus = WorkspaceAndAgentStatus.from(workspace, agent),
