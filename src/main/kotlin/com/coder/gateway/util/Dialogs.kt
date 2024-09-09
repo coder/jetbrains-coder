@@ -185,7 +185,6 @@ class DialogUi(
         isRetry: Boolean,
         useExisting: Boolean,
     ): Pair<String, Source>? {
-        var (existingToken, tokenSource) = token ?: Pair("", Source.USER)
         val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
 
         // On the first run either open a browser to generate a new token
@@ -199,7 +198,7 @@ class DialogUi(
                 // Look on disk in case we already have a token, either in
                 // the deployment's config or the global config.
                 val tryToken = settings.token(url)
-                if (tryToken != null && tryToken.first != existingToken) {
+                if (tryToken != null && tryToken.first != token?.first) {
                     return tryToken
                 }
             }
@@ -212,29 +211,19 @@ class DialogUi(
                 title = "Session Token",
                 description = if (isRetry) {
                     "This token was rejected by ${url.host}."
-                } else if (tokenSource == Source.CONFIG) {
-                    "This token was pulled from your global CLI config."
-                } else if (tokenSource == Source.DEPLOYMENT_CONFIG) {
-                    "This token was pulled from your CLI config for ${url.host}."
-                } else if (tokenSource == Source.LAST_USED) {
-                    "This token was the last used token for ${url.host}."
-                } else if (tokenSource == Source.QUERY) {
-                    "This token was pulled from the Gateway link from ${url.host}."
-                } else if (existingToken.isNotBlank()) {
-                    "The last used token for ${url.host} is shown above."
                 } else {
-                    "No existing token for ${url.host} found."
+                    token?.second?.description("token", url)
+                        ?: "No existing token for ${url.host} found."
                 },
-                placeholder = existingToken,
+                placeholder = token?.first,
                 link = Pair("Session Token:", getTokenUrl.toString()),
                 isError = isRetry,
             )
         if (tokenFromUser.isNullOrBlank()) {
             return null
         }
-        if (tokenFromUser != existingToken) {
-            tokenSource = Source.USER
-        }
-        return Pair(tokenFromUser, tokenSource)
+        // If the user submitted the same token, keep the same source too.
+        val source = if (tokenFromUser == token?.first) token.second else Source.USER
+        return Pair(tokenFromUser, source)
     }
 }

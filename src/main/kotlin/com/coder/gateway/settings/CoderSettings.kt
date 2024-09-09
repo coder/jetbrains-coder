@@ -28,6 +28,20 @@ enum class Source {
     QUERY,             // From the Gateway link as a query parameter.
     SETTINGS,          // Pulled from settings.
     USER,              // Input by the user.
+    ;
+
+    /**
+     * Return a description of the source.
+     */
+    fun description(name: String, url: URL): String = when (this) {
+        CONFIG ->  "This $name was pulled from your global CLI config."
+        DEPLOYMENT_CONFIG -> "This $name was pulled from your CLI config for ${url.host}."
+        LAST_USED -> "This last used $name for ${url.host}."
+        QUERY -> "This $name was pulled from the Gateway link from ${url.host}."
+        USER -> "The last used $name for ${url.host}."
+        ENVIRONMENT -> "This $name was pulled from an environment variable."
+        SETTINGS -> "This $name was pulled from your settings for Coder Gateway."
+    }
 }
 
 open class CoderSettingsState(
