@@ -222,6 +222,7 @@ class CoderCLIManager(
         workspaceNames: Set<String>,
         feats: Features = features,
     ) {
+        logger.info("Configuring SSH config at ${settings.sshConfigPath}")
         writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, feats))
     }
 
