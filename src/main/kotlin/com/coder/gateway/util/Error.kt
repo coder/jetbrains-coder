@@ -1,6 +1,5 @@
 package com.coder.gateway.util
 
-import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.sdk.ex.APIResponseException
 import org.zeroturnaround.exec.InvalidExitValueException
@@ -11,56 +10,25 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLHandshakeException
 
 fun humanizeConnectionError(deploymentURL: URL, requireTokenAuth: Boolean, e: Exception): String {
-    val reason = e.message ?: CoderGatewayBundle.message("gateway.connector.view.workspaces.connect.no-reason")
+    val reason = e.message ?: "No reason was provided."
     return when (e) {
-        is java.nio.file.AccessDeniedException ->
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.access-denied",
-                e.file,
-            )
-        is UnknownHostException ->
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.unknown-host",
-                e.message ?: deploymentURL.host,
-            )
-        is InvalidExitValueException ->
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.unexpected-exit",
-                e.exitValue,
-            )
+        is java.nio.file.AccessDeniedException -> "Access denied to ${e.file}."
+        is UnknownHostException -> "Unknown host ${e.message ?: deploymentURL.host}."
+        is InvalidExitValueException -> "CLI exited unexpectedly with ${e.exitValue}."
         is APIResponseException -> {
             if (e.isUnauthorized) {
-                CoderGatewayBundle.message(
-                    if (requireTokenAuth) {
-                        "gateway.connector.view.workspaces.connect.unauthorized-token"
-                    } else {
-                        "gateway.connector.view.workspaces.connect.unauthorized-other"
-                    },
-                    deploymentURL,
-                )
+                if (requireTokenAuth) {
+                    "Token was rejected by $deploymentURL; has your token expired?"
+                } else {
+                    "Authorization failed to $deploymentURL."
+                }
             } else {
                 reason
             }
         }
-        is SocketTimeoutException -> {
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.timeout",
-                deploymentURL,
-            )
-        }
-        is ResponseException, is ConnectException -> {
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.download-failed",
-                reason,
-            )
-        }
-        is SSLHandshakeException -> {
-            CoderGatewayBundle.message(
-                "gateway.connector.view.workspaces.connect.ssl-error",
-                deploymentURL.host,
-                reason,
-            )
-        }
+        is SocketTimeoutException -> "Unable to connect to $deploymentURL; is it up?"
+        is ResponseException, is ConnectException -> "Failed to download Coder CLI: $reason"
+        is SSLHandshakeException -> "Connection to $deploymentURL failed: $reason. See the <a href='https://coder.com/docs/v2/latest/ides/gateway#configuring-the-gateway-plugin-to-use-internal-certificates'>documentation for TLS certificates</a> for information on how to make your system trust certificates coming from your deployment."
         else -> reason
     }
 }
