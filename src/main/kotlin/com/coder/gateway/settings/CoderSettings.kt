@@ -33,14 +33,14 @@ enum class Source {
     /**
      * Return a description of the source.
      */
-    fun description(name: String, url: URL): String = when (this) {
+    fun description(name: String): String = when (this) {
         CONFIG ->  "This $name was pulled from your global CLI config."
-        DEPLOYMENT_CONFIG -> "This $name was pulled from your CLI config for ${url.host}."
-        LAST_USED -> "This last used $name for ${url.host}."
-        QUERY -> "This $name was pulled from the Gateway link from ${url.host}."
-        USER -> "The last used $name for ${url.host}."
+        DEPLOYMENT_CONFIG -> "This $name was pulled from your deployment's CLI config."
+        LAST_USED -> "This was the last used $name."
+        QUERY -> "This $name was pulled from the Gateway link."
+        USER -> "This was the last used $name."
         ENVIRONMENT -> "This $name was pulled from an environment variable."
-        SETTINGS -> "This $name was pulled from your settings for Coder Gateway."
+        SETTINGS -> "This $name was pulled from your settings."
     }
 }
 

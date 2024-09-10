@@ -210,7 +210,7 @@ class DialogUi(
             ask(
                 title = "Session Token",
                 description = error
-                    ?: token?.second?.description("token", url)
+                    ?: token?.second?.description("token")
                     ?: "No existing token for ${url.host} found.",
                 placeholder = token?.first,
                 link = Pair("Session Token:", getTokenUrl.toString()),
