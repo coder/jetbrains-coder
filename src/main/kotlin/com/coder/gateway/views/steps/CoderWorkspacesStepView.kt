@@ -508,10 +508,10 @@ class CoderWorkspacesStepView :
      * Ask for a new token if token auth is required (regardless of whether we
      * already have a token), place it in the local fields model, then connect.
      *
-     * If the token is invalid abort and start over from askTokenAndConnect()
-     * unless retry is false.
+     * If the token is invalid try again until the user aborts or we get a valid
+     * token.  Any other error will not be retried.
      */
-    private fun maybeAskTokenThenConnect(isRetry: Boolean = false) {
+    private fun maybeAskTokenThenConnect(error: String? = null) {
         val oldURL = fields.coderURL
         component.apply() // Force bindings to be filled.
         val newURL = fields.coderURL.toURL()
@@ -522,12 +522,12 @@ class CoderWorkspacesStepView :
                     // If this is a new URL there is no point in trying to use the same
                     // token.
                     if (oldURL == newURL.toString()) fields.token else null,
-                    isRetry,
                     fields.useExistingToken,
+                    error,
                 ) ?: return // User aborted.
             fields.token = pastedToken
             connect(newURL, pastedToken.first) {
-                maybeAskTokenThenConnect(true)
+                maybeAskTokenThenConnect(it)
             }
         } else {
             connect(newURL, null)
@@ -551,7 +551,7 @@ class CoderWorkspacesStepView :
     private fun connect(
         deploymentURL: URL,
         token: String?,
-        onAuthFailure: (() -> Unit)? = null,
+        onAuthFailure: ((error: String) -> Unit)? = null,
     ): Job {
         tfUrlComment?.foreground = UIUtil.getContextHelpForeground()
         tfUrlComment?.text =
@@ -640,7 +640,7 @@ class CoderWorkspacesStepView :
                     logger.error(msg, e)
 
                     if (e is APIResponseException && e.isUnauthorized && onAuthFailure != null) {
-                        onAuthFailure.invoke()
+                        onAuthFailure.invoke(msg)
                     }
                 }
             }

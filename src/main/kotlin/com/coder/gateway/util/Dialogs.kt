@@ -171,8 +171,8 @@ class DialogUi(
      * Open a dialog for providing the token.  Show any existing token so
      * the user can validate it if a previous connection failed.
      *
-     * If we are not retrying and the user has not checked the existing
-     * token box then also open a browser to the auth page.
+     * If we have not already tried once (no error) and the user has not checked
+     * the existing token box then also open a browser to the auth page.
      *
      * If the user has checked the existing token box then return the token
      * on disk immediately and skip the dialog (this will overwrite any
@@ -182,16 +182,16 @@ class DialogUi(
     fun askToken(
         url: URL,
         token: Pair<String, Source>?,
-        isRetry: Boolean,
         useExisting: Boolean,
+        error: String?,
     ): Pair<String, Source>? {
         val getTokenUrl = url.withPath("/login?redirect=%2Fcli-auth")
 
-        // On the first run either open a browser to generate a new token
-        // or, if using an existing token, use the token on disk if it
-        // exists otherwise assume the user already copied an existing
-        // token and they will paste in.
-        if (!isRetry) {
+        // On the first run (no error) either open a browser to generate a new
+        // token or, if using an existing token, use the token on disk if it
+        // exists otherwise assume the user already copied an existing token and
+        // they will paste in.
+        if (error == null) {
             if (!useExisting) {
                 openUrl(getTokenUrl)
             } else {
@@ -209,15 +209,12 @@ class DialogUi(
         val tokenFromUser =
             ask(
                 title = "Session Token",
-                description = if (isRetry) {
-                    "This token was rejected by ${url.host}."
-                } else {
-                    token?.second?.description("token", url)
-                        ?: "No existing token for ${url.host} found."
-                },
+                description = error
+                    ?: token?.second?.description("token", url)
+                    ?: "No existing token for ${url.host} found.",
                 placeholder = token?.first,
                 link = Pair("Session Token:", getTokenUrl.toString()),
-                isError = isRetry,
+                isError = error != null,
             )
         if (tokenFromUser.isNullOrBlank()) {
             return null

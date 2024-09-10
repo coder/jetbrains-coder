@@ -146,20 +146,20 @@ open class LinkHandler(
     private fun authenticate(
         deploymentURL: String,
         tryToken: Pair<String, Source>?,
-        lastToken: Pair<String, Source>? = null,
+        error: String? = null,
     ): CoderRestClient {
         val token =
             if (settings.requireTokenAuth) {
-                // Try the provided token, unless we already did.
-                val isRetry = lastToken != null
-                if (tryToken != null && !isRetry) {
+                // Try the provided token immediately on the first attempt.
+                if (tryToken != null && error == null) {
                     tryToken
                 } else {
+                    // Otherwise ask for a new token, showing the previous token.
                     dialogUi.askToken(
                         deploymentURL.toURL(),
-                        lastToken,
-                        isRetry,
-                        true,
+                        tryToken,
+                        useExisting = true,
+                        error,
                     )
                 }
             } else {
@@ -175,7 +175,8 @@ open class LinkHandler(
         } catch (ex: APIResponseException) {
             // If doing token auth we can ask and try again.
             if (settings.requireTokenAuth && ex.isUnauthorized) {
-                authenticate(deploymentURL, tryToken, token)
+                val msg = humanizeConnectionError(client.url, true, ex)
+                authenticate(deploymentURL, token, msg)
             } else {
                 throw ex
             }
