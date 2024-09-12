@@ -16,11 +16,11 @@ import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.sha1
-import com.intellij.openapi.diagnostic.Logger
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
+import org.slf4j.LoggerFactory
 import org.zeroturnaround.exec.ProcessExecutor
 import java.io.EOFException
 import java.io.FileInputStream
@@ -126,6 +126,8 @@ class CoderCLIManager(
     // manager to download to the data directory instead.
     forceDownloadToData: Boolean = false,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     val remoteBinaryURL: URL = settings.binSource(deploymentURL)
     val localBinaryPath: Path = settings.binPath(deploymentURL, forceDownloadToData)
     val coderConfigPath: Path = settings.dataDir(deploymentURL).resolve("config")
@@ -474,8 +476,6 @@ class CoderCLIManager(
         }
 
     companion object {
-        val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
-
         private val tokenRegex = "--token [^ ]+".toRegex()
 
         @JvmStatic

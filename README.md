@@ -1,4 +1,4 @@
-# Coder Gateway Plugin
+# Coder Toolbox Gateway Plugin
 
 [!["Join us on
 Discord"](https://img.shields.io/badge/join-us%20on%20Discord-gray.svg?longCache=true&logo=discord&colorB=purple)](https://discord.gg/coder)
@@ -7,8 +7,8 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 [![Coder Gateway Plugin Build](https://github.com/coder/jetbrains-coder/actions/workflows/build.yml/badge.svg)](https://github.com/coder/jetbrains-coder/actions/workflows/build.yml)
 
 <!-- Plugin description -->
-The Coder Gateway plugin lets you open [Coder](https://github.com/coder/coder)
-workspaces in your JetBrains IDEs with a single click.
+The Coder Toolbox Gateway plugin lets you open [Coder](https://github.com/coder/coder)
+workspaces from Toolbox with a single click.
 
 **Manage less**
 
@@ -28,10 +28,6 @@ workspaces in your JetBrains IDEs with a single click.
 
 ## Getting Started
 
-1. Install [Jetbrains Gateway](https://www.jetbrains.com/remote-development/gateway/)
-2. [Install this plugin from the JetBrains Marketplace](https://plugins.jetbrains.com/plugin/19620-coder/).
-   Alternatively, if you launch a JetBrains IDE from the Coder dashboard, this
-   plugin will be automatically installed.
-
-It is also possible to install this plugin in a local JetBrains IDE and then use
-`File` > `Remote Development`.
+Gateway in Toolbox and this plugin are still in development. Steps to
+use Toolbox with Coder will come soon, but see the contributing doc 
+if you want to contribute.

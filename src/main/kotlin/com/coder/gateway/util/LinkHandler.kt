@@ -1,15 +1,12 @@
 package com.coder.gateway.util
 
-import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.models.WorkspaceAndAgentStatus
-import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.Source
 import okhttp3.OkHttpClient
@@ -31,7 +28,7 @@ open class LinkHandler(
     fun handle(
         parameters: Map<String, String>,
         indicator: ((t: String) -> Unit)? = null,
-    ): WorkspaceProjectIDE {
+    ): String {
         val deploymentURL = parameters.url() ?: dialogUi.ask("Deployment URL", "Enter the full URL of your Coder deployment")
         if (deploymentURL.isNullOrBlank()) {
             throw MissingArgumentException("Query parameter \"$URL\" is missing")
@@ -109,30 +106,9 @@ open class LinkHandler(
         cli.configSsh(client.agentNames(workspaces))
 
         val name = "${workspace.name}.${agent.name}"
-        val openDialog =
-            parameters.ideProductCode().isNullOrBlank() ||
-                parameters.ideBuildNumber().isNullOrBlank() ||
-                (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
-                parameters.folder().isNullOrBlank()
-
-        return if (openDialog) {
-            askIDE(name, agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
-        } else {
-            // Check that both the domain and the redirected domain are
-            // allowlisted.  If not, check with the user whether to proceed.
-            verifyDownloadLink(parameters)
-            WorkspaceProjectIDE.fromInputs(
-                name = name,
-                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), name),
-                projectPath = parameters.folder(),
-                ideProductCode = parameters.ideProductCode(),
-                ideBuildNumber = parameters.ideBuildNumber(),
-                idePathOnHost = parameters.idePathOnHost(),
-                downloadSource = parameters.ideDownloadLink(),
-                deploymentURL = deploymentURL,
-                lastOpened = null, // Have not opened yet.
-            )
-        }
+        // TODO@JB: Can we ask for the IDE and project path or how does
+        //          this work?
+        return name
     }
 
     /**
@@ -168,7 +144,10 @@ open class LinkHandler(
         if (settings.requireTokenAuth && token == null) { // User aborted.
             throw MissingArgumentException("Token is required")
         }
-        val client = CoderRestClientService(deploymentURL.toURL(), token?.first, httpClient = httpClient)
+        // The http client Toolbox gives us is already set up with the
+        // proxy config, so we do net need to explicitly add it.
+        // TODO: How to get the plugin version?
+        val client = CoderRestClient(deploymentURL.toURL(), token?.first, settings, proxyValues = null, "production", httpClient)
         return try {
             client.authenticate()
             client

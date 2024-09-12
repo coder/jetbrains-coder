@@ -1,6 +1,5 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.models.WorkspaceAgentListModel
 import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -10,22 +9,12 @@ import com.coder.gateway.sdk.v2.models.WorkspaceAgentStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import java.util.UUID
 
 class DataGen {
     companion object {
-        // Create a list of random agents for a random workspace.
-        fun agentList(
-            workspaceName: String,
-            vararg agentName: String,
-        ): List<WorkspaceAgentListModel> {
-            val workspace = workspace(workspaceName, agents = agentName.associateWith { UUID.randomUUID().toString() })
-            return workspace.toAgentList()
-        }
-
         fun resource(
             agentName: String,
             agentId: String,

@@ -1,1 +1,1 @@
-rootProject.name = "Coder Gateway"
+rootProject.name = "jetbrains-toolbox-coder"

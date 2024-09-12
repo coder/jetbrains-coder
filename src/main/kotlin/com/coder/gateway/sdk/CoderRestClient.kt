@@ -1,7 +1,5 @@
 package com.coder.gateway.sdk
 
-import com.coder.gateway.icons.CoderIcons
-import com.coder.gateway.icons.toRetinaAwareIcon
 import com.coder.gateway.sdk.convertors.ArchConverter
 import com.coder.gateway.sdk.convertors.InstantConverter
 import com.coder.gateway.sdk.convertors.OSConverter
@@ -24,15 +22,9 @@ import com.coder.gateway.util.coderTrustManagers
 import com.coder.gateway.util.getArch
 import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
-import com.coder.gateway.util.toURL
-import com.coder.gateway.util.withPath
-import com.intellij.util.ImageLoader
-import com.intellij.util.ui.ImageUtil
 import com.squareup.moshi.Moshi
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import org.imgscalr.Scalr
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.net.HttpURLConnection
@@ -40,7 +32,6 @@ import java.net.ProxySelector
 import java.net.URL
 import java.util.UUID
 import javax.net.ssl.X509TrustManager
-import javax.swing.Icon
 
 /**
  * Holds proxy information.
@@ -126,8 +117,6 @@ open class CoderRestClient(
                     }
                     it.proceed(request)
                 }
-                // This should always be last if we want to see previous interceptors logged.
-                .addInterceptor(HttpLoggingInterceptor().apply { setLevel(HttpLoggingInterceptor.Level.BASIC) })
                 .build()
 
         retroRestClient =
@@ -265,34 +254,5 @@ open class CoderRestClient(
             throw APIResponseException("update workspace ${workspace.name}", url, buildResponse)
         }
         return buildResponse.body()!!
-    }
-
-    private val iconCache = mutableMapOf<Pair<String, String>, Icon>()
-
-    fun loadIcon(
-        path: String,
-        workspaceName: String,
-    ): Icon {
-        var iconURL: URL? = null
-        if (path.startsWith("http")) {
-            iconURL = path.toURL()
-        } else if (!path.contains(":") && !path.contains("//")) {
-            iconURL = url.withPath(path)
-        }
-
-        if (iconURL != null) {
-            val cachedIcon = iconCache[Pair(workspaceName, path)]
-            if (cachedIcon != null) {
-                return cachedIcon
-            }
-            val img = ImageLoader.loadFromUrl(iconURL)
-            if (img != null) {
-                val icon = toRetinaAwareIcon(Scalr.resize(ImageUtil.toBufferedImage(img), Scalr.Method.ULTRA_QUALITY, 32))
-                iconCache[Pair(workspaceName, path)] = icon
-                return icon
-            }
-        }
-
-        return CoderIcons.fromChar(workspaceName.lowercase().first())
     }
 }

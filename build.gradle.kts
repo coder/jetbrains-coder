@@ -1,159 +1,140 @@
-import org.jetbrains.changelog.markdownToHTML
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-fun properties(key: String) = project.findProperty(key).toString()
+import com.github.jk1.license.filter.ExcludeTransitiveDependenciesFilter
+import com.github.jk1.license.render.JsonReportRenderer
+import org.jetbrains.intellij.pluginRepository.PluginRepositoryFactory
+import org.jetbrains.kotlin.com.intellij.openapi.util.SystemInfoRt
+import java.nio.file.Path
+import kotlin.io.path.div
 
 plugins {
-    // Java support
-    id("java")
-    // Groovy support
-    id("groovy")
-    // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.9.23"
-    // Gradle IntelliJ Plugin
-    id("org.jetbrains.intellij") version "1.13.3"
-    // Gradle Changelog Plugin
-    id("org.jetbrains.changelog") version "2.2.1"
-    // Gradle Qodana Plugin
-    id("org.jetbrains.qodana") version "0.1.13"
-    // Generate Moshi adapters.
-    id("com.google.devtools.ksp") version "1.9.23-1.0.20"
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.serialization)
+    `java-library`
+    alias(libs.plugins.dependency.license.report)
+    alias(libs.plugins.ksp)
 }
 
-group = properties("pluginGroup")
-version = properties("pluginVersion")
+buildscript {
+    dependencies {
+        classpath(libs.marketplace.client)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven("https://packages.jetbrains.team/maven/p/tbx/gateway")
+}
 
 dependencies {
-    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
-    implementation("com.squareup.okhttp3:okhttp")
-    implementation("com.squareup.okhttp3:logging-interceptor")
-
-    implementation("com.squareup.moshi:moshi:1.15.1")
-    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
-
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
-
-    implementation("org.zeroturnaround:zt-exec:1.12")
-
+    implementation(libs.gateway.api)
+    implementation(libs.slf4j)
+    implementation(libs.bundles.serialization)
+    implementation(libs.coroutines.core)
+    implementation(libs.okhttp)
+    implementation(libs.exec)
+    implementation(libs.moshi)
+    ksp(libs.moshi.codegen)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.moshi)
     testImplementation(kotlin("test"))
 }
 
-// Configure project's dependencies
-repositories {
-    mavenCentral()
-    maven(url = "https://www.jetbrains.com/intellij-repository/snapshots")
+licenseReport {
+    renderers = arrayOf(JsonReportRenderer("dependencies.json"))
+    filters = arrayOf(ExcludeTransitiveDependenciesFilter())
+    // jq script to convert to our format:
+    // `jq '[.dependencies[] | {name: .moduleName, version: .moduleVersion, url: .moduleUrl, license: .moduleLicense, licenseUrl: .moduleLicenseUrl}]' < build/reports/dependency-license/dependencies.json > src/main/resources/dependencies.json`
 }
 
-// Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-intellij {
-    pluginName.set(properties("pluginName"))
-    version.set(properties("platformVersion"))
-    type.set(properties("platformType"))
-
-    downloadSources.set(properties("platformDownloadSources").toBoolean())
-    // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-    plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
+tasks.compileKotlin {
+    kotlinOptions.freeCompilerArgs += listOf(
+        "-opt-in=kotlinx.serialization.ExperimentalSerializationApi",
+    )
 }
 
-// Configure Gradle Changelog Plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
-changelog {
-    version.set(properties("pluginVersion"))
-    groups.set(emptyList())
+tasks.test {
+    useJUnitPlatform()
 }
 
-// Configure Gradle Qodana Plugin - read more: https://github.com/JetBrains/gradle-qodana-plugin
-qodana {
-    cachePath.set(projectDir.resolve(".qodana").canonicalPath)
-    reportPath.set(projectDir.resolve("build/reports/inspections").canonicalPath)
-    saveReport.set(true)
-    showReport.set(System.getenv("QODANA_SHOW_REPORT")?.toBoolean() ?: false)
+val pluginId = "com.coder.gateway"
+val pluginVersion = "0.0.1"
+
+val assemblePlugin by tasks.registering(Jar::class) {
+    archiveBaseName.set(pluginId)
+    from(sourceSets.main.get().output)
 }
 
-tasks {
-    buildPlugin {
-        exclude { "coroutines" in it.name }
-    }
-    prepareSandbox {
-        exclude { "coroutines" in it.name }
-    }
+val copyPlugin by tasks.creating(Sync::class.java) {
+    dependsOn(assemblePlugin)
 
-    // Set the JVM compatibility versions
-    properties("javaVersion").let {
-        withType<JavaCompile> {
-            sourceCompatibility = it
-            targetCompatibility = it
-        }
-        withType<KotlinCompile> {
-            kotlinOptions.jvmTarget = it
-        }
-    }
+    val userHome = System.getProperty("user.home").let { Path.of(it) }
+    val toolboxCachesDir = when {
+        SystemInfoRt.isWindows -> System.getenv("LOCALAPPDATA")?.let { Path.of(it) } ?: (userHome / "AppData" / "Local")
+        // currently this is the location that TBA uses on Linux
+        SystemInfoRt.isLinux -> System.getenv("XDG_DATA_HOME")?.let { Path.of(it) } ?: (userHome / ".local" / "share")
+        SystemInfoRt.isMac -> userHome / "Library" / "Caches"
+        else -> error("Unknown os")
+    } / "JetBrains" / "Toolbox"
 
-    wrapper {
-        gradleVersion = properties("gradleVersion")
-    }
+    val pluginsDir = when {
+        SystemInfoRt.isWindows -> toolboxCachesDir / "cache"
+        SystemInfoRt.isLinux || SystemInfoRt.isMac -> toolboxCachesDir
+        else -> error("Unknown os")
+    } / "plugins"
 
-    instrumentCode {
-        compilerVersion.set(properties("instrumentationCompiler"))
-    }
+    val targetDir = pluginsDir / pluginId
 
-    // TODO - this fails with linkage error, but we don't need it now
-    // because the plugin does not provide anything to search for in Preferences
-    buildSearchableOptions {
-        isEnabled = false
+    from(assemblePlugin.get().outputs.files)
+
+    from("src/main/resources") {
+        include("extension.json")
+        include("dependencies.json")
+        include("icon.svg")
     }
 
-    patchPluginXml {
-        version.set(properties("pluginVersion"))
-        sinceBuild.set(properties("pluginSinceBuild"))
-        untilBuild.set(properties("pluginUntilBuild"))
+    // Copy dependencies, excluding those provided by Toolbox.
+    from(
+        configurations.compileClasspath.map { configuration ->
+            configuration.files.filterNot { file ->
+                listOf(
+                    "kotlin",
+                    "gateway",
+                    "annotations",
+                    "okhttp",
+                    "okio",
+                    "slf4j",
+                ).any { file.name.contains(it) }
+            }
+        },
+    )
 
-        // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
-        pluginDescription.set(
-            projectDir.resolve("README.md").readText().lines().run {
-                val start = "<!-- Plugin description -->"
-                val end = "<!-- Plugin description end -->"
+    into(targetDir)
+}
 
-                if (!containsAll(listOf(start, end))) {
-                    throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
-                }
-                subList(indexOf(start) + 1, indexOf(end))
-            }.joinToString("\n").run { markdownToHTML(this) },
-        )
+val pluginZip by tasks.creating(Zip::class) {
+    dependsOn(assemblePlugin)
 
-        // Get the latest available change notes from the changelog file
-        changeNotes.set(
-            provider {
-                changelog.run {
-                    getOrNull(properties("pluginVersion")) ?: getLatest()
-                }.toHTML()
-            },
-        )
+    from(assemblePlugin.get().outputs.files)
+    from("src/main/resources") {
+        include("extension.json")
+        include("dependencies.json")
     }
-
-    runIde {
-        autoReloadPlugins.set(true)
+    from("src/main/resources") {
+        include("icon.svg")
+        rename("icon.svg", "pluginIcon.svg")
     }
+    archiveBaseName.set("$pluginId-$pluginVersion")
+}
 
-    // Configure UI tests plugin
-    // Read more: https://github.com/JetBrains/intellij-ui-test-robot
-    runIdeForUiTests {
-        systemProperty("robot-server.port", "8082")
-        systemProperty("ide.mac.message.dialogs.as.sheets", "false")
-        systemProperty("jb.privacy.policy.text", "<!--999.999-->")
-        systemProperty("jb.consents.confirmation.enabled", "false")
-    }
+val uploadPlugin by tasks.creating {
+    dependsOn(pluginZip)
 
-    publishPlugin {
-        dependsOn("patchChangelog")
-        token.set(System.getenv("PUBLISH_TOKEN"))
-    }
+    doLast {
+        val instance = PluginRepositoryFactory.create("https://plugins.jetbrains.com", project.property("pluginMarketplaceToken").toString())
 
-    test {
-        useJUnitPlatform()
-    }
+        // first upload
+        // instance.uploader.uploadNewPlugin(pluginZip.outputs.files.singleFile, listOf("toolbox", "gateway"), LicenseUrl.APACHE_2_0, ProductFamily.TOOLBOX)
 
-    runPluginVerifier {
-        ideVersions.set(properties("verifyVersions").split(","))
+        // subsequent updates
+        instance.uploader.upload(pluginId, pluginZip.outputs.files.singleFile)
     }
 }
