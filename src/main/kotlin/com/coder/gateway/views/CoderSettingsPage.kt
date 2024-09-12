@@ -47,7 +47,7 @@ class CoderSettingsPage(private val settings: CoderSettingsService) : CoderPage(
     override fun getTitle(): String = "Coder Settings"
 
     override fun getActionButtons(): MutableList<RunnableActionDescription> = mutableListOf(
-        Action("Save", true) {
+        Action("Save", closesPage = true) {
             settings.binarySource = get(binarySourceField) as String
             settings.binaryDirectory = get(binaryDirectoryField) as String
             settings.dataDirectory = get(dataDirectoryField) as String

@@ -38,7 +38,7 @@ class SignInPage(
      * Buttons displayed at the bottom of the page.
      */
     override fun getActionButtons(): MutableList<RunnableActionDescription> = mutableListOf(
-        Action("Sign In", false) { submit() },
+        Action("Sign In", closesPage = false) { submit() },
     )
 
     /**

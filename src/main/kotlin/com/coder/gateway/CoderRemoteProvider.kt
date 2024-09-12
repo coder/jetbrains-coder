@@ -161,7 +161,7 @@ class CoderRemoteProvider(
      * List of actions that appear next to the account.
      */
     override fun getAdditionalPluginActions(): List<RunnableActionDescription> = listOf(
-        Action("Settings", false) {
+        Action("Settings", closesPage = false) {
             ui.showUiPage(settingsPage)
         },
     )

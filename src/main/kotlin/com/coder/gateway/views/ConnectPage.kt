@@ -54,8 +54,8 @@ class ConnectPage(
      * Show a retry button on error.
      */
     override fun getActionButtons(): MutableList<RunnableActionDescription> = listOfNotNull(
-        if (errorField != null) Action("Retry", false) { retry() } else null,
-        if (errorField != null) Action("Cancel", false) { onCancel() } else null,
+        if (errorField != null) Action("Retry", closesPage = false) { retry() } else null,
+        if (errorField != null) Action("Cancel", closesPage = false) { onCancel() } else null,
     ).toMutableList()
 
     /**

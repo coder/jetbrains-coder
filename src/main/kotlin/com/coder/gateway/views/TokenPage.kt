@@ -46,7 +46,7 @@ class TokenPage(
      * Buttons displayed at the bottom of the page.
      */
     override fun getActionButtons(): MutableList<RunnableActionDescription> = mutableListOf(
-        Action("Connect", false) { submit(get(tokenField) as String) },
+        Action("Connect", closesPage = false) { submit(get(tokenField) as String) },
     )
 
     /**
