@@ -138,3 +138,12 @@ val uploadPlugin by tasks.creating {
         instance.uploader.upload(pluginId, pluginZip.outputs.files.singleFile)
     }
 }
+
+// For use with kotlin-language-server.
+tasks.register("classpath") {
+    doFirst {
+        File("classpath").writeText(
+          sourceSets["main"].runtimeClasspath.asPath
+        )
+    }
+}
