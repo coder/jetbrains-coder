@@ -1,7 +1,5 @@
 package com.coder.gateway.util
 
-import com.intellij.icons.ExpUiIcons.Nodes.Exception
-
 /**
  * Escape an argument to be used in the ProxyCommand of an SSH config.
  *
