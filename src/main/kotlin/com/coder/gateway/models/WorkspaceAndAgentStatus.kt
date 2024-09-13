@@ -5,6 +5,8 @@ import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentLifecycleState
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
+import com.jetbrains.toolbox.gateway.states.Color
+import com.jetbrains.toolbox.gateway.states.CustomRemoteEnvironmentState
 
 /**
  * WorkspaceAndAgentStatus represents the combined status of a single agent and
@@ -47,6 +49,30 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
     ;
 
     /**
+     * Return the environment state for Toolbox, which tells it the label, color
+     * and whether the environment is reachable.
+     *
+     * We mark all ready and pending states as reachable since if the workspace
+     * is pending the cli will wait for it anyway.
+     *
+     * Additionally, terminal states like stopped are also marked as reachable,
+     * since the cli will start them.
+     */
+    fun toRemoteEnvironmentState(): CustomRemoteEnvironmentState {
+        // Use comments; no named arguments for non-Kotlin functions.
+        // TODO@JB: Is there a set of default colors we could use?
+        return CustomRemoteEnvironmentState(
+            label,
+            Color(200, 200, 200, 200), // darkThemeColor
+            Color(104, 112, 128, 255), // lightThemeColor
+            Color(224, 224, 240, 26), // darkThemeBackgroundColor
+            Color(224, 224, 245, 250), // lightThemeBackgroundColor
+            ready() || pending() || canStart(), // reachable
+            null, // iconId
+        )
+    }
+
+    /**
      * Return true if the agent is in a connectable state.
      */
     fun ready(): Boolean {
@@ -67,6 +93,12 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
         return listOf(CONNECTING, TIMEOUT, AGENT_STARTING, START_TIMEOUT)
             .contains(this)
     }
+
+    /**
+     * Return true if the workspace can be started.
+     */
+    fun canStart(): Boolean = listOf(STOPPED, FAILED, CANCELED)
+        .contains(this)
 
     // We want to check that the workspace is `running`, the agent is
     // `connected`, and the agent lifecycle state is `ready` to ensure the best
