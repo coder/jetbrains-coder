@@ -12,6 +12,9 @@
   as "failed to retrieve IDEs". To aply this fix, you must add the connection
   again through the "Connect to Coder" flow or by using the dashboard link (the
   recent connections do not reconfigure SSH).
+- When a proxy command argument (such as the URL) contains `?` and `&`, escape
+  it in the SSH config by using double quotes, as these characters have special
+  meanings in shells.
 
 ### Changed
 
