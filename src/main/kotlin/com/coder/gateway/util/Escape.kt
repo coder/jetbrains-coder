@@ -12,8 +12,10 @@ fun escape(s: String): String {
     if (s.contains("\n")) {
         throw Exception("argument cannot contain newlines")
     }
-    if (s.contains(" ") || s.contains("\t")) {
-        return "\"" + s.replace("\"", "\\\"") + "\""
+    if (s.contains(" ") || s.contains("\t") || s.contains("&") || s.contains("?")) {
+        // See https://github.com/coder/jetbrains-coder/issues/479
+        // Escape existing " and &
+        return "\"" + s.replace("\"", "\\\"").replace("&", "\\&").replace("?", "\\?") + "\""
     }
     return s.replace("\"", "\\\"")
 }
