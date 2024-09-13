@@ -303,6 +303,7 @@ internal class CoderCLIManagerTest {
         val extraConfig: String = "",
         val env: Environment = Environment(),
         val sshLogDirectory: Path? = null,
+        val url: URL? = null
     )
 
     @Test
@@ -390,6 +391,13 @@ internal class CoderCLIManagerTest {
                     "blank",
                     sshLogDirectory = tmpdir.resolve("ssh-logs"),
                 ),
+                SSHTest(
+                    listOf("url"),
+                    input = null,
+                    output = "url",
+                    remove = "blank",
+                    url = URL("https://test.coder.invalid?foo=bar&baz=qux"),
+                ),
             )
 
         val newlineRe = "\r?\n".toRegex()
@@ -408,7 +416,7 @@ internal class CoderCLIManagerTest {
                     env = it.env,
                 )
 
-            val ccm = CoderCLIManager(URL("https://test.coder.invalid"), settings)
+            val ccm = CoderCLIManager(it.url ?: URL("https://test.coder.invalid"), settings)
 
             // Input is the configuration that we start with, if any.
             if (it.input != null) {
