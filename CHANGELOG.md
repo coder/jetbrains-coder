@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.14.1 - 2024-09-13
+
 ### Fixed
 
 - When a proxy command argument (such as the URL) contains `?` and `&`, escape
