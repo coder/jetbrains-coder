@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Fixed
+
+- When a proxy command argument (such as the URL) contains `?` and `&`, escape
+  it in the SSH config by using double quotes, as these characters have special
+  meanings in shells.
+
 ## 2.14.0 - 2024-08-30
 
 ### Fixed

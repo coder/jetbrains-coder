@@ -15,6 +15,10 @@ internal class EscapeTest {
                 """C:\echo "hello world"""" to """"C:\echo \"hello world\""""",
                 """C:\"no"\"spaces"""" to """C:\\"no\"\\"spaces\"""",
                 """"C:\Program Files\HeaderCommand.exe" --flag""" to """"\"C:\Program Files\HeaderCommand.exe\" --flag"""",
+                "https://coder.com" to """https://coder.com""",
+                "https://coder.com/?question" to """"https://coder.com/?question"""",
+                "https://coder.com/&ampersand" to """"https://coder.com/&ampersand"""",
+                "https://coder.com/?with&both" to """"https://coder.com/?with&both"""",
             )
         tests.forEach {
             assertEquals(it.value, escape(it.key))
