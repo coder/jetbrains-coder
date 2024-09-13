@@ -1,10 +1,18 @@
 package com.coder.gateway.util
 
+import com.intellij.icons.ExpUiIcons.Nodes.Exception
+
 /**
  * Escape an argument to be used in the ProxyCommand of an SSH config.
  *
- * Escaping happens by surrounding with double quotes if the argument contains
- * whitespace and escaping any existing double quotes regardless of whitespace.
+ * Escaping happens by:
+ * 1. Surrounding with double quotes if the argument contains whitespace, ?, or
+ *    & (to handle query parameters in URLs) as these characters have special
+ *    meaning in shells.
+ * 2. Always escaping existing double quotes.
+ *
+ * Double quotes does not preserve the literal values of $, `, \, *, @, and !
+ * (when history expansion is enabled); these are not currently handled.
  *
  * Throws if the argument is invalid.
  */
@@ -13,9 +21,7 @@ fun escape(s: String): String {
         throw Exception("argument cannot contain newlines")
     }
     if (s.contains(" ") || s.contains("\t") || s.contains("&") || s.contains("?")) {
-        // See https://github.com/coder/jetbrains-coder/issues/479
-        // Escape existing " and &
-        return "\"" + s.replace("\"", "\\\"").replace("&", "\\&").replace("?", "\\?") + "\""
+        return "\"" + s.replace("\"", "\\\"") + "\""
     }
     return s.replace("\"", "\\\"")
 }
