@@ -90,7 +90,7 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
      */
     fun pending(): Boolean {
         // See ready() for why `CREATED` is not in this list.
-        return listOf(CONNECTING, TIMEOUT, AGENT_STARTING, START_TIMEOUT)
+        return listOf(CONNECTING, TIMEOUT, AGENT_STARTING, START_TIMEOUT, QUEUED, STARTING)
             .contains(this)
     }
 
