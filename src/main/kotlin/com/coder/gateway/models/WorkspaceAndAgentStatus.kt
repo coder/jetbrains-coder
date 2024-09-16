@@ -68,6 +68,7 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
             Color(224, 224, 240, 26), // darkThemeBackgroundColor
             Color(224, 224, 245, 250), // lightThemeBackgroundColor
             ready() || pending() || canStart(), // reachable
+            // TODO@JB: How does this work?  Would like a spinner for pending states.
             null, // iconId
         )
     }
