@@ -51,7 +51,7 @@ class CoderRemoteProvider(
 
     // Current polling job.
     private var pollJob: Job? = null
-    private var lastEnvironments: List<CoderRemoteEnvironment>? = null
+    private var lastEnvironments: Set<CoderRemoteEnvironment>? = null
 
     // Create our services from the Toolbox ones.
     private val settingsService = CoderSettingsService(settingsStore)
@@ -96,10 +96,15 @@ class CoderRemoteProvider(
                             //       different information?
                             it.name
                         }?.map { agent ->
-                            CoderRemoteEnvironment(client, ws, agent, observablePropertiesFactory)
+                            // If we have an environment already, update that.
+                            val env = CoderRemoteEnvironment(client, ws, agent, observablePropertiesFactory)
+                            lastEnvironments?.firstOrNull { it == env }?.let {
+                                it.update(ws, agent)
+                                it
+                            } ?: env
                         } ?: emptyList()
                     }
-                }
+                }.toSet()
 
                 // In case we logged out while running the query.
                 if (!isActive) {
@@ -107,12 +112,11 @@ class CoderRemoteProvider(
                 }
 
                 // Reconfigure if a new environment is found.
-                val newEnvironments = environments
-                    .filter { a -> lastEnvironments?.any { b -> a.id == b.id } != true }
-                    .map { it.name }.toSet()
-                if (newEnvironments.isNotEmpty()) {
+                // TODO@JB: Should we use the add/remove listeners instead?
+                val newEnvironments = lastEnvironments?.let { environments.subtract(it) }
+                if (newEnvironments?.isNotEmpty() == true) {
                     logger.info("Found new environment(s), reconfiguring CLI: {}", newEnvironments)
-                    cli.configSsh(newEnvironments)
+                    cli.configSsh(newEnvironments.map { it.name }.toSet())
                 }
 
                 consumer.consumeEnvironments(environments)

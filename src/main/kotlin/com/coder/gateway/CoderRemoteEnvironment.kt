@@ -25,11 +25,19 @@ class CoderRemoteEnvironment(
 ) : AbstractRemoteProviderEnvironment(observablePropertiesFactory) {
     override fun getId(): String = "${workspace.name}.${agent.name}"
     override fun getName(): String = "${workspace.name}.${agent.name}"
-    private val status = WorkspaceAndAgentStatus.from(workspace, agent)
+    private var status = WorkspaceAndAgentStatus.from(workspace, agent)
 
-
-    // Map each state to whether a connection can be attempted.
-    private var state = status.toRemoteEnvironmentState()
+    /**
+     * Update the workspace/agent status to the listeners, if it has changed.
+     */
+    fun update(workspace: Workspace, agent: WorkspaceAgent) {
+        val newStatus = WorkspaceAndAgentStatus.from(workspace, agent)
+        if (newStatus != status) {
+            status = newStatus
+            val state = status.toRemoteEnvironmentState()
+            listenerSet.forEach { it.consume(state) }
+        }
+    }
 
     /**
      * The contents are provided by the SSH view provided by Toolbox, all we
@@ -47,14 +55,26 @@ class CoderRemoteEnvironment(
     override fun setVisible(visibilityState: EnvironmentVisibilityState) {}
 
     /**
-     * Immediately send the state to the listener.
-     *
-     * Currently we consume the entire workspace list and are not updating
-     * individual workspaces, so the state here is static and the listener is
-     * only used once.
+     * Immediately send the state to the listener and store for updates.
      */
     override fun addStateListener(consumer: EnvironmentStateConsumer): Boolean {
-        consumer.consume(state)
+        consumer.consume(status.toRemoteEnvironmentState())
         return super.addStateListener(consumer)
     }
+
+    /**
+     * An environment is equal if it has the same ID.
+     */
+    override fun equals(other: Any?): Boolean {
+        if (other == null) return false
+        if (this === other) return true // Note the triple ===
+        if (other !is CoderRemoteEnvironment) return false
+        if (getId() != other.getId()) return false
+        return true
+    }
+
+    /**
+     * Companion to equals, for sets.
+     */
+    override fun hashCode(): Int = getId().hashCode()
 }
