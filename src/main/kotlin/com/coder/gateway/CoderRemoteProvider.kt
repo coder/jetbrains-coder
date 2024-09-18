@@ -113,8 +113,10 @@ class CoderRemoteProvider(
 
                 // Reconfigure if a new environment is found.
                 // TODO@JB: Should we use the add/remove listeners instead?
-                val newEnvironments = lastEnvironments?.let { environments.subtract(it) }
-                if (newEnvironments?.isNotEmpty() == true) {
+                val newEnvironments = lastEnvironments
+                    ?.let { environments.subtract(it) }
+                    ?: environments
+                if (newEnvironments.isNotEmpty()) {
                     logger.info("Found new environment(s), reconfiguring CLI: {}", newEnvironments)
                     cli.configSsh(newEnvironments.map { it.name }.toSet())
                 }
