@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Add support for latest 2024.3 EAP.
+
 ## 2.14.1 - 2024-09-13
 
 ### Fixed
