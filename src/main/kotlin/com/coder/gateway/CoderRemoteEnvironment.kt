@@ -4,12 +4,15 @@ import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.util.withPath
+import com.coder.gateway.views.Action
 import com.coder.gateway.views.EnvironmentView
 import com.jetbrains.toolbox.gateway.AbstractRemoteProviderEnvironment
 import com.jetbrains.toolbox.gateway.EnvironmentVisibilityState
 import com.jetbrains.toolbox.gateway.environments.EnvironmentContentsView
 import com.jetbrains.toolbox.gateway.states.EnvironmentStateConsumer
 import com.jetbrains.toolbox.gateway.ui.ObservablePropertiesFactory
+import com.jetbrains.toolbox.gateway.ui.ToolboxUi
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -19,18 +22,60 @@ import java.util.concurrent.CompletableFuture
  */
 class CoderRemoteEnvironment(
     private val client: CoderRestClient,
-    private val workspace: Workspace,
-    private val agent: WorkspaceAgent,
+    private var workspace: Workspace,
+    private var agent: WorkspaceAgent,
+    private val ui: ToolboxUi,
     observablePropertiesFactory: ObservablePropertiesFactory,
 ) : AbstractRemoteProviderEnvironment(observablePropertiesFactory) {
     override fun getId(): String = "${workspace.name}.${agent.name}"
     override fun getName(): String = "${workspace.name}.${agent.name}"
     private var status = WorkspaceAndAgentStatus.from(workspace, agent)
 
+    init {
+        actionsList.add(
+            Action("Open web terminal") {
+                ui.openUrl(client.url.withPath("/${workspace.ownerName}/$name/terminal").toString())
+            },
+        )
+        actionsList.add(
+            Action("Open in dashboard") {
+                ui.openUrl(client.url.withPath("/@${workspace.ownerName}/${workspace.name}").toString())
+            },
+        )
+        actionsList.add(
+            Action("View template") {
+                ui.openUrl(client.url.withPath("/templates/${workspace.templateName}").toString())
+            },
+        )
+        actionsList.add(
+            Action("Start", enabled = { status.canStart() }) {
+                val build = client.startWorkspace(workspace)
+                workspace = workspace.copy(latestBuild = build)
+                update(workspace, agent)
+            },
+        )
+        actionsList.add(
+            Action("Stop", enabled = { status.ready() || status.pending() }) {
+                val build = client.stopWorkspace(workspace)
+                workspace = workspace.copy(latestBuild = build)
+                update(workspace, agent)
+            },
+        )
+        actionsList.add(
+            Action("Update", enabled = { workspace.outdated }) {
+                val build = client.updateWorkspace(workspace)
+                workspace = workspace.copy(latestBuild = build)
+                update(workspace, agent)
+            },
+        )
+    }
+
     /**
      * Update the workspace/agent status to the listeners, if it has changed.
      */
     fun update(workspace: Workspace, agent: WorkspaceAgent) {
+        this.workspace = workspace
+        this.agent = agent
         val newStatus = WorkspaceAndAgentStatus.from(workspace, agent)
         if (newStatus != status) {
             status = newStatus
@@ -58,6 +103,11 @@ class CoderRemoteEnvironment(
      * Immediately send the state to the listener and store for updates.
      */
     override fun addStateListener(consumer: EnvironmentStateConsumer): Boolean {
+        // TODO@JB: It would be ideal if we could have the workspace state and
+        //          the connected state listed separately, since right now the
+        //          connected state can mask the workspace state.
+        // TODO@JB: You can still press connect if the environment is
+        //          unreachable.  Is that expected?
         consumer.consume(status.toRemoteEnvironmentState())
         return super.addStateListener(consumer)
     }
