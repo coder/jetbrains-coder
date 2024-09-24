@@ -18,4 +18,5 @@ data class Workspace(
     @Json(name = "latest_build") val latestBuild: WorkspaceBuild,
     @Json(name = "outdated") val outdated: Boolean,
     @Json(name = "name") val name: String,
+    @Json(name = "owner_name") val ownerName: String,
 )

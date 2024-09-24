@@ -116,11 +116,13 @@ abstract class CoderPage(
  */
 class Action(
     private val label: String,
-    private val closesPage: Boolean,
+    private val closesPage: Boolean = false,
+    private val enabled: () -> Boolean = { true },
     private val cb: () -> Unit,
 ) : RunnableActionDescription {
     override fun getLabel(): String = label
     override fun getShouldClosePage(): Boolean = closesPage
+    override fun isEnabled(): Boolean = enabled()
     override fun run() {
         cb()
     }

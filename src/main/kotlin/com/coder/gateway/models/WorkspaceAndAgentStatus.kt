@@ -52,11 +52,8 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
      * Return the environment state for Toolbox, which tells it the label, color
      * and whether the environment is reachable.
      *
-     * We mark all ready and pending states as reachable since if the workspace
-     * is pending the cli will wait for it anyway.
-     *
-     * Additionally, terminal states like stopped are also marked as reachable,
-     * since the cli will start them.
+     * Note that a reachable environment will always display "connected" or
+     * "disconnected" regardless of the label we give that status.
      */
     fun toRemoteEnvironmentState(): CustomRemoteEnvironmentState {
         // Use comments; no named arguments for non-Kotlin functions.
@@ -67,7 +64,7 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
             Color(104, 112, 128, 255), // lightThemeColor
             Color(224, 224, 240, 26), // darkThemeBackgroundColor
             Color(224, 224, 245, 250), // lightThemeBackgroundColor
-            ready() || pending() || canStart(), // reachable
+            ready(), // reachable
             // TODO@JB: How does this work?  Would like a spinner for pending states.
             null, // iconId
         )

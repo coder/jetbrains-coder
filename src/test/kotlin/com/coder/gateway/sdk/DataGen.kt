@@ -53,6 +53,7 @@ class DataGen {
                 ),
                 outdated = false,
                 name = name,
+                ownerName = "owner",
             )
         }
 
