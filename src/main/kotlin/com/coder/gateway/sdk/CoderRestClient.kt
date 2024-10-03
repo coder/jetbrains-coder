@@ -8,14 +8,7 @@ import com.coder.gateway.sdk.convertors.OSConverter
 import com.coder.gateway.sdk.convertors.UUIDConverter
 import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
-import com.coder.gateway.sdk.v2.models.BuildInfo
-import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
-import com.coder.gateway.sdk.v2.models.Template
-import com.coder.gateway.sdk.v2.models.User
-import com.coder.gateway.sdk.v2.models.Workspace
-import com.coder.gateway.sdk.v2.models.WorkspaceBuild
-import com.coder.gateway.sdk.v2.models.WorkspaceResource
-import com.coder.gateway.sdk.v2.models.WorkspaceTransition
+import com.coder.gateway.sdk.v2.models.*
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
@@ -166,7 +159,7 @@ open class CoderRestClient(
      * @throws [APIResponseException].
      */
     fun workspaces(): List<Workspace> {
-        val workspacesResponse = retroRestClient.workspaces("owner:me").execute()
+        val workspacesResponse = retroRestClient.workspaces(settings.workspaceFilter).execute()
         if (!workspacesResponse.isSuccessful) {
             throw APIResponseException("retrieve workspaces", url, workspacesResponse)
         }
@@ -178,12 +171,12 @@ open class CoderRestClient(
      * Retrieves all the agent names for all workspaces, including those that
      * are off.  Meant to be used when configuring SSH.
      */
-    fun agentNames(workspaces: List<Workspace>): Set<String> {
+    fun agentNames(workspaces: List<Workspace>): Set<Pair<Workspace, WorkspaceAgent>> {
         // It is possible for there to be resources with duplicate names so we
         // need to use a set.
         return workspaces.flatMap { ws ->
             resources(ws).filter { it.agents != null }.flatMap { it.agents!! }.map {
-                "${ws.name}.${it.name}"
+                ws to it
             }
         }.toSet()
     }

@@ -144,6 +144,11 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::sshLogDirectory)
                     .comment(CoderGatewayBundle.message("gateway.connector.settings.ssh-log-directory.comment"))
             }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.workspace-filter.title")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::workspaceFilter)
+                    .comment(CoderGatewayBundle.message("gateway.connector.settings.workspace-filter.comment"))
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 

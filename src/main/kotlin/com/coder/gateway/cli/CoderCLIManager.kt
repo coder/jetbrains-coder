@@ -3,6 +3,9 @@ package com.coder.gateway.cli
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
+import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
@@ -219,11 +222,12 @@ class CoderCLIManager(
      * This can take supported features for testing purposes only.
      */
     fun configSsh(
-        workspaceNames: Set<String>,
+        workspacesAndAgents: Set<Pair<Workspace, WorkspaceAgent>>,
+        currentUser: User,
         feats: Features = features,
     ) {
         logger.info("Configuring SSH config at ${settings.sshConfigPath}")
-        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspaceNames, feats))
+        writeSSHConfig(modifySSHConfig(readSSHConfig(), workspacesAndAgents, feats, currentUser))
     }
 
     /**
@@ -245,8 +249,9 @@ class CoderCLIManager(
      */
     private fun modifySSHConfig(
         contents: String?,
-        workspaceNames: Set<String>,
+        workspaceNames: Set<Pair<Workspace, WorkspaceAgent>>,
         feats: Features,
+        currentUser: User,
     ): String? {
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
@@ -287,8 +292,8 @@ class CoderCLIManager(
                 System.lineSeparator() + endBlock,
                 transform = {
                     """
-                    Host ${getHostName(deploymentURL, it)}
-                      ProxyCommand ${proxyArgs.joinToString(" ")} $it
+                    Host ${getHostName(deploymentURL, it.first, currentUser, it.second)}
+                      ProxyCommand ${proxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
                       ConnectTimeout 0
                       StrictHostKeyChecking no
                       UserKnownHostsFile /dev/null
@@ -299,8 +304,8 @@ class CoderCLIManager(
                         .plus("\n")
                         .plus(
                             """
-                            Host ${getBackgroundHostName(deploymentURL, it)}
-                              ProxyCommand ${backgroundProxyArgs.joinToString(" ")} $it
+                            Host ${getHostName(deploymentURL, it.first, currentUser, it.second)}--bg
+                              ProxyCommand ${backgroundProxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
                               ConnectTimeout 0
                               StrictHostKeyChecking no
                               UserKnownHostsFile /dev/null
@@ -478,17 +483,32 @@ class CoderCLIManager(
 
         private val tokenRegex = "--token [^ ]+".toRegex()
 
+        /**
+         * This function returns the ssh host name generated for connecting to the workspace.
+         */
         @JvmStatic
         fun getHostName(
             url: URL,
-            workspaceName: String,
-        ): String = "coder-jetbrains--$workspaceName--${url.safeHost()}"
+            workspace: Workspace,
+            currentUser: User,
+            agent: WorkspaceAgent,
+        ): String =
+            if (currentUser.username == workspace.ownerName) {
+                "coder-jetbrains--${workspace.name}--${agent.name}--${url.safeHost()}"
+            } else {
+                "coder-jetbrains--${workspace.ownerName}--${workspace.name}--${agent.name}--${url.safeHost()}"
+            }
 
+
+        /**
+         * This function returns the identifier for the workspace to pass to the
+         * coder ssh proxy command.
+         */
         @JvmStatic
-        fun getBackgroundHostName(
-            url: URL,
-            workspaceName: String,
-        ): String = getHostName(url, workspaceName) + "--bg"
+        fun getWorkspaceParts(
+            workspace: Workspace,
+            agent: WorkspaceAgent,
+        ): String = "${workspace.ownerName}/${workspace.name}.${agent.name}"
 
         @JvmStatic
         fun getBackgroundHostName(

@@ -33,6 +33,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.observable.properties.ObservableMutableProperty
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.ui.setEmptyState
@@ -89,7 +90,7 @@ private const val SESSION_TOKEN_KEY = "session-token"
 private data class CoderWorkspacesFormFields(
     var coderURL: String = "",
     var token: Pair<String, Source>? = null,
-    var useExistingToken: Boolean = false,
+    var useExistingToken: Boolean = false
 )
 
 /**
@@ -751,7 +752,7 @@ class CoderWorkspacesStepView :
     override fun data(): CoderWorkspacesStepSelection {
         val selected = tableOfWorkspaces.selectedObject
         return withoutNull(client, cliManager, selected?.agent, selected?.workspace) { client, cli, agent, workspace ->
-            val name = "${workspace.name}.${agent.name}"
+            val name = "${workspace.ownerName}/${workspace.name}.${agent.name}"
             logger.info("Returning data for $name")
             CoderWorkspacesStepSelection(
                 agent = agent,
