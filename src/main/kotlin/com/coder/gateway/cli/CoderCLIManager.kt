@@ -304,7 +304,7 @@ class CoderCLIManager(
                         .plus("\n")
                         .plus(
                             """
-                            Host ${getHostName(deploymentURL, it.first, currentUser, it.second)}--bg
+                            Host ${getBackgroundHostName(deploymentURL, it.first, currentUser, it.second)}
                               ProxyCommand ${backgroundProxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
                               ConnectTimeout 0
                               StrictHostKeyChecking no
@@ -493,11 +493,22 @@ class CoderCLIManager(
             currentUser: User,
             agent: WorkspaceAgent,
         ): String =
+            // For a user's own workspace, we use the old syntax without a username for backwards compatibility,
+            // since the user might have recent connections that still use the old syntax.
             if (currentUser.username == workspace.ownerName) {
                 "coder-jetbrains--${workspace.name}.${agent.name}--${url.safeHost()}"
             } else {
                 "coder-jetbrains--${workspace.ownerName}--${workspace.name}.${agent.name}--${url.safeHost()}"
             }
+
+        fun getBackgroundHostName(
+            url: URL,
+            workspace: Workspace,
+            currentUser: User,
+            agent: WorkspaceAgent,
+        ): String {
+            return getHostName(url, workspace, currentUser, agent) + "--bg"
+        }
 
 
         /**
