@@ -784,6 +784,7 @@ class WorkspacesTableModel :
     ListTableModel<WorkspaceAgentListModel>(
         WorkspaceIconColumnInfo(""),
         WorkspaceNameColumnInfo("Name"),
+        WorkspaceOwnerColumnInfo("Owner"),
         WorkspaceTemplateNameColumnInfo("Template"),
         WorkspaceVersionColumnInfo("Version"),
         WorkspaceStatusColumnInfo("Status"),
@@ -825,6 +826,36 @@ class WorkspacesTableModel :
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
             a.name.compareTo(b.name, ignoreCase = true)
+        }
+
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
+            return object : DefaultTableCellRenderer() {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
+                    super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+                    if (value is String) {
+                        text = value
+                    }
+
+                    font = RelativeFont.BOLD.derive(table.tableHeader.font)
+                    border = JBUI.Borders.empty(0, 8)
+                    return this
+                }
+            }
+        }
+    }
+
+    private class WorkspaceOwnerColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.ownerName
+
+        override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
+            a.workspace.ownerName.compareTo(b.workspace.ownerName, ignoreCase = true)
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
