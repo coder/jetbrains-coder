@@ -494,9 +494,9 @@ class CoderCLIManager(
             agent: WorkspaceAgent,
         ): String =
             if (currentUser.username == workspace.ownerName) {
-                "coder-jetbrains--${workspace.name}--${agent.name}--${url.safeHost()}"
+                "coder-jetbrains--${workspace.name}.${agent.name}--${url.safeHost()}"
             } else {
-                "coder-jetbrains--${workspace.ownerName}--${workspace.name}--${agent.name}--${url.safeHost()}"
+                "coder-jetbrains--${workspace.ownerName}--${workspace.name}.${agent.name}--${url.safeHost()}"
             }
 
 

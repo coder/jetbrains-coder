@@ -752,7 +752,7 @@ class CoderWorkspacesStepView :
     override fun data(): CoderWorkspacesStepSelection {
         val selected = tableOfWorkspaces.selectedObject
         return withoutNull(client, cliManager, selected?.agent, selected?.workspace) { client, cli, agent, workspace ->
-            val name = "${workspace.ownerName}/${workspace.name}.${agent.name}"
+            val name = CoderCLIManager.getWorkspaceParts(workspace, agent)
             logger.info("Returning data for $name")
             CoderWorkspacesStepSelection(
                 agent = agent,

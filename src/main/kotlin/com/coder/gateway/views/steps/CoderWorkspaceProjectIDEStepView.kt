@@ -199,7 +199,7 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        data.cliManager.configSsh(data.client.agentNames(data.workspaces), data.client.me)
+                        data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
                     }
 
                     val ides =
@@ -337,7 +337,7 @@ class CoderWorkspaceProjectIDEStepView(
         workspace: Workspace,
         agent: WorkspaceAgent,
     ): List<IdeWithStatus> {
-        val name = "${workspace.ownerName}/${workspace.name}.${agent.name}"
+        val name = CoderCLIManager.getWorkspaceParts(workspace, agent)
         logger.info("Retrieving available IDEs for $name...")
         val workspaceOS =
             if (agent.operatingSystem != null && agent.architecture != null) {

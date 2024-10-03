@@ -106,7 +106,7 @@ open class LinkHandler(
         }
 
         indicator?.invoke("Configuring Coder CLI...")
-        cli.configSsh(workspacesAndAgents = client.agentNames(workspaces), currentUser = client.me)
+        cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
 
         val name = "${workspace.name}.${agent.name}"
         val openDialog =
