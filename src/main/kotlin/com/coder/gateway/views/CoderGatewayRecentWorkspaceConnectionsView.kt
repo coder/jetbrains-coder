@@ -244,7 +244,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                         foreground = Color.GRAY
                                     }
                                 }
-                                label("").resizableColumn().align(AlignX.FILL)
+                                label(workspaceProjectIDE.name.replace(workspaceName+".","")).resizableColumn()
                                 label(workspaceProjectIDE.ideName).applyToComponent {
                                     foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                                     font = ComponentPanelBuilder.getCommentFont(font)
