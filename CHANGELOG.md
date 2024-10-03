@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Added
+
+- Add ability to customize filter for workspace connections view.
+- Add owner column to connections view table.
+- Add ability to connect to workspaces you don't own but have permissions for.
+
 ## 2.14.2 - 2024-09-23
 
 ### Changed
