@@ -175,7 +175,10 @@ open class CoderRestClient(
         // It is possible for there to be resources with duplicate names so we
         // need to use a set.
         return workspaces.flatMap { ws ->
-            ws.latestBuild.resources.ifEmpty { resources(ws) }.filter { it.agents != null }.flatMap { it.agents!! }.map {
+            when (ws.latestBuild.status) {
+                WorkspaceStatus.RUNNING -> ws.latestBuild.resources
+                else -> resources(ws)
+            }.filter { it.agents != null }.flatMap { it.agents!! }.map {
                 ws to it
             }
         }.toSet()
