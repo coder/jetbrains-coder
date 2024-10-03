@@ -99,7 +99,7 @@ open class CoderSettingsState(
     // Value for --log-dir.
     open var sshLogDirectory: String = "",
     // Default filter for fetching workspaces
-    open var workspaceFilter: String = "owner:me"
+    open var workspaceFilter: String = "owner:me",
 )
 
 /**

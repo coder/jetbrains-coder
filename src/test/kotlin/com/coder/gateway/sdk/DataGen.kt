@@ -65,7 +65,7 @@ class DataGen {
                 ),
                 outdated = false,
                 name = name,
-                ownerName = ownerName
+                ownerName = ownerName,
             )
         }
 

@@ -8,7 +8,16 @@ import com.coder.gateway.sdk.convertors.OSConverter
 import com.coder.gateway.sdk.convertors.UUIDConverter
 import com.coder.gateway.sdk.ex.APIResponseException
 import com.coder.gateway.sdk.v2.CoderV2RestFacade
-import com.coder.gateway.sdk.v2.models.*
+import com.coder.gateway.sdk.v2.models.BuildInfo
+import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
+import com.coder.gateway.sdk.v2.models.Template
+import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.Workspace
+import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.sdk.v2.models.WorkspaceBuild
+import com.coder.gateway.sdk.v2.models.WorkspaceResource
+import com.coder.gateway.sdk.v2.models.WorkspaceStatus
+import com.coder.gateway.sdk.v2.models.WorkspaceTransition
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier

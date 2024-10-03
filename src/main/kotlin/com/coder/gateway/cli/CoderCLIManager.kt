@@ -506,10 +506,7 @@ class CoderCLIManager(
             workspace: Workspace,
             currentUser: User,
             agent: WorkspaceAgent,
-        ): String {
-            return getHostName(url, workspace, currentUser, agent) + "--bg"
-        }
-
+        ): String = getHostName(url, workspace, currentUser, agent) + "--bg"
 
         /**
          * This function returns the identifier for the workspace to pass to the

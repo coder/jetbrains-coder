@@ -6,7 +6,6 @@ import com.coder.gateway.cli.ex.SSHConfigFormatException
 import com.coder.gateway.sdk.DataGen
 import com.coder.gateway.sdk.DataGen.Companion.workspace
 import com.coder.gateway.sdk.v2.models.Workspace
-import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.settings.CODER_SSH_CONFIG_OPTIONS
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.CoderSettingsState
@@ -308,18 +307,15 @@ internal class CoderCLIManagerTest {
         val extraConfig: String = "",
         val env: Environment = Environment(),
         val sshLogDirectory: Path? = null,
-        val url: URL? = null
+        val url: URL? = null,
     )
 
     @Test
     fun testConfigureSSH() {
-
         val workspace = workspace("foo", agents = mapOf("agent1" to UUID.randomUUID().toString()))
         val workspace2 = workspace("bar", agents = mapOf("agent1" to UUID.randomUUID().toString()))
         val betterWorkspace = workspace("foo", agents = mapOf("agent1" to UUID.randomUUID().toString()), ownerName = "bettertester")
         val workspaceWithMultipleAgents = workspace("foo", agents = mapOf("agent1" to UUID.randomUUID().toString(), "agent2" to UUID.randomUUID().toString()))
-
-
 
         val extraConfig =
             listOf(
@@ -422,7 +418,7 @@ internal class CoderCLIManagerTest {
                     input = null,
                     output = "multiple-agents",
                     remove = "blank",
-                )
+                ),
             )
 
         val newlineRe = "\r?\n".toRegex()
@@ -468,9 +464,15 @@ internal class CoderCLIManagerTest {
                     }
 
             // Add workspaces.
-            ccm.configSsh(it.workspaces.flatMap { ws -> ws.latestBuild.resources.filter { r -> r.agents != null }.flatMap { r -> r.agents!! }.map { a ->
-                ws to a
-            } }.toSet(), DataGen.user(), it.features)
+            ccm.configSsh(
+                it.workspaces.flatMap { ws ->
+                    ws.latestBuild.resources.filter { r -> r.agents != null }.flatMap { r -> r.agents!! }.map { a ->
+                        ws to a
+                    }
+                }.toSet(),
+                DataGen.user(),
+                it.features,
+            )
 
             assertEquals(expectedConf, settings.sshConfigPath.toFile().readText())
 
