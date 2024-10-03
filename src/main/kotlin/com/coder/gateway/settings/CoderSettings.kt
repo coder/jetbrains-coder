@@ -98,6 +98,8 @@ open class CoderSettingsState(
     open var defaultURL: String = "",
     // Value for --log-dir.
     open var sshLogDirectory: String = "",
+    // Default filter for fetching workspaces
+    open var workspaceFilter: String = "owner:me"
 )
 
 /**
@@ -134,6 +136,12 @@ open class CoderSettings(
      */
     val enableDownloads: Boolean
         get() = state.enableDownloads
+
+    /**
+     * The filter to apply when fetching workspaces (default is owner:me)
+     */
+    val workspaceFilter: String
+        get() = state.workspaceFilter
 
     /**
      * Whether falling back to the data directory is allowed if the binary

@@ -184,15 +184,14 @@ class CoderWorkspaceProjectIDEStepView(
 
         // We use this when returning the connection params from data().
         state = data
-
-        val name = "${data.workspace.name}.${data.agent.name}"
+        val name = CoderCLIManager.getWorkspaceParts(data.workspace, data.agent)
         logger.info("Initializing workspace step for $name")
 
         val homeDirectory = data.agent.expandedDirectory ?: data.agent.directory
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
         titleLabel.isVisible = showTitle
-        terminalLink.url = data.client.url.withPath("/me/$name/terminal").toString()
+        terminalLink.url = data.client.url.withPath("/$name/terminal").toString()
 
         ideResolvingJob =
             cs.launch(ModalityState.current().asContextElement()) {
@@ -200,7 +199,7 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        data.cliManager.configSsh(data.client.agentNames(data.workspaces))
+                        data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
                     }
 
                     val ides =
@@ -215,7 +214,7 @@ class CoderWorkspaceProjectIDEStepView(
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
-                                val executor = createRemoteExecutor(CoderCLIManager.getBackgroundHostName(data.client.url, name))
+                                val executor = createRemoteExecutor(CoderCLIManager.getBackgroundHostName(data.client.url, data.workspace, data.client.me, data.agent))
 
                                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                                     logger.info("Installing remote path validator...")
@@ -338,7 +337,7 @@ class CoderWorkspaceProjectIDEStepView(
         workspace: Workspace,
         agent: WorkspaceAgent,
     ): List<IdeWithStatus> {
-        val name = "${workspace.name}.${agent.name}"
+        val name = CoderCLIManager.getWorkspaceParts(workspace, agent)
         logger.info("Retrieving available IDEs for $name...")
         val workspaceOS =
             if (agent.operatingSystem != null && agent.architecture != null) {
@@ -406,7 +405,7 @@ class CoderWorkspaceProjectIDEStepView(
         val name = "${state.workspace.name}.${state.agent.name}"
         selectedIDE.withWorkspaceProject(
             name = name,
-            hostname = CoderCLIManager.getHostName(state.client.url, name),
+            hostname = CoderCLIManager.getHostName(state.client.url, state.workspace, state.client.me, state.agent),
             projectPath = tfProject.text,
             deploymentURL = state.client.url,
         )

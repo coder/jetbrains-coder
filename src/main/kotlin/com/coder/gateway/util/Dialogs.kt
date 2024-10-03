@@ -32,14 +32,13 @@ import javax.swing.border.Border
  * A dialog wrapper around CoderWorkspaceStepView.
  */
 private class CoderWorkspaceStepDialog(
-    name: String,
     private val state: CoderWorkspacesStepSelection,
 ) : DialogWrapper(true) {
     private val view = CoderWorkspaceProjectIDEStepView(showTitle = false)
 
     init {
         init()
-        title = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
+        title = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", CoderCLIManager.getWorkspaceParts(state.workspace, state.agent))
     }
 
     override fun show() {
@@ -71,7 +70,6 @@ private class CoderWorkspaceStepDialog(
 }
 
 fun askIDE(
-    name: String,
     agent: WorkspaceAgent,
     workspace: Workspace,
     cli: CoderCLIManager,
@@ -82,7 +80,6 @@ fun askIDE(
     ApplicationManager.getApplication().invokeAndWait {
         val dialog =
             CoderWorkspaceStepDialog(
-                name,
                 CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces),
             )
         data = dialog.showAndGetData()

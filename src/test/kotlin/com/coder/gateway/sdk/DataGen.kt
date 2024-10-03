@@ -50,6 +50,7 @@ class DataGen {
             name: String,
             templateID: UUID = UUID.randomUUID(),
             agents: Map<String, String> = emptyMap(),
+            ownerName: String = "tester",
         ): Workspace {
             val wsId = UUID.randomUUID()
             return Workspace(
@@ -64,6 +65,7 @@ class DataGen {
                 ),
                 outdated = false,
                 name = name,
+                ownerName = ownerName
             )
         }
 

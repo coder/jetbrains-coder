@@ -33,6 +33,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.observable.properties.ObservableMutableProperty
 import com.intellij.openapi.rd.util.launchUnderBackgroundProgress
 import com.intellij.openapi.ui.panel.ComponentPanelBuilder
 import com.intellij.openapi.ui.setEmptyState
@@ -89,7 +90,7 @@ private const val SESSION_TOKEN_KEY = "session-token"
 private data class CoderWorkspacesFormFields(
     var coderURL: String = "",
     var token: Pair<String, Source>? = null,
-    var useExistingToken: Boolean = false,
+    var useExistingToken: Boolean = false
 )
 
 /**
@@ -751,7 +752,7 @@ class CoderWorkspacesStepView :
     override fun data(): CoderWorkspacesStepSelection {
         val selected = tableOfWorkspaces.selectedObject
         return withoutNull(client, cliManager, selected?.agent, selected?.workspace) { client, cli, agent, workspace ->
-            val name = "${workspace.name}.${agent.name}"
+            val name = CoderCLIManager.getWorkspaceParts(workspace, agent)
             logger.info("Returning data for $name")
             CoderWorkspacesStepSelection(
                 agent = agent,
@@ -783,6 +784,7 @@ class WorkspacesTableModel :
     ListTableModel<WorkspaceAgentListModel>(
         WorkspaceIconColumnInfo(""),
         WorkspaceNameColumnInfo("Name"),
+        WorkspaceOwnerColumnInfo("Owner"),
         WorkspaceTemplateNameColumnInfo("Template"),
         WorkspaceVersionColumnInfo("Version"),
         WorkspaceStatusColumnInfo("Status"),
@@ -824,6 +826,36 @@ class WorkspacesTableModel :
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
             a.name.compareTo(b.name, ignoreCase = true)
+        }
+
+        override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
+            return object : DefaultTableCellRenderer() {
+                override fun getTableCellRendererComponent(
+                    table: JTable,
+                    value: Any,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int,
+                ): Component {
+                    super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+                    if (value is String) {
+                        text = value
+                    }
+
+                    font = RelativeFont.BOLD.derive(table.tableHeader.font)
+                    border = JBUI.Borders.empty(0, 8)
+                    return this
+                }
+            }
+        }
+    }
+
+    private class WorkspaceOwnerColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+        override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.ownerName
+
+        override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
+            a.workspace.ownerName.compareTo(b.workspace.ownerName, ignoreCase = true)
         }
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {

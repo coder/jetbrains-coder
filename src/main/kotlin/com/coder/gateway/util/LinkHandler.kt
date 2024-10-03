@@ -106,7 +106,7 @@ open class LinkHandler(
         }
 
         indicator?.invoke("Configuring Coder CLI...")
-        cli.configSsh(client.agentNames(workspaces))
+        cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
 
         val name = "${workspace.name}.${agent.name}"
         val openDialog =
@@ -116,14 +116,14 @@ open class LinkHandler(
                 parameters.folder().isNullOrBlank()
 
         return if (openDialog) {
-            askIDE(name, agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
+            askIDE(agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
         } else {
             // Check that both the domain and the redirected domain are
             // allowlisted.  If not, check with the user whether to proceed.
             verifyDownloadLink(parameters)
             WorkspaceProjectIDE.fromInputs(
                 name = name,
-                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), name),
+                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), workspace, client.me, agent),
                 projectPath = parameters.folder(),
                 ideProductCode = parameters.ideProductCode(),
                 ideBuildNumber = parameters.ideBuildNumber(),
