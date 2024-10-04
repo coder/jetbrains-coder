@@ -989,17 +989,19 @@ class WorkspacesTable : TableView<WorkspaceAgentListModel>(WorkspacesTableModel(
         }
     }
 
-    fun getNewSelection(oldSelection: WorkspaceAgentListModel?): Int {
+    /**
+     * If a row becomes unselected because the workspace turned on, find the
+     * first agent row and select that.
+     *
+     * If a row becomes unselected because the workspace turned off, find the
+     * workspace row and select that.
+     */
+    private fun getNewSelection(oldSelection: WorkspaceAgentListModel?): Int {
         if (oldSelection == null) {
             return -1
         }
-        val index = listTableModel.items.indexOfFirst { it.name == oldSelection.name }
-        if (index > -1) {
-            return index
-        }
-        // If there is no matching agent, try matching on just the workspace.
-        // It is possible it turned off so it no longer has agents displaying;
-        // in this case we want to keep it highlighted.
-        return listTableModel.items.indexOfFirst { it.workspace.name == oldSelection.workspace.name }
+        // Both cases are handled by just looking for the ID, since we only ever
+        // show agents or a workspace but never both.
+        return listTableModel.items.indexOfFirst { it.workspace.id == oldSelection.workspace.id }
     }
 }
