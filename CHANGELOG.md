@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### Added
+
+- Support an "owner" parameter when launching an IDE from the dashboard. This
+  makes it possible to reliably connect to the right workspace in the case where
+  multiple users are using the same workspace name and the workspace filter is
+  configured to show multiple users' workspaces. This requires an updated
+  Gateway module that includes the new "owner" parameter.
+
 ## 2.15.0 - 2024-10-04
 
 ### Added

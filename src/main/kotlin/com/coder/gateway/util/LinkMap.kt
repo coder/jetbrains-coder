@@ -5,6 +5,7 @@ private const val TYPE = "type"
 const val URL = "url"
 const val TOKEN = "token"
 const val WORKSPACE = "workspace"
+const val OWNER = "owner"
 const val AGENT_NAME = "agent"
 const val AGENT_ID = "agent_id"
 private const val FOLDER = "folder"
@@ -23,6 +24,8 @@ fun Map<String, String>.url() = this[URL]
 fun Map<String, String>.token() = this[TOKEN]
 
 fun Map<String, String>.workspace() = this[WORKSPACE]
+
+fun Map<String, String>.owner() = this[OWNER]
 
 fun Map<String, String?>.agentName() = this[AGENT_NAME]
 

@@ -52,10 +52,15 @@ open class LinkHandler(
         // TODO: Show a dropdown and ask for the workspace if missing.
         val workspaceName = parameters.workspace() ?: throw MissingArgumentException("Query parameter \"$WORKSPACE\" is missing")
 
+        // The owner was added to support getting into another user's workspace
+        // but may not exist if the Coder Gateway module is out of date.  If no
+        // owner is included, assume the current user.
+        val owner = (parameters.owner() ?: client.me.username).ifBlank { client.me.username }
+
         val workspaces = client.workspaces()
         val workspace =
             workspaces.firstOrNull {
-                it.name == workspaceName
+                it.ownerName == owner && it.name == workspaceName
             } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
 
         when (workspace.latestBuild.status) {
