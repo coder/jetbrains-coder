@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.15.0 - 2024-10-04
+
 ### Added
 
 - Add the ability to customize the workspace query filter used in the workspaces
