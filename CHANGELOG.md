@@ -6,9 +6,17 @@
 
 ### Added
 
-- Add ability to customize filter for workspace connections view.
+- Add the ability to customize the workspace query filter used in the workspaces
+  table view. For example, you can use this to view workspaces other than your
+  own by changing the filter or making it blank (useful mainly for admins).
+  Please note that currently, if many workspaces are being fetched this could
+  result in long configuration times as the plugin will make queries for each
+  workspace that is not running to find its agents (running workspaces already
+  include agents in the initial workspaces query) and add them individually to
+  the SSH config. In the future, we would like to use a wildcard host name to
+  work around this issue.
 - Add owner column to connections view table.
-- Add ability to connect to workspaces you don't own but have permissions for.
+- Add agent name to the recent connections view.
 
 ## 2.14.2 - 2024-09-23
 
