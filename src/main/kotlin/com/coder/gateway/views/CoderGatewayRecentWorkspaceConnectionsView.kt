@@ -171,12 +171,16 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         } else {
                             false
                         }
-                        val workspaceWithAgent = deployment?.items?.firstOrNull { it.workspace.name == workspaceName }
+                        val me = deployment?.client?.me?.username
+                        val workspaceWithAgent = deployment?.items?.firstOrNull {
+                            it.workspace.ownerName + "/" + it.workspace.name == workspaceName ||
+                                (it.workspace.ownerName == me && it.workspace.name == workspaceName)
+                        }
                         val status =
                             if (deploymentError != null) {
                                 Triple(UIUtil.getErrorForeground(), deploymentError, UIUtil.getBalloonErrorIcon())
                             } else if (workspaceWithAgent != null) {
-                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent.workspace.latestBuild.status)
 
                                 Triple(
                                     workspaceWithAgent.status.statusColor(),
@@ -244,7 +248,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                         foreground = Color.GRAY
                                     }
                                 }
-                                label(workspaceProjectIDE.name.replace(workspaceName + ".", "")).resizableColumn()
+                                label(workspaceProjectIDE.name.replace("$workspaceName.", "")).resizableColumn()
                                 label(workspaceProjectIDE.ideName).applyToComponent {
                                     foreground = JBUI.CurrentTheme.ContextHelp.FOREGROUND
                                     font = ComponentPanelBuilder.getCommentFont(font)
@@ -276,7 +280,10 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
     }
 
     /**
-     * Get valid connections grouped by deployment and workspace.
+     * Get valid connections grouped by deployment and workspace name.  The
+     * workspace name will be in the form `owner/workspace.agent`, without the agent
+     * name, or just `workspace`, if the connection predates when we added owner
+     * information, in which case it belongs to the current user.
      */
     private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> = recentConnectionsService.getAllRecentConnections()
         // Validate and parse connections.
@@ -351,10 +358,20 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         throw Exception("Unable to make request; token was not found in CLI config.")
                     }
 
+                    // This is purely to populate the current user, which is
+                    // used to match workspaces that were not recorded with owner
+                    // information.
+                    val me = client.authenticate().username
+
                     // Delete connections that have no workspace.
+                    // TODO: Deletion without confirmation seems sketchy.
                     val items = client.workspaces().flatMap { it.toAgentList() }
                     connectionsByWorkspace.forEach { (name, connections) ->
-                        if (items.firstOrNull { it.workspace.name == name } == null) {
+                        if (items.firstOrNull {
+                                it.workspace.ownerName + "/" + it.workspace.name == name ||
+                                    (it.workspace.ownerName == me && it.workspace.name == name)
+                            } == null
+                        ) {
                             logger.info("Removing recent connections for deleted workspace $name (found ${connections.size})")
                             connections.forEach { recentConnectionsService.removeConnection(it.toRecentWorkspaceConnection()) }
                         }

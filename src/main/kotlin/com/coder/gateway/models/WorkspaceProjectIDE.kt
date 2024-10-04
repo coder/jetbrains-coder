@@ -16,6 +16,8 @@ import kotlin.io.path.name
  * workspace.
  */
 class WorkspaceProjectIDE(
+    // Either `workspace.agent` for old connections or `user/workspace.agent`
+    // for new connections.
     val name: String,
     val hostname: String,
     val projectPath: String,

@@ -108,7 +108,6 @@ open class LinkHandler(
         indicator?.invoke("Configuring Coder CLI...")
         cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
 
-        val name = "${workspace.name}.${agent.name}"
         val openDialog =
             parameters.ideProductCode().isNullOrBlank() ||
                 parameters.ideBuildNumber().isNullOrBlank() ||
@@ -122,7 +121,7 @@ open class LinkHandler(
             // allowlisted.  If not, check with the user whether to proceed.
             verifyDownloadLink(parameters)
             WorkspaceProjectIDE.fromInputs(
-                name = name,
+                name = CoderCLIManager.getWorkspaceParts(workspace, agent),
                 hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), workspace, client.me, agent),
                 projectPath = parameters.folder(),
                 ideProductCode = parameters.ideProductCode(),

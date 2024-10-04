@@ -402,9 +402,8 @@ class CoderWorkspaceProjectIDEStepView(
      * Return the selected parameters.  Throw if not configured.
      */
     override fun data(): WorkspaceProjectIDE = withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
-        val name = "${state.workspace.name}.${state.agent.name}"
         selectedIDE.withWorkspaceProject(
-            name = name,
+            name = CoderCLIManager.getWorkspaceParts(state.workspace, state.agent),
             hostname = CoderCLIManager.getHostName(state.client.url, state.workspace, state.client.me, state.agent),
             projectPath = tfProject.text,
             deploymentURL = state.client.url,

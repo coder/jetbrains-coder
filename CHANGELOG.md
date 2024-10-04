@@ -15,6 +15,13 @@
   include agents in the initial workspaces query) and add them individually to
   the SSH config. In the future, we would like to use a wildcard host name to
   work around this issue.
+
+  Additionally, be aware that the recents view is using the same query filter.
+  This means if you connect to a workspace, then change the filter such that the
+  workspace is excluded, you could cause the workspace to be deleted from the
+  recent connections even if the workspace still exists in actuality, as it
+  would no longer show up in the query which the plugin takes as its cue to
+  delete the connection.
 - Add owner column to connections view table.
 - Add agent name to the recent connections view.
 
