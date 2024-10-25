@@ -127,7 +127,7 @@ open class LinkHandler(
             verifyDownloadLink(parameters)
             WorkspaceProjectIDE.fromInputs(
                 name = CoderCLIManager.getWorkspaceParts(workspace, agent),
-                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), workspace, client.me, agent),
+                hostname = CoderCLIManager.getBackgroundHostName(deploymentURL.toURL(), workspace, client.me, agent),
                 projectPath = parameters.folder(),
                 ideProductCode = parameters.ideProductCode(),
                 ideBuildNumber = parameters.ideBuildNumber(),
