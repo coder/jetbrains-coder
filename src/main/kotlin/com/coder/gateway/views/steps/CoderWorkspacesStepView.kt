@@ -202,7 +202,7 @@ class CoderWorkspacesStepView :
             row {
                 browserLink(
                     CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"),
-                    "https://coder.com/docs/coder-oss/latest/workspaces",
+                    "https://coder.com/docs/user-guides/workspace-management",
                 )
             }
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
