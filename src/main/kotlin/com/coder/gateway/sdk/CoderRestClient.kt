@@ -230,18 +230,6 @@ open class CoderRestClient(
     /**
      * @throws [APIResponseException].
      */
-    fun startWorkspace(workspace: Workspace): WorkspaceBuild {
-        val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.START)
-        val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
-        if (buildResponse.code() != HttpURLConnection.HTTP_CREATED) {
-            throw APIResponseException("start workspace ${workspace.name}", url, buildResponse)
-        }
-        return buildResponse.body()!!
-    }
-
-    /**
-     * @throws [APIResponseException].
-     */
     fun stopWorkspace(workspace: Workspace): WorkspaceBuild {
         val buildRequest = CreateWorkspaceBuildRequest(null, WorkspaceTransition.STOP)
         val buildResponse = retroRestClient.createWorkspaceBuild(workspace.id, buildRequest).execute()
