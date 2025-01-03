@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.15.1 - 2024-10-04
+
 ### Added
 
 - Support an "owner" parameter when launching an IDE from the dashboard. This
