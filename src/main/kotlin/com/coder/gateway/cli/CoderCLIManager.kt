@@ -451,6 +451,21 @@ class CoderCLIManager(
         return matches
     }
 
+    /**
+     * Start a workspace.
+     *
+     * Throws if the command execution fails.
+     */
+    fun startWorkspace(workspaceOwner: String, workspaceName: String): String {
+        return exec(
+            "--global-config",
+            coderConfigPath.toString(),
+            "start",
+            "--yes",
+            workspaceOwner+"/"+workspaceName,
+        )
+    }
+
     private fun exec(vararg args: String): String {
         val stdout =
             ProcessExecutor()

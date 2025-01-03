@@ -303,13 +303,13 @@ class CoderWorkspacesStepView :
             CoderIcons.RUN,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
+            withoutNull(cliManager, tableOfWorkspaces.selectedObject?.workspace) { cliManager, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] =
                     cs.launch(ModalityState.current().asContextElement()) {
                         withContext(Dispatchers.IO) {
                             try {
-                                c.startWorkspace(workspace)
+                                cliManager.startWorkspace(workspace.ownerName, workspace.name)
                                 loadWorkspaces()
                             } catch (e: Exception) {
                                 logger.error("Could not start workspace ${workspace.name}", e)
@@ -659,7 +659,7 @@ class CoderWorkspacesStepView :
             cs.launch(ModalityState.current().asContextElement()) {
                 while (isActive) {
                     loadWorkspaces()
-                    delay(5000)
+                    delay(1000)
                 }
             }
     }
