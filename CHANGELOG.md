@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### Changed
+
+- When starting a workspace, shell out to the Coder binary instead of making an
+  API call. This reduces drift between what the plugin does and the CLI does.
+- Increase workspace polling to one second on the workspace list view, to pick
+  up changes made via the CLI faster. The recent connections view remains
+  unchanged at five seconds.
+
 ## 2.15.1 - 2024-10-04
 
 ### Added
