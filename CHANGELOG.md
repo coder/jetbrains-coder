@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.15.2 - 2025-01-06
+
 ### Changed
 
 - When starting a workspace, shell out to the Coder binary instead of making an
