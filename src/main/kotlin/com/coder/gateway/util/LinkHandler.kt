@@ -111,7 +111,11 @@ open class LinkHandler(
         }
 
         indicator?.invoke("Configuring Coder CLI...")
-        cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
+        if (cli.features.wildcardSSH) {
+            cli.configSsh(workspacesAndAgents = emptySet(), currentUser = client.me)
+        } else {
+            cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
+        }
 
         val openDialog =
             parameters.ideProductCode().isNullOrBlank() ||
@@ -127,7 +131,7 @@ open class LinkHandler(
             verifyDownloadLink(parameters)
             WorkspaceProjectIDE.fromInputs(
                 name = CoderCLIManager.getWorkspaceParts(workspace, agent),
-                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), workspace, client.me, agent),
+                hostname = CoderCLIManager(deploymentURL.toURL(), settings).getHostName(workspace, client.me, agent),
                 projectPath = parameters.folder(),
                 ideProductCode = parameters.ideProductCode(),
                 ideBuildNumber = parameters.ideBuildNumber(),

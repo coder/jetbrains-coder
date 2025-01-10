@@ -419,6 +419,15 @@ internal class CoderCLIManagerTest {
                     output = "multiple-agents",
                     remove = "blank",
                 ),
+                SSHTest(
+                    listOf(workspace),
+                    input = null,
+                    output = "wildcard",
+                    remove = "blank",
+                    features = Features(
+                        wildcardSSH = true,
+                    ),
+                ),
             )
 
         val newlineRe = "\r?\n".toRegex()
@@ -804,7 +813,7 @@ internal class CoderCLIManagerTest {
             listOf(
                 Pair("2.5.0", Features(true)),
                 Pair("2.13.0", Features(true, true)),
-                Pair("4.9.0", Features(true, true)),
+                Pair("4.9.0", Features(true, true, true)),
                 Pair("2.4.9", Features(false)),
                 Pair("1.0.1", Features(false)),
             )
