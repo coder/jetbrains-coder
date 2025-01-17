@@ -273,7 +273,7 @@ class CoderWorkspaceProjectIDEStepView(
                         // Using contains on the displayable version of the ide means they can be as specific or as vague as they want
                         // CL 2023.3.6 233.15619.8 -> a specific Clion build
                         // CL 2023.3.6 -> a specific Clion version
-                        // 2023.3.6 -> a specific version (some customers will on have one specific IDE in their list anyway)
+                        // 2023.3.6 -> a specific version (some customers will only have one specific IDE in their list anyway)
                         if (settings.defaultIde.isEmpty()) {
                             false
                         } else {
