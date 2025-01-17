@@ -208,7 +208,11 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
+                        if (data.cliManager.features.wildcardSSH) {
+                            data.cliManager.configSsh(emptySet(), data.client.me)
+                        } else {
+                            data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
+                        }
                     }
 
                     val ides =
@@ -223,7 +227,7 @@ class CoderWorkspaceProjectIDEStepView(
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
-                                val executor = createRemoteExecutor(CoderCLIManager.getBackgroundHostName(data.client.url, data.workspace, data.client.me, data.agent))
+                                val executor = createRemoteExecutor(CoderCLIManager(data.client.url).getBackgroundHostName(data.workspace, data.client.me, data.agent))
 
                                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                                     logger.info("Installing remote path validator...")
@@ -428,7 +432,7 @@ class CoderWorkspaceProjectIDEStepView(
     override fun data(): WorkspaceProjectIDE = withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
         selectedIDE.withWorkspaceProject(
             name = CoderCLIManager.getWorkspaceParts(state.workspace, state.agent),
-            hostname = CoderCLIManager.getHostName(state.client.url, state.workspace, state.client.me, state.agent),
+            hostname = CoderCLIManager(state.client.url).getHostName(state.workspace, state.client.me, state.agent),
             projectPath = tfProject.text,
             deploymentURL = state.client.url,
         )
