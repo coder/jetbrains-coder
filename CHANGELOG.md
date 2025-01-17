@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.16.0 - 2025-01-17
+
 ### Added
 
 - Added setting "Default IDE Selection" which will look for a matching IDE 
