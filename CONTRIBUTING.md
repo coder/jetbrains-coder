@@ -34,7 +34,7 @@ To simulate opening a workspace from the dashboard pass the Gateway link via
 `--args`. For example:
 
 ```
-./gradlew clean runIDE --args="jetbrains-gateway://connect#type=coder&workspace=bcpeinhardt&owner=benpeinhardt&agent=dev&folder=/home/coder&url=https://dev.coder.com&token=<redacted>"
+./gradlew clean runIDE --args="jetbrains-gateway://connect#type=coder&workspace=dev&agent=coder&folder=/home/coder&url=https://dev.coder.com&token=<redacted>&ide_product_code=IU&ide_build_number=223.8836.41&ide_download_link=https://download.jetbrains.com/idea/ideaIU-2022.3.3.tar.gz"
 ```
 
 Alternatively, if you have separately built the plugin and already installed it
