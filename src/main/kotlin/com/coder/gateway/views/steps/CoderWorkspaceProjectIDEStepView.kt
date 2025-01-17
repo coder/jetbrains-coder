@@ -56,7 +56,6 @@ import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
 import com.jetbrains.gateway.ssh.deploy.DeployException
 import com.jetbrains.gateway.ssh.util.validateRemotePath
-import com.jetbrains.rd.generator.nova.PredefinedType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,11 +82,9 @@ import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
 // Just extracting the way we display the IDE info into a helper function.
-private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String {
-    return "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
-        Locale.getDefault(),
-    )}"
-}
+private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String = "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
+    Locale.getDefault(),
+)}"
 
 /**
  * View for a single workspace.  In particular, show available IDEs and a button
@@ -483,9 +480,10 @@ class CoderWorkspaceProjectIDEStepView(
                 layout = FlowLayout(FlowLayout.LEFT)
                 add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
                 add(
-                    JLabel(displayIdeWithStatus(
-                        ideWithStatus
-                    ),
+                    JLabel(
+                        displayIdeWithStatus(
+                            ideWithStatus,
+                        ),
                     ).apply {
                         foreground = UIUtil.getLabelDisabledForeground()
                     },
