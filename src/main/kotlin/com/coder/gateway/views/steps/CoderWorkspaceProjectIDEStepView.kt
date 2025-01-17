@@ -8,6 +8,7 @@ import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.humanizeDuration
@@ -20,6 +21,7 @@ import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
@@ -79,6 +81,11 @@ import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
+// Just extracting the way we display the IDE info into a helper function.
+private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String = "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
+    Locale.getDefault(),
+)}"
+
 /**
  * View for a single workspace.  In particular, show available IDEs and a button
  * to select an IDE and project to run on the workspace.
@@ -88,6 +95,8 @@ class CoderWorkspaceProjectIDEStepView(
 ) : CoderWizardStep<WorkspaceProjectIDE>(
     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text"),
 ) {
+    private val settings: CoderSettingsService = service<CoderSettingsService>()
+
     private val cs = CoroutineScope(Dispatchers.IO)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
     private var state: CoderWorkspacesStepSelection? = null
@@ -258,9 +267,24 @@ class CoderWorkspaceProjectIDEStepView(
                                     )
                             },
                         )
+
+                    // Check the provided setting to see if there's a default IDE to set.
+                    val defaultIde = ides.find { it ->
+                        // Using contains on the displayable version of the ide means they can be as specific or as vague as they want
+                        // CL 2023.3.6 233.15619.8 -> a specific Clion build
+                        // CL 2023.3.6 -> a specific Clion version
+                        // 2023.3.6 -> a specific version (some customers will only have one specific IDE in their list anyway)
+                        if (settings.defaultIde.isEmpty()) {
+                            false
+                        } else {
+                            displayIdeWithStatus(it).contains(settings.defaultIde)
+                        }
+                    }
+                    val index = ides.indexOf(defaultIde ?: ides.firstOrNull())
+
                     withContext(Dispatchers.IO) {
                         ideComboBoxModel.addAll(ides)
-                        cbIDE.selectedIndex = 0
+                        cbIDE.selectedIndex = index
                     }
                 } catch (e: Exception) {
                     if (isCancellation(e)) {
@@ -457,9 +481,9 @@ class CoderWorkspaceProjectIDEStepView(
                 add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
                 add(
                     JLabel(
-                        "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
-                            Locale.getDefault(),
-                        )}",
+                        displayIdeWithStatus(
+                            ideWithStatus,
+                        ),
                     ).apply {
                         foreground = UIUtil.getLabelDisabledForeground()
                     },

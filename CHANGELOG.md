@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### Added
+
+- Added setting "Default IDE Selection" which will look for a matching IDE 
+  code/version/build number to set as the preselected IDE in the select 
+  component.
+
 ## 2.15.2 - 2025-01-06
 
 ### Changed
