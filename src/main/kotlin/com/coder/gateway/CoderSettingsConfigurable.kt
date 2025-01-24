@@ -157,6 +157,13 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                             "Example format: CL 2023.3.6 233.15619.8",
                     )
             }
+            row(CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.heading")) {
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.title"))
+                    .bindSelected(state::checkIDEUpdates)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.comment"),
+                    )
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 
