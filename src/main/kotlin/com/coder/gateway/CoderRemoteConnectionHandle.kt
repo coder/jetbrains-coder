@@ -93,7 +93,7 @@ class CoderRemoteConnectionHandle {
                             },
                             true,
                         )
-                        if (attempt == 1) {
+                        if (settings.checkIDEUpdate && attempt == 1) {
                             // See if there is a newer (non-EAP) version of the IDE available.
                             checkUpdate(accessor, parameters, indicator)?.let { update ->
                                 // Store the old IDE to delete later.
