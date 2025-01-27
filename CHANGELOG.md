@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- Added setting "Check for IDE updates" which controls whether the plugin
+  checks and prompts for available IDE backend updates.
+
 ## 2.16.0 - 2025-01-17
 
 ### Added
