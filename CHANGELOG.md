@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+### Added
+
 - Added setting "Check for IDE updates" which controls whether the plugin
   checks and prompts for available IDE backend updates.
 
