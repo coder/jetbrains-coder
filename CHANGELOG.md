@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.17.0 - 2025-01-27
+
 ### Added
 
 - Added setting "Check for IDE updates" which controls whether the plugin
