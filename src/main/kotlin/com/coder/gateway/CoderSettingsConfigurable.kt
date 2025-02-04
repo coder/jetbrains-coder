@@ -149,6 +149,21 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::workspaceFilter)
                     .comment(CoderGatewayBundle.message("gateway.connector.settings.workspace-filter.comment"))
             }.layout(RowLayout.PARENT_GRID)
+            row(CoderGatewayBundle.message("gateway.connector.settings.default-ide")) {
+                textField().resizableColumn().align(AlignX.FILL)
+                    .bindText(state::defaultIde)
+                    .comment(
+                        "The default IDE version to display in the IDE selection dropdown. " +
+                            "Example format: CL 2023.3.6 233.15619.8",
+                    )
+            }
+            row(CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.heading")) {
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.title"))
+                    .bindSelected(state::checkIDEUpdates)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.comment"),
+                    )
+            }.layout(RowLayout.PARENT_GRID)
         }
     }
 

@@ -100,6 +100,10 @@ open class CoderSettingsState(
     open var sshLogDirectory: String = "",
     // Default filter for fetching workspaces
     open var workspaceFilter: String = "owner:me",
+    // Default version of IDE to display in IDE selection dropdown
+    open var defaultIde: String = "",
+    // Whether to check for IDE updates.
+    open var checkIDEUpdates: Boolean = true,
 )
 
 /**
@@ -173,6 +177,18 @@ open class CoderSettings(
      */
     val setupCommand: String
         get() = state.setupCommand
+
+    /**
+     * The default IDE version to display in the selection menu
+     */
+    val defaultIde: String
+        get() = state.defaultIde
+
+    /**
+     * Whether to check for IDE updates.
+     */
+    val checkIDEUpdate: Boolean
+    get() = state.checkIDEUpdates
 
     /**
      * Whether to ignore a failed setup command.

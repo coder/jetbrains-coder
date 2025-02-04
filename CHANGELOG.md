@@ -4,6 +4,21 @@
 
 ## Unreleased
 
+## 2.17.0 - 2025-01-27
+
+### Added
+
+- Added setting "Check for IDE updates" which controls whether the plugin
+  checks and prompts for available IDE backend updates.
+
+## 2.16.0 - 2025-01-17
+
+### Added
+
+- Added setting "Default IDE Selection" which will look for a matching IDE 
+  code/version/build number to set as the preselected IDE in the select 
+  component.
+
 ## 2.15.2 - 2025-01-06
 
 ### Changed
