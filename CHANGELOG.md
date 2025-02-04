@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Simplifies the written SSH config and avoids the need to make an API request for every workspace the filter returns. 
+
 ## 2.17.0 - 2025-01-27
 
 ### Added
