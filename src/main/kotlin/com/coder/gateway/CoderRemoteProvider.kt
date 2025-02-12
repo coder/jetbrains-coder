@@ -16,16 +16,17 @@ import com.coder.gateway.views.ConnectPage
 import com.coder.gateway.views.NewEnvironmentPage
 import com.coder.gateway.views.SignInPage
 import com.coder.gateway.views.TokenPage
-import com.jetbrains.toolbox.gateway.PluginSecretStore
-import com.jetbrains.toolbox.gateway.PluginSettingsStore
-import com.jetbrains.toolbox.gateway.ProviderVisibilityState
-import com.jetbrains.toolbox.gateway.RemoteEnvironmentConsumer
-import com.jetbrains.toolbox.gateway.RemoteProvider
-import com.jetbrains.toolbox.gateway.ui.AccountDropdownField
-import com.jetbrains.toolbox.gateway.ui.ObservablePropertiesFactory
-import com.jetbrains.toolbox.gateway.ui.RunnableActionDescription
-import com.jetbrains.toolbox.gateway.ui.ToolboxUi
-import com.jetbrains.toolbox.gateway.ui.UiPage
+import com.jetbrains.toolbox.api.core.PluginSecretStore
+import com.jetbrains.toolbox.api.core.PluginSettingsStore
+import com.jetbrains.toolbox.api.core.ui.icons.SvgIcon
+import com.jetbrains.toolbox.api.remoteDev.ProviderVisibilityState
+import com.jetbrains.toolbox.api.remoteDev.RemoteEnvironmentConsumer
+import com.jetbrains.toolbox.api.remoteDev.RemoteProvider
+import com.jetbrains.toolbox.api.ui.ToolboxUi
+import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
+import com.jetbrains.toolbox.api.ui.components.AccountDropdownField
+import com.jetbrains.toolbox.api.ui.components.UiPage
+import com.jetbrains.toolbox.api.ui.observables.ObservablePropertiesFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -186,8 +187,9 @@ class CoderRemoteProvider(
     }
 
     override fun getName(): String = "Coder Gateway"
-    override fun getSvgIcon(): ByteArray =
-        this::class.java.getResourceAsStream("/icon.svg")?.readAllBytes() ?: byteArrayOf()
+    override fun getSvgIcon(): SvgIcon =
+        SvgIcon(this::class.java.getResourceAsStream("/icon.svg")?.readAllBytes() ?: byteArrayOf())
+
     override fun getNoEnvironmentsSvgIcon(): ByteArray =
         this::class.java.getResourceAsStream("/icon.svg")?.readAllBytes() ?: byteArrayOf()
 
@@ -254,7 +256,8 @@ class CoderRemoteProvider(
      * than using multiple root pages.
      */
     private fun reset() {
-        ui.showPluginEnvironmentsPage()
+        // TODO - check this later
+//        ui.showPluginEnvironmentsPage()
     }
 
     /**

@@ -1,13 +1,12 @@
 package com.coder.gateway.views
 
-import com.jetbrains.toolbox.gateway.ui.RunnableActionDescription
-import com.jetbrains.toolbox.gateway.ui.UiField
-import com.jetbrains.toolbox.gateway.ui.UiPage
-import com.jetbrains.toolbox.gateway.ui.ValidationErrorField
+import com.jetbrains.toolbox.api.core.ui.icons.SvgIcon
+import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
+import com.jetbrains.toolbox.api.ui.components.UiField
+import com.jetbrains.toolbox.api.ui.components.UiPage
+import com.jetbrains.toolbox.api.ui.components.ValidationErrorField
 import org.slf4j.LoggerFactory
-import java.util.function.BiConsumer
 import java.util.function.Consumer
-import java.util.function.Function
 
 /**
  * Base page that handles the icon, displaying error notifications, and
@@ -35,7 +34,7 @@ abstract class CoderPage(
     private var notifier: Consumer<Throwable>? = null
 
     /** Used to get field values. */
-    private var getter: Function<UiField, *>? = null
+    private var stateAccessor: UiPage.UiFieldStateAccessor? = null
 
     /** Let Toolbox know the fields should be updated. */
     protected var listener: Consumer<UiField?>? = null
@@ -48,12 +47,13 @@ abstract class CoderPage(
      *
      * This seems to only work on the first page.
      */
-    override fun getSvgIcon(): ByteArray =
-        if (showIcon) {
-            this::class.java.getResourceAsStream("/icon.svg")?.readAllBytes() ?: byteArrayOf()
+    override fun getSvgIcon(): SvgIcon {
+        return if (showIcon) {
+            SvgIcon(this::class.java.getResourceAsStream("/icon.svg")?.readAllBytes() ?: byteArrayOf())
         } else {
-            byteArrayOf()
+            SvgIcon(byteArrayOf())
         }
+    }
 
     /**
      * Show an error as a popup on this page.
@@ -70,9 +70,8 @@ abstract class CoderPage(
      * TODO@JB: Is this really meant to be used with casting?  I kind of expected
      *          to be able to do `myField.value`.
      */
-    fun get(field: UiField): Any {
-        val getter = getter ?: throw Exception("Page is not being displayed")
-        return getter.apply(field)
+    fun get(field: UiField): Any? {
+        return stateAccessor?.get(field)
     }
 
     /**
@@ -82,11 +81,9 @@ abstract class CoderPage(
         this.listener = listener
     }
 
-    /**
-     * The setter is unused but the getter is used to get field values.
-     */
-    override fun setStateAccessor(setter: BiConsumer<UiField, Any>?, getter: Function<UiField, *>?) {
-        this.getter = getter
+
+    override fun setStateAccessor(stateAccessor: UiPage.UiFieldStateAccessor?) {
+        this.stateAccessor = stateAccessor
     }
 
     /**

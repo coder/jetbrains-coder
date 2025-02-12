@@ -1,6 +1,7 @@
 package com.coder.gateway.services
 
-import com.jetbrains.toolbox.gateway.PluginSecretStore
+import com.jetbrains.toolbox.api.core.PluginSecretStore
+
 
 /**
  * Provides Coder secrets backed by the secrets store service.

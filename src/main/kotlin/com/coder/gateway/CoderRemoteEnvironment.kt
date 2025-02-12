@@ -4,15 +4,14 @@ import com.coder.gateway.models.WorkspaceAndAgentStatus
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
-import com.coder.gateway.util.withPath
 import com.coder.gateway.views.Action
 import com.coder.gateway.views.EnvironmentView
-import com.jetbrains.toolbox.gateway.AbstractRemoteProviderEnvironment
-import com.jetbrains.toolbox.gateway.EnvironmentVisibilityState
-import com.jetbrains.toolbox.gateway.environments.EnvironmentContentsView
-import com.jetbrains.toolbox.gateway.states.EnvironmentStateConsumer
-import com.jetbrains.toolbox.gateway.ui.ObservablePropertiesFactory
-import com.jetbrains.toolbox.gateway.ui.ToolboxUi
+import com.jetbrains.toolbox.api.remoteDev.AbstractRemoteProviderEnvironment
+import com.jetbrains.toolbox.api.remoteDev.EnvironmentVisibilityState
+import com.jetbrains.toolbox.api.remoteDev.environments.EnvironmentContentsView
+import com.jetbrains.toolbox.api.remoteDev.states.EnvironmentStateConsumer
+import com.jetbrains.toolbox.api.ui.ToolboxUi
+import com.jetbrains.toolbox.api.ui.observables.ObservablePropertiesFactory
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -34,17 +33,20 @@ class CoderRemoteEnvironment(
     init {
         actionsList.add(
             Action("Open web terminal") {
-                ui.openUrl(client.url.withPath("/${workspace.ownerName}/$name/terminal").toString())
+                // TODO - check this later
+//                ui.openUrl(client.url.withPath("/${workspace.ownerName}/$name/terminal").toString())
             },
         )
         actionsList.add(
             Action("Open in dashboard") {
-                ui.openUrl(client.url.withPath("/@${workspace.ownerName}/${workspace.name}").toString())
+                // TODO - check this later
+//                ui.openUrl(client.url.withPath("/@${workspace.ownerName}/${workspace.name}").toString())
             },
         )
         actionsList.add(
             Action("View template") {
-                ui.openUrl(client.url.withPath("/templates/${workspace.templateName}").toString())
+                // TODO - check this later
+//                ui.openUrl(client.url.withPath("/templates/${workspace.templateName}").toString())
             },
         )
         actionsList.add(
@@ -110,6 +112,10 @@ class CoderRemoteEnvironment(
         //          unreachable.  Is that expected?
         consumer.consume(status.toRemoteEnvironmentState())
         return super.addStateListener(consumer)
+    }
+
+    override fun onDelete() {
+        throw NotImplementedError()
     }
 
     /**
