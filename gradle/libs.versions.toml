@@ -10,11 +10,10 @@ marketplace-client = "2.0.38"
 gradle-wrapper = "0.14.0"
 exec = "1.12"
 moshi = "1.15.1"
-ksp = "1.9.23-1.0.19"
+ksp = "2.0.10-1.0.24"
 retrofit = "2.8.2"
 
 [libraries]
-kotlin-stdlib = { module = "com.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 toolbox-core-api = { module = "com.jetbrains.toolbox:core-api", version.ref = "toolbox-plugin-api" }
 toolbox-ui-api = { module = "com.jetbrains.toolbox:ui-api", version.ref = "toolbox-plugin-api" }
 toolbox-remote-dev-api = { module = "com.jetbrains.toolbox:remote-dev-api", version.ref = "toolbox-plugin-api" }
