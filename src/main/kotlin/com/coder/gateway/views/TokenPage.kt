@@ -2,12 +2,8 @@ package com.coder.gateway.views
 
 import com.coder.gateway.settings.Source
 import com.coder.gateway.util.withPath
-import com.jetbrains.toolbox.gateway.ui.LabelField
-import com.jetbrains.toolbox.gateway.ui.LinkField
-import com.jetbrains.toolbox.gateway.ui.RunnableActionDescription
-import com.jetbrains.toolbox.gateway.ui.TextField
-import com.jetbrains.toolbox.gateway.ui.TextType
-import com.jetbrains.toolbox.gateway.ui.UiField
+import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
+import com.jetbrains.toolbox.api.ui.components.*
 import java.net.URL
 
 /**

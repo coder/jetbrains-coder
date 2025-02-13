@@ -1,11 +1,11 @@
 package com.coder.gateway.views
 
 import com.coder.gateway.settings.Source
-import com.jetbrains.toolbox.gateway.ui.LabelField
-import com.jetbrains.toolbox.gateway.ui.RunnableActionDescription
-import com.jetbrains.toolbox.gateway.ui.TextField
-import com.jetbrains.toolbox.gateway.ui.TextType
-import com.jetbrains.toolbox.gateway.ui.UiField
+import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
+import com.jetbrains.toolbox.api.ui.components.LabelField
+import com.jetbrains.toolbox.api.ui.components.TextField
+import com.jetbrains.toolbox.api.ui.components.TextType
+import com.jetbrains.toolbox.api.ui.components.UiField
 import java.net.URL
 
 /**

@@ -3,8 +3,8 @@ package com.coder.gateway.views
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
-import com.jetbrains.toolbox.gateway.environments.SshEnvironmentContentsView
-import com.jetbrains.toolbox.gateway.ssh.SshConnectionInfo
+import com.jetbrains.toolbox.api.remoteDev.environments.SshEnvironmentContentsView
+import com.jetbrains.toolbox.api.remoteDev.ssh.SshConnectionInfo
 import java.net.URL
 import java.util.concurrent.CompletableFuture
 

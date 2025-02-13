@@ -2,8 +2,8 @@ package com.coder.gateway.util
 
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.settings.Source
-import com.jetbrains.toolbox.gateway.ui.TextType
-import com.jetbrains.toolbox.gateway.ui.ToolboxUi
+import com.jetbrains.toolbox.api.ui.ToolboxUi
+import com.jetbrains.toolbox.api.ui.components.TextType
 import java.net.URL
 
 /**
@@ -34,7 +34,8 @@ class DialogUi(
     }
 
     private fun openUrl(url: URL) {
-        ui.openUrl(url.toString())
+        // TODO - check this later
+//        ui.openUrl(url.toString())
     }
 
     /**

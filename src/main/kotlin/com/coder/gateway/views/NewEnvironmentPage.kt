@@ -1,6 +1,7 @@
 package com.coder.gateway.views
 
-import com.jetbrains.toolbox.gateway.ui.UiField
+import com.jetbrains.toolbox.api.ui.components.UiField
+
 
 /**
  * A page for creating new environments.  It displays at the top of the

@@ -5,9 +5,9 @@ import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.sdk.CoderRestClient
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.humanizeConnectionError
-import com.jetbrains.toolbox.gateway.ui.LabelField
-import com.jetbrains.toolbox.gateway.ui.RunnableActionDescription
-import com.jetbrains.toolbox.gateway.ui.UiField
+import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
+import com.jetbrains.toolbox.api.ui.components.LabelField
+import com.jetbrains.toolbox.api.ui.components.UiField
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch

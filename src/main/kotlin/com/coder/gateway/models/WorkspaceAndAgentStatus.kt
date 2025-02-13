@@ -5,8 +5,10 @@ import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentLifecycleState
 import com.coder.gateway.sdk.v2.models.WorkspaceAgentStatus
 import com.coder.gateway.sdk.v2.models.WorkspaceStatus
-import com.jetbrains.toolbox.gateway.states.Color
-import com.jetbrains.toolbox.gateway.states.CustomRemoteEnvironmentState
+import com.jetbrains.toolbox.api.core.ui.color.Color
+import com.jetbrains.toolbox.api.core.ui.color.StateColor
+import com.jetbrains.toolbox.api.core.ui.color.ThemeColor
+import com.jetbrains.toolbox.api.remoteDev.states.CustomRemoteEnvironmentState
 
 /**
  * WorkspaceAndAgentStatus represents the combined status of a single agent and
@@ -60,10 +62,16 @@ enum class WorkspaceAndAgentStatus(val label: String, val description: String) {
         // TODO@JB: Is there a set of default colors we could use?
         return CustomRemoteEnvironmentState(
             label,
-            Color(200, 200, 200, 200), // darkThemeColor
-            Color(104, 112, 128, 255), // lightThemeColor
-            Color(224, 224, 240, 26), // darkThemeBackgroundColor
-            Color(224, 224, 245, 250), // lightThemeBackgroundColor
+            StateColor(
+                ThemeColor(
+                    Color(0.407f, 0.439f, 0.502f, 1.0f), // lightThemeColor
+                    Color(0.784f, 0.784f, 0.784f, 0.784f), // darkThemeColor
+                ),
+                ThemeColor(
+                    Color(0.878f, 0.878f, 0.941f, 0.102f), // darkThemeBackgroundColor
+                    Color(0.878f, 0.878f, 0.961f, 0.980f), // lightThemeBackgroundColor
+                )
+            ),
             ready(), // reachable
             // TODO@JB: How does this work?  Would like a spinner for pending states.
             null, // iconId

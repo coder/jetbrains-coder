@@ -1,7 +1,7 @@
 package com.coder.gateway.services
 
 import com.coder.gateway.settings.CoderSettingsState
-import com.jetbrains.toolbox.gateway.PluginSettingsStore
+import com.jetbrains.toolbox.api.core.PluginSettingsStore
 
 /**
  * Provides Coder settings backed by the settings state service.
