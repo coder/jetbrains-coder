@@ -26,7 +26,6 @@ import com.jetbrains.toolbox.api.ui.ToolboxUi
 import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
 import com.jetbrains.toolbox.api.ui.components.AccountDropdownField
 import com.jetbrains.toolbox.api.ui.components.UiPage
-import com.jetbrains.toolbox.api.ui.observables.ObservablePropertiesFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,7 +45,6 @@ class CoderRemoteProvider(
     private val ui: ToolboxUi,
     settingsStore: PluginSettingsStore,
     secretsStore: PluginSecretStore,
-    private val observablePropertiesFactory: ObservablePropertiesFactory,
 ) : RemoteProvider {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -98,7 +96,7 @@ class CoderRemoteProvider(
                             it.name
                         }?.map { agent ->
                             // If we have an environment already, update that.
-                            val env = CoderRemoteEnvironment(client, ws, agent, ui, observablePropertiesFactory)
+                            val env = CoderRemoteEnvironment(client, ws, agent, ui)
                             lastEnvironments?.firstOrNull { it == env }?.let {
                                 it.update(ws, agent)
                                 it
@@ -122,7 +120,7 @@ class CoderRemoteProvider(
                     cli.configSsh(newEnvironments.map { it.name }.toSet())
                 }
 
-                consumer.consumeEnvironments(environments)
+                consumer.consumeEnvironments(environments, true)
 
                 lastEnvironments = environments
             } catch (_: CancellationException) {
@@ -157,9 +155,7 @@ class CoderRemoteProvider(
     override fun getAccountDropDown(): AccountDropdownField? {
         val username = client?.me?.username
         if (username != null) {
-            return AccountDropdownField(username) {
-                logout()
-            }
+            return AccountDropdownField(username, Runnable { logout() })
         }
         return null
     }
@@ -183,7 +179,7 @@ class CoderRemoteProvider(
         pollJob?.cancel()
         client = null
         lastEnvironments = null
-        consumer.consumeEnvironments(emptyList())
+        consumer.consumeEnvironments(emptyList(), true)
     }
 
     override fun getName(): String = "Coder Gateway"

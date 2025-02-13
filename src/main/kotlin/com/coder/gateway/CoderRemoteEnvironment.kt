@@ -11,7 +11,6 @@ import com.jetbrains.toolbox.api.remoteDev.EnvironmentVisibilityState
 import com.jetbrains.toolbox.api.remoteDev.environments.EnvironmentContentsView
 import com.jetbrains.toolbox.api.remoteDev.states.EnvironmentStateConsumer
 import com.jetbrains.toolbox.api.ui.ToolboxUi
-import com.jetbrains.toolbox.api.ui.observables.ObservablePropertiesFactory
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -24,8 +23,7 @@ class CoderRemoteEnvironment(
     private var workspace: Workspace,
     private var agent: WorkspaceAgent,
     private val ui: ToolboxUi,
-    observablePropertiesFactory: ObservablePropertiesFactory,
-) : AbstractRemoteProviderEnvironment(observablePropertiesFactory) {
+) : AbstractRemoteProviderEnvironment() {
     override fun getId(): String = "${workspace.name}.${agent.name}"
     override fun getName(): String = "${workspace.name}.${agent.name}"
     private var status = WorkspaceAndAgentStatus.from(workspace, agent)

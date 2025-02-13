@@ -33,9 +33,6 @@ abstract class CoderPage(
     /** Toolbox uses this to show notifications on the page. */
     private var notifier: Consumer<Throwable>? = null
 
-    /** Used to get field values. */
-    private var stateAccessor: UiPage.UiFieldStateAccessor? = null
-
     /** Let Toolbox know the fields should be updated. */
     protected var listener: Consumer<UiField?>? = null
 
@@ -71,19 +68,9 @@ abstract class CoderPage(
      *          to be able to do `myField.value`.
      */
     fun get(field: UiField): Any? {
-        return stateAccessor?.get(field)
-    }
-
-    /**
-     * Used to update fields when they change (like validation fields).
-     */
-    override fun setPageChangedListener(listener: Consumer<UiField?>) {
-        this.listener = listener
-    }
-
-
-    override fun setStateAccessor(stateAccessor: UiPage.UiFieldStateAccessor?) {
-        this.stateAccessor = stateAccessor
+        //return stateAccessor?.get(field)
+        // TODO - check this later
+        return null
     }
 
     /**
