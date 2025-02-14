@@ -107,7 +107,9 @@ val copyPlugin by tasks.creating(Sync::class.java) {
             configuration.files.filterNot { file ->
                 listOf(
                     "kotlin",
-                    "gateway",
+                    "remote-dev-api",
+                    "core-api",
+                    "ui-api",
                     "annotations",
                     "okhttp",
                     "okio",
