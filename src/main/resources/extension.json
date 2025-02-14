@@ -7,7 +7,7 @@
     "vendor": "Coder",
     "url": "https://github.com/coder/jetbrains-coder"
   },
-  "apiVersion": "0.3.0",
+  "apiVersion": "0.3",
   "compatibleVersionRange": {
     "from": "2.6.0.0",
     "to": "2.6.0.99999"
