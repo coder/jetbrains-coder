@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.18.1 - 2025-02-14
+
 ### Changed
 
 - Update the `pluginUntilBuild` to latest EAP
