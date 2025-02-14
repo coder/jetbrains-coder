@@ -111,8 +111,6 @@ val copyPlugin by tasks.creating(Sync::class.java) {
                     "core-api",
                     "ui-api",
                     "annotations",
-                    "okhttp",
-                    "okio",
                     "slf4j",
                 ).any { file.name.contains(it) }
             }

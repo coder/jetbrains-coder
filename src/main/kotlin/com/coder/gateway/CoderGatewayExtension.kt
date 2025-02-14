@@ -17,7 +17,7 @@ class CoderGatewayExtension : RemoteDevExtension {
     // All services must be passed in here and threaded as necessary.
     override fun createRemoteProviderPluginInstance(serviceLocator: ServiceLocator): RemoteProvider {
         return CoderRemoteProvider(
-            serviceLocator.getService(OkHttpClient::class.java),
+            OkHttpClient(),
             serviceLocator.getService(RemoteEnvironmentConsumer::class.java),
             serviceLocator.getService(CoroutineScope::class.java),
             serviceLocator.getService(ToolboxUi::class.java),
