@@ -3,7 +3,11 @@ package com.coder.gateway.views
 import com.coder.gateway.settings.Source
 import com.coder.gateway.util.withPath
 import com.jetbrains.toolbox.api.ui.actions.RunnableActionDescription
-import com.jetbrains.toolbox.api.ui.components.*
+import com.jetbrains.toolbox.api.ui.components.LabelField
+import com.jetbrains.toolbox.api.ui.components.LinkField
+import com.jetbrains.toolbox.api.ui.components.TextField
+import com.jetbrains.toolbox.api.ui.components.TextType
+import com.jetbrains.toolbox.api.ui.components.UiField
 import java.net.URL
 
 /**
@@ -42,7 +46,7 @@ class TokenPage(
      * Buttons displayed at the bottom of the page.
      */
     override fun getActionButtons(): MutableList<RunnableActionDescription> = mutableListOf(
-        Action("Connect", closesPage = false) { submit(get(tokenField) as String) },
+        Action("Connect", closesPage = false) { submit(tokenField.text.value) },
     )
 
     /**

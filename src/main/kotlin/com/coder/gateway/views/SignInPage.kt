@@ -45,7 +45,7 @@ class SignInPage(
      * Call onSignIn with the URL, or error if blank.
      */
     private fun submit() {
-        val urlRaw = get(urlField) as String
+        val urlRaw = urlField.text.value
         // Ensure the URL can be parsed.
         try {
             if (urlRaw.isBlank()) {

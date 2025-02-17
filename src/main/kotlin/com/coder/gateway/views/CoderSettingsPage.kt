@@ -48,17 +48,17 @@ class CoderSettingsPage(private val settings: CoderSettingsService) : CoderPage(
 
     override fun getActionButtons(): MutableList<RunnableActionDescription> = mutableListOf(
         Action("Save", closesPage = true) {
-            settings.binarySource = get(binarySourceField) as String
-            settings.binaryDirectory = get(binaryDirectoryField) as String
-            settings.dataDirectory = get(dataDirectoryField) as String
-            settings.enableDownloads = get(enableDownloadsField) as Boolean
-            settings.enableBinaryDirectoryFallback = get(enableBinaryDirectoryFallbackField) as Boolean
-            settings.headerCommand = get(headerCommandField) as String
-            settings.tlsCertPath = get(tlsCertPathField) as String
-            settings.tlsKeyPath = get(tlsKeyPathField) as String
-            settings.tlsCAPath = get(tlsCAPathField) as String
-            settings.tlsAlternateHostname = get(tlsAlternateHostnameField) as String
-            settings.disableAutostart = get(disableAutostartField) as Boolean
+            settings.binarySource = binarySourceField.text.value
+            settings.binaryDirectory = binaryDirectoryField.text.value
+            settings.dataDirectory = dataDirectoryField.text.value
+            settings.enableDownloads = enableDownloadsField.checked.value
+            settings.enableBinaryDirectoryFallback = enableBinaryDirectoryFallbackField.checked.value
+            settings.headerCommand = headerCommandField.text.value
+            settings.tlsCertPath = tlsCertPathField.text.value
+            settings.tlsKeyPath = tlsKeyPathField.text.value
+            settings.tlsCAPath = tlsCAPathField.text.value
+            settings.tlsAlternateHostname = tlsAlternateHostnameField.text.value
+            settings.disableAutostart = disableAutostartField.checked.value
         },
     )
 }

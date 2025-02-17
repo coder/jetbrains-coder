@@ -62,18 +62,6 @@ abstract class CoderPage(
     }
 
     /**
-     * Get the value for a field.
-     *
-     * TODO@JB: Is this really meant to be used with casting?  I kind of expected
-     *          to be able to do `myField.value`.
-     */
-    fun get(field: UiField): Any? {
-        //return stateAccessor?.get(field)
-        // TODO - check this later
-        return null
-    }
-
-    /**
      * Immediately notify any pending errors and store for later errors.
      */
     override fun setActionErrorNotifier(notifier: Consumer<Throwable>?) {
