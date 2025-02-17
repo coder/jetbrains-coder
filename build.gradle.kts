@@ -77,25 +77,7 @@ val assemblePlugin by tasks.registering(Jar::class) {
 val copyPlugin by tasks.creating(Sync::class.java) {
     dependsOn(assemblePlugin)
 
-    val userHome = System.getProperty("user.home").let { Path.of(it) }
-    val toolboxCachesDir = when {
-        SystemInfoRt.isWindows -> System.getenv("LOCALAPPDATA")?.let { Path.of(it) } ?: (userHome / "AppData" / "Local")
-        // currently this is the location that TBA uses on Linux
-        SystemInfoRt.isLinux -> System.getenv("XDG_DATA_HOME")?.let { Path.of(it) } ?: (userHome / ".local" / "share")
-        SystemInfoRt.isMac -> userHome / "Library" / "Caches"
-        else -> error("Unknown os")
-    } / "JetBrains" / "Toolbox"
-
-    val pluginsDir = when {
-        SystemInfoRt.isWindows -> toolboxCachesDir / "cache"
-        SystemInfoRt.isLinux || SystemInfoRt.isMac -> toolboxCachesDir
-        else -> error("Unknown os")
-    } / "plugins"
-
-    val targetDir = pluginsDir / pluginId
-
     from(assemblePlugin.get().outputs.files)
-
     from("src/main/resources") {
         include("extension.json")
         include("dependencies.json")
@@ -117,7 +99,32 @@ val copyPlugin by tasks.creating(Sync::class.java) {
         },
     )
 
-    into(targetDir)
+    into(getPluginInstallDir())
+}
+
+tasks.register("cleanAll", Delete::class.java) {
+    dependsOn(tasks.clean)
+    delete(getPluginInstallDir())
+    delete()
+}
+
+private fun getPluginInstallDir(): Path {
+    val userHome = System.getProperty("user.home").let { Path.of(it) }
+    val toolboxCachesDir = when {
+        SystemInfoRt.isWindows -> System.getenv("LOCALAPPDATA")?.let { Path.of(it) } ?: (userHome / "AppData" / "Local")
+        // currently this is the location that TBA uses on Linux
+        SystemInfoRt.isLinux -> System.getenv("XDG_DATA_HOME")?.let { Path.of(it) } ?: (userHome / ".local" / "share")
+        SystemInfoRt.isMac -> userHome / "Library" / "Caches"
+        else -> error("Unknown os")
+    } / "JetBrains" / "Toolbox"
+
+    val pluginsDir = when {
+        SystemInfoRt.isWindows -> toolboxCachesDir / "cache"
+        SystemInfoRt.isLinux || SystemInfoRt.isMac -> toolboxCachesDir
+        else -> error("Unknown os")
+    } / "plugins"
+
+    return pluginsDir / pluginId
 }
 
 val pluginZip by tasks.creating(Zip::class) {
