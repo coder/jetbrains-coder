@@ -39,6 +39,7 @@ jvmWrapper {
 dependencies {
     compileOnly(libs.bundles.toolbox.plugin.api)
     implementation(libs.slf4j)
+    implementation(libs.tinylog)
     implementation(libs.bundles.serialization)
     implementation(libs.coroutines.core)
     implementation(libs.okhttp)
@@ -111,7 +112,6 @@ val copyPlugin by tasks.creating(Sync::class.java) {
                     "core-api",
                     "ui-api",
                     "annotations",
-                    "slf4j",
                 ).any { file.name.contains(it) }
             }
         },
