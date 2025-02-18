@@ -2,6 +2,7 @@
 
 package com.coder.gateway
 
+import com.coder.gateway.CoderGatewayConstants.GATEWAY_SETUP_COMMAND_ERROR
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toIdeWithStatus
@@ -412,17 +413,15 @@ class CoderRemoteConnectionHandle {
     ) {
         if (setupCommand.isNotBlank()) {
             indicator.text = "Running setup command..."
-            try {
-                exec(workspace, setupCommand)
-            } catch (ex: Exception) {
-                if (!ignoreSetupFailure) {
-                    throw ex
-                }
-            }
+            processSetupCommand(
+                { exec(workspace, setupCommand) },
+                ignoreSetupFailure
+            )
         } else {
             logger.info("No setup command to run on ${workspace.hostname}")
         }
     }
+
 
     /**
      * Execute a command in the IDE's bin directory.
@@ -523,5 +522,25 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
+        fun processSetupCommand(
+            output: () -> String,
+            ignoreSetupFailure: Boolean
+        ) {
+            try {
+                val errorText = output
+                    .invoke()
+                    .lines()
+                    .firstOrNull { it.contains(GATEWAY_SETUP_COMMAND_ERROR) }
+                    ?.let { it.substring(it.indexOf(GATEWAY_SETUP_COMMAND_ERROR) + GATEWAY_SETUP_COMMAND_ERROR.length).trim() }
+
+                if (!errorText.isNullOrBlank()) {
+                    throw Exception(errorText)
+                }
+            } catch (ex: Exception) {
+                if (!ignoreSetupFailure) {
+                    throw ex
+                }
+            }
+        }
     }
 }
