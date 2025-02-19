@@ -12,10 +12,10 @@ internal class SetupCommandTest {
         assertEquals(
             "Execution error",
             assertThrows<Exception> {
-                processSetupCommand({ throw Exception("Execution error") }, false)
+                processSetupCommand(false) { throw Exception("Execution error") }
             }.message
         )
-        processSetupCommand({ throw Exception("Execution error") }, true)
+        processSetupCommand(true) { throw Exception("Execution error") }
     }
 
     @Test
@@ -23,25 +23,25 @@ internal class SetupCommandTest {
         assertEquals(
             "Your IDE is expired, please update",
             assertThrows<Exception> {
-                processSetupCommand({
-                """
+                processSetupCommand(false) {
+                    """
                 execution line 1    
                 execution line 2
                 CODER_SETUP_ERRORYour IDE is expired, please update
                 execution line 3    
                 """
-                }, false)
+                }
             }.message
         )
 
-        processSetupCommand({
+        processSetupCommand(true) {
             """
                 execution line 1    
                 execution line 2
                 CODER_SETUP_ERRORYour IDE is expired, please update
                 execution line 3    
                 """
-        }, true)
+        }
 
     }
 }

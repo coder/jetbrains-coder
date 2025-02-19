@@ -413,10 +413,9 @@ class CoderRemoteConnectionHandle {
     ) {
         if (setupCommand.isNotBlank()) {
             indicator.text = "Running setup command..."
-            processSetupCommand(
-                { exec(workspace, setupCommand) },
-                ignoreSetupFailure
-            )
+            processSetupCommand(ignoreSetupFailure) {
+                exec(workspace, setupCommand)
+            }
         } else {
             logger.info("No setup command to run on ${workspace.hostname}")
         }
@@ -523,11 +522,11 @@ class CoderRemoteConnectionHandle {
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
         fun processSetupCommand(
-            output: () -> String,
-            ignoreSetupFailure: Boolean
+            ignoreSetupFailure: Boolean,
+            execCommand: () -> String
         ) {
             try {
-                val errorText = output
+                val errorText = execCommand
                     .invoke()
                     .lines()
                     .firstOrNull { it.contains(GATEWAY_SETUP_COMMAND_ERROR) }
