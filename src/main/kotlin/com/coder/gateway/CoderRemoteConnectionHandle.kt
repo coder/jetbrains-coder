@@ -161,22 +161,35 @@ class CoderRemoteConnectionHandle {
                 )
                 logger.info("Adding ${parameters.ideName} for ${parameters.hostname}:${parameters.projectPath} to recent connections")
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
+            } catch (e: CoderSetupCommandException) {
+                logger.error("Failed to run setup command", e)
+                showConnectionErrorMessage(
+                    e.message ?: "Unknown error",
+                    "gateway.connector.coder.setup-command.failed",
+                )
             } catch (e: Exception) {
                 if (isCancellation(e)) {
                     logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
                     logger.error("Failed to connect (will not retry)", e)
-                    // The dialog will close once we return so write the error
-                    // out into a new dialog.
-                    ApplicationManager.getApplication().invokeAndWait {
-                        Messages.showMessageDialog(
-                            e.message ?: e.javaClass.simpleName ?: "Aborted",
-                            CoderGatewayBundle.message("gateway.connector.coder.connection.failed"),
-                            Messages.getErrorIcon(),
-                        )
-                    }
+                    showConnectionErrorMessage(
+                        e.message ?: e.javaClass.simpleName ?: "Aborted",
+                        "gateway.connector.coder.connection.failed"
+                    )
                 }
             }
+        }
+    }
+
+    // The dialog will close once we return so write the error
+    // out into a new dialog.
+    private fun showConnectionErrorMessage(message: String, titleKey: String) {
+        ApplicationManager.getApplication().invokeAndWait {
+            Messages.showMessageDialog(
+                message,
+                CoderGatewayBundle.message(titleKey),
+                Messages.getErrorIcon(),
+            )
         }
     }
 
@@ -521,6 +534,7 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
+        @Throws(CoderSetupCommandException::class)
         fun processSetupCommand(
             ignoreSetupFailure: Boolean,
             execCommand: () -> String
@@ -533,11 +547,11 @@ class CoderRemoteConnectionHandle {
                     ?.let { it.substring(it.indexOf(GATEWAY_SETUP_COMMAND_ERROR) + GATEWAY_SETUP_COMMAND_ERROR.length).trim() }
 
                 if (!errorText.isNullOrBlank()) {
-                    throw Exception(errorText)
+                    throw CoderSetupCommandException(errorText)
                 }
             } catch (ex: Exception) {
                 if (!ignoreSetupFailure) {
-                    throw ex
+                    throw CoderSetupCommandException(ex.message ?: "Unknown error", ex)
                 }
             }
         }

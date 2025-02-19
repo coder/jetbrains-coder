@@ -1,6 +1,7 @@
 package com.coder.gateway.util
 
 import com.coder.gateway.CoderRemoteConnectionHandle.Companion.processSetupCommand
+import com.coder.gateway.CoderSetupCommandException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
@@ -11,7 +12,7 @@ internal class SetupCommandTest {
     fun executionErrors() {
         assertEquals(
             "Execution error",
-            assertThrows<Exception> {
+            assertThrows<CoderSetupCommandException> {
                 processSetupCommand(false) { throw Exception("Execution error") }
             }.message
         )
@@ -22,7 +23,7 @@ internal class SetupCommandTest {
     fun setupScriptError() {
         assertEquals(
             "Your IDE is expired, please update",
-            assertThrows<Exception> {
+            assertThrows<CoderSetupCommandException> {
                 processSetupCommand(false) {
                     """
                 execution line 1    
