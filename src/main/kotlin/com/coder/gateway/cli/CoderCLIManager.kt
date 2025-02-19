@@ -257,7 +257,6 @@ class CoderCLIManager(
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
-        val isRemoving = workspaceNames.isEmpty()
         val baseArgs =
             listOfNotNull(
                 escape(localBinaryPath.toString()),
@@ -345,6 +344,8 @@ class CoderCLIManager(
 
         val start = "(\\s*)$startBlock".toRegex().find(contents)
         val end = "$endBlock(\\s*)".toRegex().find(contents)
+
+        val isRemoving = blockContent.isEmpty()
 
         if (start == null && end == null && isRemoving) {
             logger.info("No workspaces and no existing config blocks to remove")
