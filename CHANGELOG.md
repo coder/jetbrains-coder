@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Fix bug where wildcard configs would not be written under certain conditions.
+
 ## 2.18.1 - 2025-02-14
 
 ### Changed
