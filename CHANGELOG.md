@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- Added functionality to show setup script error message to the end user.
+
 ### Fixed
 
 - Fix bug where wildcard configs would not be written under certain conditions.
