@@ -63,48 +63,47 @@ object CoderIcons {
     private val Y = IconLoader.getIcon("symbols/y.svg", javaClass)
     private val Z = IconLoader.getIcon("symbols/z.svg", javaClass)
 
-    fun fromChar(c: Char) =
-        when (c) {
-            '0' -> ZERO
-            '1' -> ONE
-            '2' -> TWO
-            '3' -> THREE
-            '4' -> FOUR
-            '5' -> FIVE
-            '6' -> SIX
-            '7' -> SEVEN
-            '8' -> EIGHT
-            '9' -> NINE
+    fun fromChar(c: Char) = when (c) {
+        '0' -> ZERO
+        '1' -> ONE
+        '2' -> TWO
+        '3' -> THREE
+        '4' -> FOUR
+        '5' -> FIVE
+        '6' -> SIX
+        '7' -> SEVEN
+        '8' -> EIGHT
+        '9' -> NINE
 
-            'a' -> A
-            'b' -> B
-            'c' -> C
-            'd' -> D
-            'e' -> E
-            'f' -> F
-            'g' -> G
-            'h' -> H
-            'i' -> I
-            'j' -> J
-            'k' -> K
-            'l' -> L
-            'm' -> M
-            'n' -> N
-            'o' -> O
-            'p' -> P
-            'q' -> Q
-            'r' -> R
-            's' -> S
-            't' -> T
-            'u' -> U
-            'v' -> V
-            'w' -> W
-            'x' -> X
-            'y' -> Y
-            'z' -> Z
+        'a' -> A
+        'b' -> B
+        'c' -> C
+        'd' -> D
+        'e' -> E
+        'f' -> F
+        'g' -> G
+        'h' -> H
+        'i' -> I
+        'j' -> J
+        'k' -> K
+        'l' -> L
+        'm' -> M
+        'n' -> N
+        'o' -> O
+        'p' -> P
+        'q' -> Q
+        'r' -> R
+        's' -> S
+        't' -> T
+        'u' -> U
+        'v' -> V
+        'w' -> W
+        'x' -> X
+        'y' -> Y
+        'z' -> Z
 
-            else -> UNKNOWN
-        }
+        else -> UNKNOWN
+    }
 }
 
 fun alignToInt(g: Graphics) {

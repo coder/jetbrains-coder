@@ -257,7 +257,6 @@ class CoderCLIManager(
         val host = deploymentURL.safeHost()
         val startBlock = "# --- START CODER JETBRAINS $host"
         val endBlock = "# --- END CODER JETBRAINS $host"
-        val isRemoving = workspaceNames.isEmpty()
         val baseArgs =
             listOfNotNull(
                 escape(localBinaryPath.toString()),
@@ -308,35 +307,36 @@ class CoderCLIManager(
                             Host ${getHostPrefix()}-bg--*
                               ProxyCommand ${backgroundProxyArgs.joinToString(" ")} --ssh-host-prefix ${getHostPrefix()}-bg-- %h
                             """.trimIndent()
-                            .plus("\n" + sshOpts.prependIndent("  "))
-                            .plus(extraConfig),
-                        ).replace("\n", System.lineSeparator()) +
-                    System.lineSeparator() + endBlock
-
-        } else {
-            workspaceNames.joinToString(
-                System.lineSeparator(),
-                startBlock + System.lineSeparator(),
-                System.lineSeparator() + endBlock,
-                transform = {
-                    """
-                    Host ${getHostName(it.first, currentUser, it.second)}
-                      ProxyCommand ${proxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
-                    """.trimIndent()
-                        .plus("\n" + sshOpts.prependIndent("  "))
-                        .plus(extraConfig)
-                        .plus("\n")
-                        .plus(
-                            """
-                            Host ${getBackgroundHostName(it.first, currentUser, it.second)}
-                              ProxyCommand ${backgroundProxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
-                            """.trimIndent()
                                 .plus("\n" + sshOpts.prependIndent("  "))
                                 .plus(extraConfig),
-                        ).replace("\n", System.lineSeparator())
-                },
-            )
-        }
+                        ).replace("\n", System.lineSeparator()) +
+                    System.lineSeparator() + endBlock
+            } else if (workspaceNames.isEmpty()) {
+                ""
+            } else {
+                workspaceNames.joinToString(
+                    System.lineSeparator(),
+                    startBlock + System.lineSeparator(),
+                    System.lineSeparator() + endBlock,
+                    transform = {
+                        """
+                    Host ${getHostName(it.first, currentUser, it.second)}
+                      ProxyCommand ${proxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
+                        """.trimIndent()
+                            .plus("\n" + sshOpts.prependIndent("  "))
+                            .plus(extraConfig)
+                            .plus("\n")
+                            .plus(
+                                """
+                            Host ${getBackgroundHostName(it.first, currentUser, it.second)}
+                              ProxyCommand ${backgroundProxyArgs.joinToString(" ")} ${getWorkspaceParts(it.first, it.second)}
+                                """.trimIndent()
+                                    .plus("\n" + sshOpts.prependIndent("  "))
+                                    .plus(extraConfig),
+                            ).replace("\n", System.lineSeparator())
+                    },
+                )
+            }
 
         if (contents == null) {
             logger.info("No existing SSH config to modify")
@@ -345,6 +345,8 @@ class CoderCLIManager(
 
         val start = "(\\s*)$startBlock".toRegex().find(contents)
         val end = "$endBlock(\\s*)".toRegex().find(contents)
+
+        val isRemoving = blockContent.isEmpty()
 
         if (start == null && end == null && isRemoving) {
             logger.info("No workspaces and no existing config blocks to remove")
@@ -477,15 +479,13 @@ class CoderCLIManager(
      *
      * Throws if the command execution fails.
      */
-    fun startWorkspace(workspaceOwner: String, workspaceName: String): String {
-        return exec(
-            "--global-config",
-            coderConfigPath.toString(),
-            "start",
-            "--yes",
-            workspaceOwner+"/"+workspaceName,
-        )
-    }
+    fun startWorkspace(workspaceOwner: String, workspaceName: String): String = exec(
+        "--global-config",
+        coderConfigPath.toString(),
+        "start",
+        "--yes",
+        workspaceOwner + "/" + workspaceName,
+    )
 
     private fun exec(vararg args: String): String {
         val stdout =
@@ -518,8 +518,7 @@ class CoderCLIManager(
     /*
      * This function returns the ssh-host-prefix used for Host entries.
      */
-    fun getHostPrefix(): String =
-        "coder-jetbrains-${deploymentURL.safeHost()}"
+    fun getHostPrefix(): String = "coder-jetbrains-${deploymentURL.safeHost()}"
 
     /**
      * This function returns the ssh host name generated for connecting to the workspace.
@@ -528,16 +527,15 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String =
-        if (features.wildcardSSH) {
-           "${getHostPrefix()}--${workspace.ownerName}--${workspace.name}.${agent.name}"
+    ): String = if (features.wildcardSSH) {
+        "${getHostPrefix()}--${workspace.ownerName}--${workspace.name}.${agent.name}"
+    } else {
+        // For a user's own workspace, we use the old syntax without a username for backwards compatibility,
+        // since the user might have recent connections that still use the old syntax.
+        if (currentUser.username == workspace.ownerName) {
+            "coder-jetbrains--${workspace.name}.${agent.name}--${deploymentURL.safeHost()}"
         } else {
-           // For a user's own workspace, we use the old syntax without a username for backwards compatibility,
-           // since the user might have recent connections that still use the old syntax.
-           if (currentUser.username == workspace.ownerName) {
-               "coder-jetbrains--${workspace.name}.${agent.name}--${deploymentURL.safeHost()}"
-           } else {
-               "coder-jetbrains--${workspace.ownerName}--${workspace.name}.${agent.name}--${deploymentURL.safeHost()}"
+            "coder-jetbrains--${workspace.ownerName}--${workspace.name}.${agent.name}--${deploymentURL.safeHost()}"
         }
     }
 
@@ -545,12 +543,11 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String =
-        if (features.wildcardSSH) {
-            "${getHostPrefix()}-bg--${workspace.ownerName}--${workspace.name}.${agent.name}"
-        } else {
-            getHostName(workspace, currentUser, agent) + "--bg"
-        }
+    ): String = if (features.wildcardSSH) {
+        "${getHostPrefix()}-bg--${workspace.ownerName}--${workspace.name}.${agent.name}"
+    } else {
+        getHostName(workspace, currentUser, agent) + "--bg"
+    }
 
     companion object {
         val logger = Logger.getInstance(CoderCLIManager::class.java.simpleName)
