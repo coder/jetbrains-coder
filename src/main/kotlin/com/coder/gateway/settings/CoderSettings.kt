@@ -188,7 +188,7 @@ open class CoderSettings(
      * Whether to check for IDE updates.
      */
     val checkIDEUpdate: Boolean
-    get() = state.checkIDEUpdates
+        get() = state.checkIDEUpdates
 
     /**
      * Whether to ignore a failed setup command.

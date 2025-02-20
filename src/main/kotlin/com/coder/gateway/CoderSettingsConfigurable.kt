@@ -167,12 +167,11 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
         }
     }
 
-    private fun validateDataDirectory(): ValidationInfoBuilder.(JBTextField) -> ValidationInfo? =
-        {
-            if (it.text.isNotBlank() && !Path.of(it.text).canCreateDirectory()) {
-                error("Cannot create this directory")
-            } else {
-                null
-            }
+    private fun validateDataDirectory(): ValidationInfoBuilder.(JBTextField) -> ValidationInfo? = {
+        if (it.text.isNotBlank() && !Path.of(it.text).canCreateDirectory()) {
+            error("Cannot create this directory")
+        } else {
+            null
         }
+    }
 }
