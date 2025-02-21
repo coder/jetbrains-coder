@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.19.0 - 2025-02-21
+
 ### Added
 
 - Added functionality to show setup script error message to the end user.
