@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+Retrieve workspace directly in link handler when using wildcardSSH feature
+
 ## 2.19.0 - 2025-02-21
 
 ### Added
