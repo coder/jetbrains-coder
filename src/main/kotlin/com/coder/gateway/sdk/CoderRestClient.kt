@@ -177,6 +177,19 @@ open class CoderRestClient(
     }
 
     /**
+     * Retrieves a specific workspace by owner and name.
+     * @throws [APIResponseException].
+     */
+    fun workspaceByOwnerAndName(owner: String, workspaceName: String): Workspace {
+        val workspaceResponse = retroRestClient.workspaceByOwnerAndName(owner, workspaceName).execute()
+        if (!workspaceResponse.isSuccessful) {
+            throw APIResponseException("retrieve workspace", url, workspaceResponse)
+        }
+
+        return workspaceResponse.body()!!
+    }
+
+    /**
      * Retrieves all the agent names for all workspaces, including those that
      * are off.  Meant to be used when configuring SSH.
      */

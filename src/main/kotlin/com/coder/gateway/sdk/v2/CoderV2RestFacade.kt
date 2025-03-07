@@ -4,6 +4,7 @@ import com.coder.gateway.sdk.v2.models.BuildInfo
 import com.coder.gateway.sdk.v2.models.CreateWorkspaceBuildRequest
 import com.coder.gateway.sdk.v2.models.Template
 import com.coder.gateway.sdk.v2.models.User
+import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceBuild
 import com.coder.gateway.sdk.v2.models.WorkspaceResource
 import com.coder.gateway.sdk.v2.models.WorkspacesResponse
@@ -21,6 +22,15 @@ interface CoderV2RestFacade {
      */
     @GET("api/v2/users/me")
     fun me(): Call<User>
+
+    /**
+     * Retrieves a specific workspace by owner and name.
+     */
+    @GET("api/v2/users/{user}/workspace/{workspace}")
+    fun workspaceByOwnerAndName(
+        @Path("user") user: String,
+        @Path("workspace") workspace: String,
+    ): Call<Workspace>
 
     /**
      * Retrieves all workspaces the authenticated user has access to.

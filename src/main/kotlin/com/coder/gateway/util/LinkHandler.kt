@@ -57,11 +57,27 @@ open class LinkHandler(
         // owner is included, assume the current user.
         val owner = (parameters.owner() ?: client.me.username).ifBlank { client.me.username }
 
-        val workspaces = client.workspaces()
-        val workspace =
-            workspaces.firstOrNull {
-                it.ownerName == owner && it.name == workspaceName
-            } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
+        val cli =
+            ensureCLI(
+                deploymentURL.toURL(),
+                client.buildInfo().version,
+                settings,
+                indicator,
+            )
+
+        var workspace : Workspace
+        var workspaces : List<Workspace> = emptyList()
+        var workspacesAndAgents : Set<Pair<Workspace, WorkspaceAgent>> = emptySet()
+        if (cli.features.wildcardSSH) {
+            workspace = client.workspaceByOwnerAndName(owner, workspaceName)
+        } else {
+            workspaces = client.workspaces()
+            workspace =
+                workspaces.firstOrNull {
+                    it.ownerName == owner && it.name == workspaceName
+                } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
+            workspacesAndAgents = client.withAgents(workspaces)
+        }
 
         when (workspace.latestBuild.status) {
             WorkspaceStatus.PENDING, WorkspaceStatus.STARTING ->
@@ -96,14 +112,6 @@ open class LinkHandler(
             throw IllegalArgumentException("The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; unable to connect")
         }
 
-        val cli =
-            ensureCLI(
-                deploymentURL.toURL(),
-                client.buildInfo().version,
-                settings,
-                indicator,
-            )
-
         // We only need to log in if we are using token-based auth.
         if (client.token != null) {
             indicator?.invoke("Authenticating Coder CLI...")
@@ -111,11 +119,7 @@ open class LinkHandler(
         }
 
         indicator?.invoke("Configuring Coder CLI...")
-        if (cli.features.wildcardSSH) {
-            cli.configSsh(workspacesAndAgents = emptySet(), currentUser = client.me)
-        } else {
-            cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
-        }
+        cli.configSsh(workspacesAndAgents, currentUser = client.me)
 
         val openDialog =
             parameters.ideProductCode().isNullOrBlank() ||
