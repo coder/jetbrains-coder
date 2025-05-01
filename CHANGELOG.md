@@ -6,7 +6,11 @@
 
 ### Changed
 
-Retrieve workspace directly in link handler when using wildcardSSH feature
+- Retrieve workspace directly in link handler when using wildcardSSH feature
+
+### Fixed
+
+- installed EAP, RC, NIGHTLY and PREVIEW IDEs are no longer displayed if there is a higher released version available for download.
 
 ## 2.19.0 - 2025-02-21
 

@@ -6,10 +6,13 @@ import com.jetbrains.gateway.ssh.IdeStatus
 import com.jetbrains.gateway.ssh.IdeWithStatus
 import com.jetbrains.gateway.ssh.InstalledIdeUIEx
 import com.jetbrains.gateway.ssh.IntelliJPlatformProduct
+import com.jetbrains.gateway.ssh.ReleaseType
 import com.jetbrains.gateway.ssh.deploy.ShellArgument
 import java.net.URL
 import java.nio.file.Path
 import kotlin.io.path.name
+
+private val NON_STABLE_RELEASE_TYPES = setOf("EAP", "RC", "NIGHTLY", "PREVIEW")
 
 /**
  * Validated parameters for downloading and opening a project using an IDE on a
@@ -101,7 +104,8 @@ class WorkspaceProjectIDE(
                 name = name,
                 hostname = hostname,
                 projectPath = projectPath,
-                ideProduct = IntelliJPlatformProduct.fromProductCode(ideProductCode) ?: throw Exception("invalid product code"),
+                ideProduct = IntelliJPlatformProduct.fromProductCode(ideProductCode)
+                    ?: throw Exception("invalid product code"),
                 ideBuildNumber = ideBuildNumber,
                 idePathOnHost = idePathOnHost,
                 downloadSource = downloadSource,
@@ -126,13 +130,13 @@ fun RecentWorkspaceConnection.toWorkspaceProjectIDE(): WorkspaceProjectIDE {
         // connections page, so it could be missing.  Try to get it from the
         // host name.
         name =
-        if (name.isNullOrBlank() && !hostname.isNullOrBlank()) {
-            hostname
-                .removePrefix("coder-jetbrains--")
-                .removeSuffix("--${hostname.split("--").last()}")
-        } else {
-            name
-        },
+            if (name.isNullOrBlank() && !hostname.isNullOrBlank()) {
+                hostname
+                    .removePrefix("coder-jetbrains--")
+                    .removeSuffix("--${hostname.split("--").last()}")
+            } else {
+                name
+            },
         hostname = hostname,
         projectPath = projectPath,
         ideProductCode = ideProductCode,
@@ -146,17 +150,17 @@ fun RecentWorkspaceConnection.toWorkspaceProjectIDE(): WorkspaceProjectIDE {
         // the config directory).  For backwards compatibility with existing
         // entries, extract the URL from the config directory or host name.
         deploymentURL =
-        if (deploymentURL.isNullOrBlank()) {
-            if (!dir.isNullOrBlank()) {
-                "https://${Path.of(dir).parent.name}"
-            } else if (!hostname.isNullOrBlank()) {
-                "https://${hostname.split("--").last()}"
+            if (deploymentURL.isNullOrBlank()) {
+                if (!dir.isNullOrBlank()) {
+                    "https://${Path.of(dir).parent.name}"
+                } else if (!hostname.isNullOrBlank()) {
+                    "https://${hostname.split("--").last()}"
+                } else {
+                    deploymentURL
+                }
             } else {
                 deploymentURL
-            }
-        } else {
-            deploymentURL
-        },
+            },
         lastOpened = lastOpened,
     )
 }
@@ -194,6 +198,39 @@ fun AvailableIde.toIdeWithStatus(): IdeWithStatus = IdeWithStatus(
     presentableVersion = presentableVersion,
     remoteDevType = remoteDevType,
 )
+
+/**
+ * Returns a list of installed IDEs that don't have a RELEASED version available for download.
+ * Typically, installed EAP, RC, nightly or preview builds should be superseded by released versions.
+ */
+fun List<InstalledIdeUIEx>.filterOutAvailableReleasedIdes(availableIde: List<AvailableIde>): List<InstalledIdeUIEx> {
+    val availableReleasedByProductCode = availableIde
+        .filter { it.releaseType == ReleaseType.RELEASE }
+        .groupBy { it.product.productCode }
+    val result = mutableListOf<InstalledIdeUIEx>()
+
+    this.forEach { installedIde ->
+        // installed IDEs have the release type embedded in the presentable version
+        // which is a string in the form: 2024.2.4 NIGHTLY
+        if (NON_STABLE_RELEASE_TYPES.any { it in installedIde.presentableVersion }) {
+            // we can show the installed IDe if there isn't a higher released version available for download
+            if (installedIde.isSNotSupersededBy(availableReleasedByProductCode[installedIde.product.productCode])) {
+                result.add(installedIde)
+            }
+        } else {
+            result.add(installedIde)
+        }
+    }
+
+    return result
+}
+
+private fun InstalledIdeUIEx.isSNotSupersededBy(availableIdes: List<AvailableIde>?): Boolean {
+    if (availableIdes.isNullOrEmpty()) {
+        return true
+    }
+    return !availableIdes.any { it.buildNumber >= this.buildNumber }
+}
 
 /**
  * Convert an installed IDE to an IDE with status.

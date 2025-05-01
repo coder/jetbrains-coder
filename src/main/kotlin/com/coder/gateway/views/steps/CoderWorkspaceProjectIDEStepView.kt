@@ -4,6 +4,7 @@ import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.filterOutAvailableReleasedIdes
 import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -82,9 +83,12 @@ import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
 // Just extracting the way we display the IDE info into a helper function.
-private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String = "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
-    Locale.getDefault(),
-)}"
+private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String =
+    "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${
+        ideWithStatus.status.name.lowercase(
+            Locale.getDefault(),
+        )
+    }"
 
 /**
  * View for a single workspace.  In particular, show available IDEs and a button
@@ -222,12 +226,21 @@ class CoderWorkspaceProjectIDEStepView(
                                 cbIDE.renderer =
                                     if (attempt > 1) {
                                         IDECellRenderer(
-                                            CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt),
+                                            CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.connect-ssh.retry",
+                                                attempt
+                                            ),
                                         )
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
-                                val executor = createRemoteExecutor(CoderCLIManager(data.client.url).getBackgroundHostName(data.workspace, data.client.me, data.agent))
+                                val executor = createRemoteExecutor(
+                                    CoderCLIManager(data.client.url).getBackgroundHostName(
+                                        data.workspace,
+                                        data.client.me,
+                                        data.agent
+                                    )
+                                )
 
                                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                                     logger.info("Installing remote path validator...")
@@ -238,7 +251,10 @@ class CoderWorkspaceProjectIDEStepView(
                                 cbIDE.renderer =
                                     if (attempt > 1) {
                                         IDECellRenderer(
-                                            CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt),
+                                            CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.retrieve-ides.retry",
+                                                attempt
+                                            ),
                                         )
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
@@ -247,9 +263,9 @@ class CoderWorkspaceProjectIDEStepView(
                             },
                             retryIf = {
                                 it is ConnectionException ||
-                                    it is TimeoutException ||
-                                    it is SSHException ||
-                                    it is DeployException
+                                        it is TimeoutException ||
+                                        it is SSHException ||
+                                        it is DeployException
                             },
                             onException = { attempt, nextMs, e ->
                                 logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
@@ -311,7 +327,10 @@ class CoderWorkspaceProjectIDEStepView(
      * Validate the remote path whenever it changes.
      */
     private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
-        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceProjectIDEStepView::class.java.name)
+        val disposable = Disposer.newDisposable(
+            ApplicationManager.getApplication(),
+            CoderWorkspaceProjectIDEStepView::class.java.name
+        )
         ComponentValidator(disposable).installOn(tfProject)
 
         tfProject.document.addDocumentListener(
@@ -324,7 +343,12 @@ class CoderWorkspaceProjectIDEStepView(
                                     val isPathPresent = validateRemotePath(tfProject.text, executor)
                                     if (isPathPresent.pathOrNull == null) {
                                         ComponentValidator.getInstance(tfProject).ifPresent {
-                                            it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
+                                            it.updateInfo(
+                                                ValidationInfo(
+                                                    "Can't find directory: ${tfProject.text}",
+                                                    tfProject
+                                                )
+                                            )
                                         }
                                     } else {
                                         ComponentValidator.getInstance(tfProject).ifPresent {
@@ -333,7 +357,12 @@ class CoderWorkspaceProjectIDEStepView(
                                     }
                                 } catch (e: Exception) {
                                     ComponentValidator.getInstance(tfProject).ifPresent {
-                                        it.updateInfo(ValidationInfo("Can't validate directory: ${tfProject.text}", tfProject))
+                                        it.updateInfo(
+                                            ValidationInfo(
+                                                "Can't validate directory: ${tfProject.text}",
+                                                tfProject
+                                            )
+                                        )
                                     }
                                 }
                             }
@@ -377,27 +406,34 @@ class CoderWorkspaceProjectIDEStepView(
             }
 
         logger.info("Resolved OS and Arch for $name is: $workspaceOS")
-        val installedIdesJob =
-            cs.async(Dispatchers.IO) {
-                executor.getInstalledIDEs().map { it.toIdeWithStatus() }
-            }
-        val idesWithStatusJob =
-            cs.async(Dispatchers.IO) {
-                IntelliJPlatformProduct.entries
-                    .filter { it.showInGateway }
-                    .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
-                    .map { it.toIdeWithStatus() }
-            }
+        val installedIdesJob = cs.async(Dispatchers.IO) {
+            executor.getInstalledIDEs()
+        }
+        val availableToDownloadIdesJob = cs.async(Dispatchers.IO) {
+            IntelliJPlatformProduct.entries
+                .filter { it.showInGateway }
+                .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
+        }
 
-        val installedIdes = installedIdesJob.await().sorted()
-        val idesWithStatus = idesWithStatusJob.await().sorted()
+        val installedIdes = installedIdesJob.await()
+        val availableIdes = availableToDownloadIdesJob.await()
+
         if (installedIdes.isEmpty()) {
             logger.info("No IDE is installed in $name")
         }
-        if (idesWithStatus.isEmpty()) {
+        if (availableIdes.isEmpty()) {
             logger.warn("Could not resolve any IDE for $name, probably $workspaceOS is not supported by Gateway")
         }
-        return installedIdes + idesWithStatus
+
+        val remainingInstalledIdes = installedIdes.filterOutAvailableReleasedIdes(availableIdes)
+        if (remainingInstalledIdes.size < installedIdes.size) {
+            logger.info(
+                "Skipping the following list of installed IDEs because there is already a released version " +
+                    "available for download: ${(installedIdes - remainingInstalledIdes).joinToString { "${it.product.productCode} ${it.presentableVersion}" }}"
+            )
+        }
+        return remainingInstalledIdes.map { it.toIdeWithStatus() }.sorted() + availableIdes.map { it.toIdeWithStatus() }
+            .sorted()
     }
 
     private fun toDeployedOS(
@@ -455,7 +491,8 @@ class CoderWorkspaceProjectIDEStepView(
         override fun getSelectedItem(): IdeWithStatus? = super.getSelectedItem() as IdeWithStatus?
     }
 
-    private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) : ListCellRenderer<IdeWithStatus> {
+    private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) :
+        ListCellRenderer<IdeWithStatus> {
         private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> =
             object : ColoredListCellRenderer<IdeWithStatus>() {
                 override fun customizeCellRenderer(
