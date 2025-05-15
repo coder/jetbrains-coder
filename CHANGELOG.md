@@ -11,6 +11,7 @@
 ### Fixed
 
 - installed EAP, RC, NIGHTLY and PREVIEW IDEs are no longer displayed if there is a higher released version available for download.
+- project path is prefilled with the `folder` URI parameter when the IDE&Project dialog opens for URI handling.
 
 ## 2.19.0 - 2025-02-21
 
