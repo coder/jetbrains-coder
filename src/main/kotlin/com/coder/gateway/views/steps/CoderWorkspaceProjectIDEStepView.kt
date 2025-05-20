@@ -95,7 +95,7 @@ private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String =
  * to select an IDE and project to run on the workspace.
  */
 class CoderWorkspaceProjectIDEStepView(
-    private val showTitle: Boolean = true,
+    private val showTitle: Boolean = true
 ) : CoderWizardStep<WorkspaceProjectIDE>(
     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text"),
 ) {
@@ -200,7 +200,9 @@ class CoderWorkspaceProjectIDEStepView(
         val name = CoderCLIManager.getWorkspaceParts(data.workspace, data.agent)
         logger.info("Initializing workspace step for $name")
 
-        val homeDirectory = data.agent.expandedDirectory ?: data.agent.directory
+        val homeDirectory = data.remoteProjectPath.takeIf { !it.isNullOrBlank() }
+            ?: data.agent.expandedDirectory
+            ?: data.agent.directory
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
         titleLabel.isVisible = showTitle
@@ -429,7 +431,7 @@ class CoderWorkspaceProjectIDEStepView(
         if (remainingInstalledIdes.size < installedIdes.size) {
             logger.info(
                 "Skipping the following list of installed IDEs because there is already a released version " +
-                    "available for download: ${(installedIdes - remainingInstalledIdes).joinToString { "${it.product.productCode} ${it.presentableVersion}" }}"
+                        "available for download: ${(installedIdes - remainingInstalledIdes).joinToString { "${it.product.productCode} ${it.presentableVersion}" }}"
             )
         }
         return remainingInstalledIdes.map { it.toIdeWithStatus() }.sorted() + availableIdes.map { it.toIdeWithStatus() }

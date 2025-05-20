@@ -38,7 +38,10 @@ private class CoderWorkspaceStepDialog(
 
     init {
         init()
-        title = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", CoderCLIManager.getWorkspaceParts(state.workspace, state.agent))
+        title = CoderGatewayBundle.message(
+            "gateway.connector.view.coder.remoteproject.choose.text",
+            CoderCLIManager.getWorkspaceParts(state.workspace, state.agent)
+        )
     }
 
     override fun show() {
@@ -75,12 +78,13 @@ fun askIDE(
     cli: CoderCLIManager,
     client: CoderRestClient,
     workspaces: List<Workspace>,
+    remoteProjectPath: String? = null
 ): WorkspaceProjectIDE? {
     var data: WorkspaceProjectIDE? = null
     ApplicationManager.getApplication().invokeAndWait {
         val dialog =
             CoderWorkspaceStepDialog(
-                CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces),
+                CoderWorkspacesStepSelection(agent, workspace, cli, client, workspaces, remoteProjectPath),
             )
         data = dialog.showAndGetData()
     }

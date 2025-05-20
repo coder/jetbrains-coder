@@ -105,6 +105,7 @@ data class CoderWorkspacesStepSelection(
     // Pass along the latest workspaces so we can configure the CLI a bit
     // faster, otherwise this step would have to fetch the workspaces again.
     val workspaces: List<Workspace>,
+    val remoteProjectPath: String? = null
 )
 
 /**
@@ -147,7 +148,8 @@ class CoderWorkspacesStepView :
             setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
             setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
             selectionModel.addListSelectionListener {
-                nextButton.isEnabled = selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
+                nextButton.isEnabled =
+                    selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
                 if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
                     notificationBanner.apply {
                         component.isVisible = true
@@ -343,22 +345,26 @@ class CoderWorkspacesStepView :
                                     val maxWait = Duration.ofMinutes(10)
                                     while (isActive) { // Wait for the workspace to fully stop.
                                         delay(timeout.toMillis())
-                                        val found = tableOfWorkspaces.items.firstOrNull { it.workspace.id == workspace.id }
+                                        val found =
+                                            tableOfWorkspaces.items.firstOrNull { it.workspace.id == workspace.id }
                                         when (val status = found?.workspace?.latestBuild?.status) {
                                             WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
                                                 logger.info("Still waiting for ${workspace.name} to stop before updating")
                                             }
+
                                             WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
                                             WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
                                             WorkspaceStatus.DELETING, WorkspaceStatus.DELETED,
-                                            -> {
+                                                -> {
                                                 logger.warn("Canceled ${workspace.name} update due to status change to $status")
                                                 break
                                             }
+
                                             null -> {
                                                 logger.warn("Canceled ${workspace.name} update because it no longer exists")
                                                 break
                                             }
+
                                             WorkspaceStatus.STOPPED -> {
                                                 logger.info("${workspace.name} has stopped; updating now")
                                                 c.updateWorkspace(workspace)
@@ -560,7 +566,10 @@ class CoderWorkspacesStepView :
                 deploymentURL.host,
             )
         tableOfWorkspaces.setEmptyState(
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host),
+            CoderGatewayBundle.message(
+                "gateway.connector.view.coder.workspaces.connect.text.connecting",
+                deploymentURL.host
+            ),
         )
 
         tableOfWorkspaces.listTableModel.items = emptyList()
@@ -600,7 +609,10 @@ class CoderWorkspacesStepView :
                 client = authedClient
 
                 tableOfWorkspaces.setEmptyState(
-                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host),
+                    CoderGatewayBundle.message(
+                        "gateway.connector.view.coder.workspaces.connect.text.connected",
+                        deploymentURL.host
+                    ),
                 )
                 tfUrlComment?.text =
                     CoderGatewayBundle.message(
@@ -788,7 +800,8 @@ class WorkspacesTableModel :
         WorkspaceVersionColumnInfo("Version"),
         WorkspaceStatusColumnInfo("Status"),
     ) {
-    private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceIconColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
@@ -820,7 +833,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceNameColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.name
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -850,7 +864,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceOwnerColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceOwnerColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.ownerName
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -880,7 +895,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceTemplateNameColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -909,7 +925,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceVersionColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentListModel?): String? = if (workspace == null) {
             "Unknown"
         } else if (workspace.workspace.outdated) {
@@ -940,7 +957,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceStatusColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.status?.label
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
