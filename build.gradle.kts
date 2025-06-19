@@ -54,6 +54,11 @@ dependencies {
     implementation("org.zeroturnaround:zt-exec:1.12")
 
     testImplementation(kotlin("test"))
+    // required by the unit tests
+    testImplementation(kotlin("test-junit5"))
+    // required by IntelliJ test framework
+    testImplementation("junit:junit:4.13.2")
+
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
