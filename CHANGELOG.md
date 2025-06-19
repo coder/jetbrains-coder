@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.20.1 - 2025-05-20
+
 ### Changed
 
 - Retrieve workspace directly in link handler when using wildcardSSH feature
@@ -11,6 +13,7 @@
 ### Fixed
 
 - installed EAP, RC, NIGHTLY and PREVIEW IDEs are no longer displayed if there is a higher released version available for download.
+- project path is prefilled with the `folder` URI parameter when the IDE&Project dialog opens for URI handling.
 
 ## 2.19.0 - 2025-02-21
 
