@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Changed
+
+- the logos and icons now match the new branding
+- the plugin is functionally the same but built with the new plugin system
+
 ## 2.20.1 - 2025-05-20
 
 ### Changed
