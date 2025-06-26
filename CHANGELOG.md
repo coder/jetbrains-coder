@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- marketplace logo
+
 ## 2.21.0 - 2025-06-25
 
 ### Changed
