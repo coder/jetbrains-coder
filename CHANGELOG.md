@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.21.0 - 2025-06-25
+
 ### Changed
 
 - the logos and icons now match the new branding
