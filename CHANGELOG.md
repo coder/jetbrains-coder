@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.21.1 - 2025-06-26
+
 ### Fixed
 
 - marketplace logo
