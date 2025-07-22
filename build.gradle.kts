@@ -57,6 +57,7 @@ dependencies {
     // required by the unit tests
     testImplementation(kotlin("test-junit5"))
     testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     // required by IntelliJ test framework
     testImplementation("junit:junit:4.13.2")
 

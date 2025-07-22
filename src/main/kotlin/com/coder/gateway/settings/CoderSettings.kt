@@ -1,6 +1,5 @@
 package com.coder.gateway.settings
 
-import com.coder.gateway.cli.gpg.VerificationResult
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.expand
@@ -9,7 +8,6 @@ import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
-import com.github.weisj.jsvg.B
 import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Files
@@ -169,6 +167,11 @@ open class CoderSettings(
         get() = state.fallbackOnCoderForSignatures
 
     /**
+     * Default CLI binary name based on OS and architecture
+     */
+    val defaultCliBinaryNameByOsAndArch: String get() = getCoderCLIForOS(getOS(), getArch())
+
+    /**
      * Default CLI signature name based on OS and architecture
      */
     val defaultSignatureNameByOsAndArch: String get() = getCoderSignatureForOS(getOS(), getArch())
@@ -281,9 +284,8 @@ open class CoderSettings(
      */
     fun binSource(url: URL): URL {
         state.binarySource.let {
-            val binaryName = getCoderCLIForOS(getOS(), getArch())
             return if (it.isBlank()) {
-                url.withPath("/bin/$binaryName")
+                url.withPath("/bin/$defaultCliBinaryNameByOsAndArch")
             } else {
                 logger.info("Using binary source override $it")
                 try {
@@ -393,44 +395,19 @@ open class CoderSettings(
         }
 
     /**
-     * Return the name of the binary (with extension) for the provided OS and architecture.
+     * Returns the name of the binary (with extension) for the provided OS and architecture.
      */
-    private fun getCoderCLIForOS(
-        os: OS?,
-        arch: Arch?,
-    ): String {
+    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
         logger.debug("Resolving binary for $os $arch")
-        return buildCoderFileName(os, arch)
-    }
 
-    /**
-     * Return the name of the signature file (.asc) for the provided OS and architecture.
-     */
-    private fun getCoderSignatureForOS(
-        os: OS?,
-        arch: Arch?,
-    ): String {
-        logger.debug("Resolving signature for $os $arch")
-        return buildCoderFileName(os, arch, true)
-    }
-
-    /**
-     * Build the coder file name based on OS, architecture, and whether it's a signature file.
-     */
-    private fun buildCoderFileName(
-        os: OS?,
-        arch: Arch?,
-        isSignature: Boolean = false
-    ): String {
-        if (os == null) {
-            logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return if (isSignature) "coder-windows-amd64.asc" else "coder-windows-amd64.exe"
-        }
-
-        val osName = when (os) {
-            OS.WINDOWS -> "windows"
-            OS.LINUX -> "linux"
-            OS.MAC -> "darwin"
+        val (osName, extension) = when (os) {
+            OS.WINDOWS -> "windows" to ".exe"
+            OS.LINUX -> "linux" to ""
+            OS.MAC -> "darwin" to ""
+            null -> {
+                logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
+                return "coder-windows-amd64.exe"
+            }
         }
 
         val archName = when (arch) {
@@ -440,12 +417,15 @@ open class CoderSettings(
             else -> "amd64" // default fallback
         }
 
-        val extension = if (isSignature) ".asc" else when (os) {
-            OS.WINDOWS -> ".exe"
-            OS.LINUX, OS.MAC -> ""
-        }
-
         return "coder-$osName-$archName$extension"
+    }
+
+    /**
+     * Returns the name of the signature file (.asc) for the provided OS and architecture.
+     */
+    private fun getCoderSignatureForOS(os: OS?, arch: Arch?): String {
+        logger.debug("Resolving signature for $os $arch")
+        return "${getCoderCLIForOS(os, arch)}.asc"
     }
 
     companion object {

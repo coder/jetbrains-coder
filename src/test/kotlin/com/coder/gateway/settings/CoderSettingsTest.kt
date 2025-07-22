@@ -3,14 +3,36 @@ package com.coder.gateway.settings
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.withPath
+import org.junit.jupiter.api.Assertions
 import java.net.URL
 import java.nio.file.Path
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
 internal class CoderSettingsTest {
+    private var originalOsName: String? = null
+    private var originalOsArch: String? = null
+
+    private lateinit var store: CoderSettings
+
+    @BeforeTest
+    fun setUp() {
+        originalOsName = System.getProperty("os.name")
+        originalOsArch = System.getProperty("os.arch")
+        store = CoderSettings(CoderSettingsState())
+        System.setProperty("intellij.testFramework.rethrow.logged.errors", "false")
+    }
+
+    @AfterTest
+    fun tearDown() {
+        System.setProperty("os.name", originalOsName)
+        System.setProperty("os.arch", originalOsArch)
+    }
+
     @Test
     fun testExpands() {
         val state = CoderSettingsState()
@@ -35,13 +57,13 @@ internal class CoderSettingsTest {
             CoderSettings(
                 state,
                 env =
-                Environment(
-                    mapOf(
-                        "LOCALAPPDATA" to "/tmp/coder-gateway-test/localappdata",
-                        "HOME" to "/tmp/coder-gateway-test/home",
-                        "XDG_DATA_HOME" to "/tmp/coder-gateway-test/xdg-data",
+                    Environment(
+                        mapOf(
+                            "LOCALAPPDATA" to "/tmp/coder-gateway-test/localappdata",
+                            "HOME" to "/tmp/coder-gateway-test/home",
+                            "XDG_DATA_HOME" to "/tmp/coder-gateway-test/xdg-data",
+                        ),
                     ),
-                ),
             )
         var expected =
             when (getOS()) {
@@ -59,12 +81,12 @@ internal class CoderSettingsTest {
                 CoderSettings(
                     state,
                     env =
-                    Environment(
-                        mapOf(
-                            "XDG_DATA_HOME" to "",
-                            "HOME" to "/tmp/coder-gateway-test/home",
+                        Environment(
+                            mapOf(
+                                "XDG_DATA_HOME" to "",
+                                "HOME" to "/tmp/coder-gateway-test/home",
+                            ),
                         ),
-                    ),
                 )
             expected = "/tmp/coder-gateway-test/home/.local/share/coder-gateway/localhost"
 
@@ -78,13 +100,13 @@ internal class CoderSettingsTest {
             CoderSettings(
                 state,
                 env =
-                Environment(
-                    mapOf(
-                        "LOCALAPPDATA" to "/ignore",
-                        "HOME" to "/ignore",
-                        "XDG_DATA_HOME" to "/ignore",
+                    Environment(
+                        mapOf(
+                            "LOCALAPPDATA" to "/ignore",
+                            "HOME" to "/ignore",
+                            "XDG_DATA_HOME" to "/ignore",
+                        ),
                     ),
-                ),
             )
         expected = "/tmp/coder-gateway-test/data-dir/localhost"
         assertEquals(Path.of(expected).toAbsolutePath(), settings.dataDir(url))
@@ -131,13 +153,13 @@ internal class CoderSettingsTest {
             CoderSettings(
                 state,
                 env =
-                Environment(
-                    mapOf(
-                        "APPDATA" to "/tmp/coder-gateway-test/cli-appdata",
-                        "HOME" to "/tmp/coder-gateway-test/cli-home",
-                        "XDG_CONFIG_HOME" to "/tmp/coder-gateway-test/cli-xdg-config",
+                    Environment(
+                        mapOf(
+                            "APPDATA" to "/tmp/coder-gateway-test/cli-appdata",
+                            "HOME" to "/tmp/coder-gateway-test/cli-home",
+                            "XDG_CONFIG_HOME" to "/tmp/coder-gateway-test/cli-xdg-config",
+                        ),
                     ),
-                ),
             )
         var expected =
             when (getOS()) {
@@ -153,12 +175,12 @@ internal class CoderSettingsTest {
                 CoderSettings(
                     state,
                     env =
-                    Environment(
-                        mapOf(
-                            "XDG_CONFIG_HOME" to "",
-                            "HOME" to "/tmp/coder-gateway-test/cli-home",
+                        Environment(
+                            mapOf(
+                                "XDG_CONFIG_HOME" to "",
+                                "HOME" to "/tmp/coder-gateway-test/cli-home",
+                            ),
                         ),
-                    ),
                 )
             expected = "/tmp/coder-gateway-test/cli-home/.config/coderv2"
             assertEquals(Path.of(expected), settings.coderConfigDir)
@@ -169,14 +191,14 @@ internal class CoderSettingsTest {
             CoderSettings(
                 state,
                 env =
-                Environment(
-                    mapOf(
-                        "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
-                        "APPDATA" to "/ignore",
-                        "HOME" to "/ignore",
-                        "XDG_CONFIG_HOME" to "/ignore",
+                    Environment(
+                        mapOf(
+                            "CODER_CONFIG_DIR" to "/tmp/coder-gateway-test/coder-config-dir",
+                            "APPDATA" to "/ignore",
+                            "HOME" to "/ignore",
+                            "XDG_CONFIG_HOME" to "/ignore",
+                        ),
                     ),
-                ),
             )
         expected = "/tmp/coder-gateway-test/coder-config-dir"
         assertEquals(Path.of(expected), settings.coderConfigDir)
@@ -401,5 +423,55 @@ internal class CoderSettingsTest {
         assertEquals("test setup", settings.setupCommand)
         assertEquals(true, settings.ignoreSetupFailure)
         assertEquals("test ssh log directory", settings.sshLogDirectory)
+    }
+
+
+    @Test
+    fun `Default CLI and signature for Windows AMD64`() =
+        assertBinaryAndSignature("Windows 10", "amd64", "coder-windows-amd64.exe", "coder-windows-amd64.exe.asc")
+
+    @Test
+    fun `Default CLI and signature for Windows ARM64`() =
+        assertBinaryAndSignature("Windows 10", "aarch64", "coder-windows-arm64.exe", "coder-windows-arm64.exe.asc")
+
+    @Test
+    fun `Default CLI and signature for Linux AMD64`() =
+        assertBinaryAndSignature("Linux", "x86_64", "coder-linux-amd64", "coder-linux-amd64.asc")
+
+    @Test
+    fun `Default CLI and signature for Linux ARM64`() =
+        assertBinaryAndSignature("Linux", "aarch64", "coder-linux-arm64", "coder-linux-arm64.asc")
+
+    @Test
+    fun `Default CLI and signature for Linux ARMV7`() =
+        assertBinaryAndSignature("Linux", "armv7l", "coder-linux-armv7", "coder-linux-armv7.asc")
+
+    @Test
+    fun `Default CLI and signature for Mac AMD64`() =
+        assertBinaryAndSignature("Mac OS X", "x86_64", "coder-darwin-amd64", "coder-darwin-amd64.asc")
+
+    @Test
+    fun `Default CLI and signature for Mac ARM64`() =
+        assertBinaryAndSignature("Mac OS X", "aarch64", "coder-darwin-arm64", "coder-darwin-arm64.asc")
+
+    @Test
+    fun `Default CLI and signature for unknown OS and Arch`() =
+        assertBinaryAndSignature(null, null, "coder-windows-amd64.exe", "coder-windows-amd64.exe.asc")
+
+    @Test
+    fun `Default CLI and signature for unknown Arch fallback on Linux`() =
+        assertBinaryAndSignature("Linux", "mips64", "coder-linux-amd64", "coder-linux-amd64.asc")
+
+    private fun assertBinaryAndSignature(
+        osName: String?,
+        arch: String?,
+        expectedBinary: String,
+        expectedSignature: String
+    ) {
+        if (osName == null) System.clearProperty("os.name") else System.setProperty("os.name", osName)
+        if (arch == null) System.clearProperty("os.arch") else System.setProperty("os.arch", arch)
+
+        Assertions.assertEquals(expectedBinary, store.defaultCliBinaryNameByOsAndArch)
+        Assertions.assertEquals(expectedSignature, store.defaultSignatureNameByOsAndArch)
     }
 }
