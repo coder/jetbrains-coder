@@ -267,8 +267,8 @@ class CoderCLIManager(
             }
 
             else -> {
-                UnsignedBinaryExecutionDeniedException((result as DownloadResult.Failed).error.message)
-                val failure = result as DownloadResult.Failed
+                val failure = result as VerificationResult.Failed
+                UnsignedBinaryExecutionDeniedException(result.error.message)
                 logger.error("Failed to verify signature for ${cliResult.dst}", failure.error)
             }
         }
