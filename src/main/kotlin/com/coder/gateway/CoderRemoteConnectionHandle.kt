@@ -66,7 +66,7 @@ class CoderRemoteConnectionHandle {
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
     private val dialogUi = DialogUi(settings)
 
-    fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
+    fun connect(getParameters: suspend (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {

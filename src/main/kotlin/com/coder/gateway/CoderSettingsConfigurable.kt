@@ -68,6 +68,14 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
+            row {
+                cell() // For alignment.
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                    .bindSelected(state::fallbackOnCoderForSignatures)
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                    )
+            }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.header-command.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::headerCommand)

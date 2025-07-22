@@ -28,7 +28,7 @@ open class LinkHandler(
      * Throw if required arguments are not supplied or the workspace is not in a
      * connectable state.
      */
-    fun handle(
+    suspend fun handle(
         parameters: Map<String, String>,
         indicator: ((t: String) -> Unit)? = null,
     ): WorkspaceProjectIDE {

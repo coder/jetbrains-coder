@@ -1,5 +1,6 @@
 package com.coder.gateway.settings
 
+import com.coder.gateway.cli.gpg.VerificationResult
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.expand
@@ -8,6 +9,7 @@ import com.coder.gateway.util.getOS
 import com.coder.gateway.util.safeHost
 import com.coder.gateway.util.toURL
 import com.coder.gateway.util.withPath
+import com.github.weisj.jsvg.B
 import com.intellij.openapi.diagnostic.Logger
 import java.net.URL
 import java.nio.file.Files
@@ -34,7 +36,7 @@ enum class Source {
      * Return a description of the source.
      */
     fun description(name: String): String = when (this) {
-        CONFIG ->  "This $name was pulled from your global CLI config."
+        CONFIG -> "This $name was pulled from your global CLI config."
         DEPLOYMENT_CONFIG -> "This $name was pulled from your deployment's CLI config."
         LAST_USED -> "This was the last used $name."
         QUERY -> "This $name was pulled from the Gateway link."
@@ -63,6 +65,12 @@ open class CoderSettingsState(
     // Whether to allow the plugin to fall back to the data directory when the
     // CLI directory is not writable.
     open var enableBinaryDirectoryFallback: Boolean = false,
+
+    /**
+     * Controls whether we fall back release.coder.com
+     */
+    open var fallbackOnCoderForSignatures: Boolean = false,
+
     // An external command that outputs additional HTTP headers added to all
     // requests. The command must output each header as `key=value` on its own
     // line. The following environment variables will be available to the
@@ -153,6 +161,17 @@ open class CoderSettings(
      */
     val enableBinaryDirectoryFallback: Boolean
         get() = state.enableBinaryDirectoryFallback
+
+    /**
+     * Controls whether we fall back release.coder.com
+     */
+    val fallbackOnCoderForSignatures: Boolean
+        get() = state.fallbackOnCoderForSignatures
+
+    /**
+     * Default CLI signature name based on OS and architecture
+     */
+    val defaultSignatureNameByOsAndArch: String get() = getCoderSignatureForOS(getOS(), getArch())
 
     /**
      * A command to run to set headers for API calls.
@@ -306,12 +325,12 @@ open class CoderSettings(
             // SSH has not been configured yet, or using some other authorization mechanism.
             null
         } to
-            try {
-                Files.readString(dir.resolve("session"))
-            } catch (e: Exception) {
-                // SSH has not been configured yet, or using some other authorization mechanism.
-                null
-            }
+                try {
+                    Files.readString(dir.resolve("session"))
+                } catch (e: Exception) {
+                    // SSH has not been configured yet, or using some other authorization mechanism.
+                    null
+                }
     }
 
     /**
@@ -374,41 +393,59 @@ open class CoderSettings(
         }
 
     /**
-     * Return the name of the binary (with extension) for the provided OS and
-     * architecture.
+     * Return the name of the binary (with extension) for the provided OS and architecture.
      */
     private fun getCoderCLIForOS(
         os: OS?,
         arch: Arch?,
     ): String {
-        logger.info("Resolving binary for $os $arch")
+        logger.debug("Resolving binary for $os $arch")
+        return buildCoderFileName(os, arch)
+    }
+
+    /**
+     * Return the name of the signature file (.asc) for the provided OS and architecture.
+     */
+    private fun getCoderSignatureForOS(
+        os: OS?,
+        arch: Arch?,
+    ): String {
+        logger.debug("Resolving signature for $os $arch")
+        return buildCoderFileName(os, arch, true)
+    }
+
+    /**
+     * Build the coder file name based on OS, architecture, and whether it's a signature file.
+     */
+    private fun buildCoderFileName(
+        os: OS?,
+        arch: Arch?,
+        isSignature: Boolean = false
+    ): String {
         if (os == null) {
             logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return "coder-windows-amd64.exe"
+            return if (isSignature) "coder-windows-amd64.asc" else "coder-windows-amd64.exe"
         }
-        return when (os) {
-            OS.WINDOWS ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-windows-amd64.exe"
-                    Arch.ARM64 -> "coder-windows-arm64.exe"
-                    else -> "coder-windows-amd64.exe"
-                }
 
-            OS.LINUX ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-linux-amd64"
-                    Arch.ARM64 -> "coder-linux-arm64"
-                    Arch.ARMV7 -> "coder-linux-armv7"
-                    else -> "coder-linux-amd64"
-                }
-
-            OS.MAC ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-darwin-amd64"
-                    Arch.ARM64 -> "coder-darwin-arm64"
-                    else -> "coder-darwin-amd64"
-                }
+        val osName = when (os) {
+            OS.WINDOWS -> "windows"
+            OS.LINUX -> "linux"
+            OS.MAC -> "darwin"
         }
+
+        val archName = when (arch) {
+            Arch.AMD64 -> "amd64"
+            Arch.ARM64 -> "arm64"
+            Arch.ARMV7 -> "armv7"
+            else -> "amd64" // default fallback
+        }
+
+        val extension = if (isSignature) ".asc" else when (os) {
+            OS.WINDOWS -> ".exe"
+            OS.LINUX, OS.MAC -> ""
+        }
+
+        return "coder-$osName-$archName$extension"
     }
 
     companion object {

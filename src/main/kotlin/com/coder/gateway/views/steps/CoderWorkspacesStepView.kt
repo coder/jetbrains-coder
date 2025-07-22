@@ -14,6 +14,7 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.services.CoderSettingsStateService
 import com.coder.gateway.settings.Source
 import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
@@ -40,6 +41,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
@@ -116,6 +118,7 @@ class CoderWorkspacesStepView :
     CoderWizardStep<CoderWorkspacesStepSelection>(
         CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
     ) {
+    private val state: CoderSettingsStateService = service()
     private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val dialogUi = DialogUi(settings)
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -130,6 +133,7 @@ class CoderWorkspacesStepView :
     private var tfUrl: JTextField? = null
     private var tfUrlComment: JLabel? = null
     private var cbExistingToken: JCheckBox? = null
+    private var cbFallbackOnSignature: JCheckBox? = null
 
     private val notificationBanner = NotificationBanner()
     private var tableOfWorkspaces =
@@ -262,6 +266,19 @@ class CoderWorkspacesStepView :
                     )
                 }.layout(RowLayout.PARENT_GRID)
             }
+            row {
+                cell() // For alignment.
+                    checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                        .bindSelected(state::fallbackOnCoderForSignatures).applyToComponent {
+                            addActionListener { event ->
+                                state.fallbackOnCoderForSignatures = (event.source as JBCheckBox).isSelected
+                            }
+                        }
+                        .comment(
+                            CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                        )
+
+            }.layout(RowLayout.PARENT_GRID)
             row {
                 scrollCell(
                     toolbar.createPanel().apply {
