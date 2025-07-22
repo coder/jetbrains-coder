@@ -888,7 +888,7 @@ internal class CoderCLIManagerTest {
             listOf(
                 Pair("2.5.0", Features(true)),
                 Pair("2.13.0", Features(true, true)),
-                Pair("4.9.0", Features(true, true, true)),
+                Pair("4.9.0", Features(true, true, true, true)),
                 Pair("2.4.9", Features(false)),
                 Pair("1.0.1", Features(false)),
             )
