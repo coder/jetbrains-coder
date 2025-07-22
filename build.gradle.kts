@@ -56,6 +56,7 @@ dependencies {
     testImplementation(kotlin("test"))
     // required by the unit tests
     testImplementation(kotlin("test-junit5"))
+    testImplementation("io.mockk:mockk:1.13.12")
     // required by IntelliJ test framework
     testImplementation("junit:junit:4.13.2")
 
