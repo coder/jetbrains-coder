@@ -60,4 +60,58 @@ internal class URLExtensionsTest {
             )
         }
     }
+
+    @Test
+    fun `valid http URL should return Valid`() {
+        val uri = URI("http://coder.com")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(WebUrlValidationResult.Valid, result)
+    }
+
+    @Test
+    fun `valid https URL with path and query should return Valid`() {
+        val uri = URI("https://coder.com/bin/coder-linux-amd64?query=1")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(WebUrlValidationResult.Valid, result)
+    }
+
+    @Test
+    fun `relative URL should return Invalid with appropriate message`() {
+        val uri = URI("/bin/coder-linux-amd64")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(
+            WebUrlValidationResult.Invalid("$uri is relative, it must be absolute"),
+            result
+        )
+    }
+
+    @Test
+    fun `opaque URI like mailto should return Invalid`() {
+        val uri = URI("mailto:user@coder.com")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(
+            WebUrlValidationResult.Invalid("$uri is opaque, instead of hierarchical"),
+            result
+        )
+    }
+
+    @Test
+    fun `unsupported scheme like ftp should return Invalid`() {
+        val uri = URI("ftp://coder.com")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(
+            WebUrlValidationResult.Invalid("Scheme for $uri must be either http or https"),
+            result
+        )
+    }
+
+    @Test
+    fun `http URL with missing authority should return Invalid`() {
+        val uri = URI("http:///bin/coder-linux-amd64")
+        val result = uri.validateStrictWebUrl()
+        assertEquals(
+            WebUrlValidationResult.Invalid("$uri does not have a hostname"),
+            result
+        )
+    }
 }

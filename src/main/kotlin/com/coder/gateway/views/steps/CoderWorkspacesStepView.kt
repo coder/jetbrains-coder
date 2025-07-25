@@ -20,9 +20,11 @@ import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.WebUrlValidationResult
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
+import com.coder.gateway.util.validateStrictWebUrl
 import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
@@ -78,6 +80,8 @@ import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
@@ -133,7 +137,6 @@ class CoderWorkspacesStepView :
     private var tfUrl: JTextField? = null
     private var tfUrlComment: JLabel? = null
     private var cbExistingToken: JCheckBox? = null
-    private var cbFallbackOnSignature: JCheckBox? = null
 
     private val notificationBanner = NotificationBanner()
     private var tableOfWorkspaces =
@@ -219,6 +222,31 @@ class CoderWorkspacesStepView :
                                 // Reconnect when the enter key is pressed.
                                 maybeAskTokenThenConnect()
                             }
+                            // Add document listener to clear error when user types
+                            document.addDocumentListener(object : DocumentListener {
+                                override fun insertUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun removeUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun changedUpdate(e: DocumentEvent?) = clearErrorState()
+
+                                private fun clearErrorState() {
+                                    tfUrlComment?.apply {
+                                        foreground = UIUtil.getContextHelpForeground()
+                                        if (tfUrl?.text.equals(client?.url?.toString())) {
+                                            text =
+                                                CoderGatewayBundle.message(
+                                                    "gateway.connector.view.coder.workspaces.connect.text.connected",
+                                                    client!!.url.host,
+                                                )
+                                        } else {
+                                            text = CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.workspaces.connect.text.comment",
+                                                CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                                            )
+                                        }
+                                        icon = null
+                                    }
+                                }
+                            })
                         }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     // Reconnect when the connect button is pressed.
@@ -268,15 +296,15 @@ class CoderWorkspacesStepView :
             }
             row {
                 cell() // For alignment.
-                    checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
-                        .bindSelected(state::fallbackOnCoderForSignatures).applyToComponent {
-                            addActionListener { event ->
-                                state.fallbackOnCoderForSignatures = (event.source as JBCheckBox).isSelected
-                            }
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                    .bindSelected(state::fallbackOnCoderForSignatures).applyToComponent {
+                        addActionListener { event ->
+                            state.fallbackOnCoderForSignatures = (event.source as JBCheckBox).isSelected
                         }
-                        .comment(
-                            CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
-                        )
+                    }
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                    )
 
             }.layout(RowLayout.PARENT_GRID)
             row {
@@ -539,6 +567,15 @@ class CoderWorkspacesStepView :
         component.apply() // Force bindings to be filled.
         val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
+            val result = newURL.toURI().validateStrictWebUrl()
+            if (result is WebUrlValidationResult.Invalid) {
+                tfUrlComment.apply {
+                    this?.foreground = UIUtil.getErrorForeground()
+                    this?.text = result.reason
+                    this?.icon = UIUtil.getBalloonErrorIcon()
+                }
+                return
+            }
             val pastedToken =
                 dialogUi.askToken(
                     newURL,
