@@ -15,12 +15,18 @@ fun URL.withPath(path: String): URL = URL(
     if (path.startsWith("/")) path else "/$path",
 )
 
-fun URI.validateStrictWebUrl(): WebUrlValidationResult = try {
+
+fun String.validateStrictWebUrl(): WebUrlValidationResult = try {
+    val uri = URI(this)
+
     when {
-        isOpaque -> Invalid("$this is opaque, instead of hierarchical")
-        !isAbsolute -> Invalid("$this is relative, it must be absolute")
-        scheme?.lowercase() !in setOf("http", "https") -> Invalid("Scheme for $this must be either http or https")
-        authority.isNullOrBlank() -> Invalid("$this does not have a hostname")
+        uri.isOpaque -> Invalid("$this is opaque, instead of hierarchical")
+        !uri.isAbsolute -> Invalid("$this is relative, it must be absolute")
+        uri.scheme?.lowercase() !in setOf("http", "https") ->
+            Invalid("Scheme for $this must be either http or https")
+
+        uri.authority.isNullOrBlank() ->
+            Invalid("$this does not have a hostname")
         else -> WebUrlValidationResult.Valid
     }
 } catch (e: Exception) {

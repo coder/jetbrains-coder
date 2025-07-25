@@ -37,6 +37,10 @@ open class LinkHandler(
         if (deploymentURL.isNullOrBlank()) {
             throw MissingArgumentException("Query parameter \"$URL\" is missing")
         }
+        val result = deploymentURL.validateStrictWebUrl()
+        if (result is WebUrlValidationResult.Invalid) {
+            throw IllegalArgumentException(result.reason)
+        }
 
         val queryTokenRaw = parameters.token()
         val queryToken = if (!queryTokenRaw.isNullOrBlank()) {

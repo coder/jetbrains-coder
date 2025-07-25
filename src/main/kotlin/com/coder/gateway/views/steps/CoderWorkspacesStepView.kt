@@ -565,9 +565,9 @@ class CoderWorkspacesStepView :
     private fun maybeAskTokenThenConnect(error: String? = null) {
         val oldURL = fields.coderURL
         component.apply() // Force bindings to be filled.
-        val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
-            val result = newURL.toURI().validateStrictWebUrl()
+            val result = fields.coderURL.validateStrictWebUrl()
+            val newURL = fields.coderURL.toURL()
             if (result is WebUrlValidationResult.Invalid) {
                 tfUrlComment.apply {
                     this?.foreground = UIUtil.getErrorForeground()
@@ -590,7 +590,7 @@ class CoderWorkspacesStepView :
                 maybeAskTokenThenConnect(it)
             }
         } else {
-            connect(newURL, null)
+            connect(fields.coderURL.toURL(), null)
         }
     }
 

@@ -60,57 +60,64 @@ internal class URLExtensionsTest {
             )
         }
     }
-
     @Test
     fun `valid http URL should return Valid`() {
-        val uri = URI("http://coder.com")
-        val result = uri.validateStrictWebUrl()
+        val result = "http://coder.com".validateStrictWebUrl()
         assertEquals(WebUrlValidationResult.Valid, result)
     }
 
     @Test
     fun `valid https URL with path and query should return Valid`() {
-        val uri = URI("https://coder.com/bin/coder-linux-amd64?query=1")
-        val result = uri.validateStrictWebUrl()
+        val result = "https://coder.com/bin/coder-linux-amd64?query=1".validateStrictWebUrl()
         assertEquals(WebUrlValidationResult.Valid, result)
     }
 
     @Test
     fun `relative URL should return Invalid with appropriate message`() {
-        val uri = URI("/bin/coder-linux-amd64")
-        val result = uri.validateStrictWebUrl()
+        val url = "/bin/coder-linux-amd64"
+        val result = url.validateStrictWebUrl()
         assertEquals(
-            WebUrlValidationResult.Invalid("$uri is relative, it must be absolute"),
+            WebUrlValidationResult.Invalid("$url is relative, it must be absolute"),
             result
         )
     }
 
     @Test
     fun `opaque URI like mailto should return Invalid`() {
-        val uri = URI("mailto:user@coder.com")
-        val result = uri.validateStrictWebUrl()
+        val url = "mailto:user@coder.com"
+        val result = url.validateStrictWebUrl()
         assertEquals(
-            WebUrlValidationResult.Invalid("$uri is opaque, instead of hierarchical"),
+            WebUrlValidationResult.Invalid("$url is opaque, instead of hierarchical"),
             result
         )
     }
 
     @Test
     fun `unsupported scheme like ftp should return Invalid`() {
-        val uri = URI("ftp://coder.com")
-        val result = uri.validateStrictWebUrl()
+        val url = "ftp://coder.com"
+        val result = url.validateStrictWebUrl()
         assertEquals(
-            WebUrlValidationResult.Invalid("Scheme for $uri must be either http or https"),
+            WebUrlValidationResult.Invalid("Scheme for $url must be either http or https"),
             result
         )
     }
 
     @Test
     fun `http URL with missing authority should return Invalid`() {
-        val uri = URI("http:///bin/coder-linux-amd64")
-        val result = uri.validateStrictWebUrl()
+        val url = "http:///bin/coder-linux-amd64"
+        val result = url.validateStrictWebUrl()
         assertEquals(
-            WebUrlValidationResult.Invalid("$uri does not have a hostname"),
+            WebUrlValidationResult.Invalid("$url does not have a hostname"),
+            result
+        )
+    }
+
+    @Test
+    fun `malformed URI should return Invalid with parsing error message`() {
+        val url = "http://[invalid-uri]"
+        val result = url.validateStrictWebUrl()
+        assertEquals(
+            WebUrlValidationResult.Invalid("$url could not be parsed as a URI reference"),
             result
         )
     }
