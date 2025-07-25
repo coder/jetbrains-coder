@@ -15,7 +15,6 @@ fun URL.withPath(path: String): URL = URL(
     if (path.startsWith("/")) path else "/$path",
 )
 
-
 fun String.validateStrictWebUrl(): WebUrlValidationResult = try {
     val uri = URI(this)
 

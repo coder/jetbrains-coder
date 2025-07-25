@@ -8,7 +8,7 @@
 
 - support for checking if CLI is signed
 - improved progress reporting while downloading the CLI
-- URL validation is stricter in the connection screen
+- URL validation is stricter in the connection screen and URI protocol handler
 
 ## 2.21.1 - 2025-06-26
 

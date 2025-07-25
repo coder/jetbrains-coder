@@ -567,7 +567,6 @@ class CoderWorkspacesStepView :
         component.apply() // Force bindings to be filled.
         if (settings.requireTokenAuth) {
             val result = fields.coderURL.validateStrictWebUrl()
-            val newURL = fields.coderURL.toURL()
             if (result is WebUrlValidationResult.Invalid) {
                 tfUrlComment.apply {
                     this?.foreground = UIUtil.getErrorForeground()
@@ -576,6 +575,7 @@ class CoderWorkspacesStepView :
                 }
                 return
             }
+            val newURL = fields.coderURL.toURL()
             val pastedToken =
                 dialogUi.askToken(
                     newURL,
