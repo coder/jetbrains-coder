@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.22.0 - 2025-07-25
+
 ### Added
 
 - support for checking if CLI is signed
