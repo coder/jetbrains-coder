@@ -14,14 +14,17 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.services.CoderSettingsStateService
 import com.coder.gateway.settings.Source
 import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.WebUrlValidationResult
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
+import com.coder.gateway.util.validateStrictWebUrl
 import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
@@ -40,6 +43,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
@@ -76,6 +80,8 @@ import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
@@ -116,6 +122,7 @@ class CoderWorkspacesStepView :
     CoderWizardStep<CoderWorkspacesStepSelection>(
         CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
     ) {
+    private val state: CoderSettingsStateService = service()
     private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val dialogUi = DialogUi(settings)
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -215,6 +222,31 @@ class CoderWorkspacesStepView :
                                 // Reconnect when the enter key is pressed.
                                 maybeAskTokenThenConnect()
                             }
+                            // Add document listener to clear error when user types
+                            document.addDocumentListener(object : DocumentListener {
+                                override fun insertUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun removeUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun changedUpdate(e: DocumentEvent?) = clearErrorState()
+
+                                private fun clearErrorState() {
+                                    tfUrlComment?.apply {
+                                        foreground = UIUtil.getContextHelpForeground()
+                                        if (tfUrl?.text.equals(client?.url?.toString())) {
+                                            text =
+                                                CoderGatewayBundle.message(
+                                                    "gateway.connector.view.coder.workspaces.connect.text.connected",
+                                                    client!!.url.host,
+                                                )
+                                        } else {
+                                            text = CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.workspaces.connect.text.comment",
+                                                CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                                            )
+                                        }
+                                        icon = null
+                                    }
+                                }
+                            })
                         }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     // Reconnect when the connect button is pressed.
@@ -262,6 +294,19 @@ class CoderWorkspacesStepView :
                     )
                 }.layout(RowLayout.PARENT_GRID)
             }
+            row {
+                cell() // For alignment.
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                    .bindSelected(state::fallbackOnCoderForSignatures).applyToComponent {
+                        addActionListener { event ->
+                            state.fallbackOnCoderForSignatures = (event.source as JBCheckBox).isSelected
+                        }
+                    }
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                    )
+
+            }.layout(RowLayout.PARENT_GRID)
             row {
                 scrollCell(
                     toolbar.createPanel().apply {
@@ -520,8 +565,17 @@ class CoderWorkspacesStepView :
     private fun maybeAskTokenThenConnect(error: String? = null) {
         val oldURL = fields.coderURL
         component.apply() // Force bindings to be filled.
-        val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
+            val result = fields.coderURL.validateStrictWebUrl()
+            if (result is WebUrlValidationResult.Invalid) {
+                tfUrlComment.apply {
+                    this?.foreground = UIUtil.getErrorForeground()
+                    this?.text = result.reason
+                    this?.icon = UIUtil.getBalloonErrorIcon()
+                }
+                return
+            }
+            val newURL = fields.coderURL.toURL()
             val pastedToken =
                 dialogUi.askToken(
                     newURL,
@@ -536,7 +590,7 @@ class CoderWorkspacesStepView :
                 maybeAskTokenThenConnect(it)
             }
         } else {
-            connect(newURL, null)
+            connect(fields.coderURL.toURL(), null)
         }
     }
 

@@ -34,7 +34,7 @@ enum class Source {
      * Return a description of the source.
      */
     fun description(name: String): String = when (this) {
-        CONFIG ->  "This $name was pulled from your global CLI config."
+        CONFIG -> "This $name was pulled from your global CLI config."
         DEPLOYMENT_CONFIG -> "This $name was pulled from your deployment's CLI config."
         LAST_USED -> "This was the last used $name."
         QUERY -> "This $name was pulled from the Gateway link."
@@ -63,6 +63,12 @@ open class CoderSettingsState(
     // Whether to allow the plugin to fall back to the data directory when the
     // CLI directory is not writable.
     open var enableBinaryDirectoryFallback: Boolean = false,
+
+    /**
+     * Controls whether we fall back release.coder.com
+     */
+    open var fallbackOnCoderForSignatures: Boolean = false,
+
     // An external command that outputs additional HTTP headers added to all
     // requests. The command must output each header as `key=value` on its own
     // line. The following environment variables will be available to the
@@ -153,6 +159,22 @@ open class CoderSettings(
      */
     val enableBinaryDirectoryFallback: Boolean
         get() = state.enableBinaryDirectoryFallback
+
+    /**
+     * Controls whether we fall back release.coder.com
+     */
+    val fallbackOnCoderForSignatures: Boolean
+        get() = state.fallbackOnCoderForSignatures
+
+    /**
+     * Default CLI binary name based on OS and architecture
+     */
+    val defaultCliBinaryNameByOsAndArch: String get() = getCoderCLIForOS(getOS(), getArch())
+
+    /**
+     * Default CLI signature name based on OS and architecture
+     */
+    val defaultSignatureNameByOsAndArch: String get() = getCoderSignatureForOS(getOS(), getArch())
 
     /**
      * A command to run to set headers for API calls.
@@ -262,9 +284,8 @@ open class CoderSettings(
      */
     fun binSource(url: URL): URL {
         state.binarySource.let {
-            val binaryName = getCoderCLIForOS(getOS(), getArch())
             return if (it.isBlank()) {
-                url.withPath("/bin/$binaryName")
+                url.withPath("/bin/$defaultCliBinaryNameByOsAndArch")
             } else {
                 logger.info("Using binary source override $it")
                 try {
@@ -306,12 +327,12 @@ open class CoderSettings(
             // SSH has not been configured yet, or using some other authorization mechanism.
             null
         } to
-            try {
-                Files.readString(dir.resolve("session"))
-            } catch (e: Exception) {
-                // SSH has not been configured yet, or using some other authorization mechanism.
-                null
-            }
+                try {
+                    Files.readString(dir.resolve("session"))
+                } catch (e: Exception) {
+                    // SSH has not been configured yet, or using some other authorization mechanism.
+                    null
+                }
     }
 
     /**
@@ -374,41 +395,37 @@ open class CoderSettings(
         }
 
     /**
-     * Return the name of the binary (with extension) for the provided OS and
-     * architecture.
+     * Returns the name of the binary (with extension) for the provided OS and architecture.
      */
-    private fun getCoderCLIForOS(
-        os: OS?,
-        arch: Arch?,
-    ): String {
-        logger.info("Resolving binary for $os $arch")
-        if (os == null) {
-            logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
-            return "coder-windows-amd64.exe"
-        }
-        return when (os) {
-            OS.WINDOWS ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-windows-amd64.exe"
-                    Arch.ARM64 -> "coder-windows-arm64.exe"
-                    else -> "coder-windows-amd64.exe"
-                }
+    private fun getCoderCLIForOS(os: OS?, arch: Arch?): String {
+        logger.debug("Resolving binary for $os $arch")
 
-            OS.LINUX ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-linux-amd64"
-                    Arch.ARM64 -> "coder-linux-arm64"
-                    Arch.ARMV7 -> "coder-linux-armv7"
-                    else -> "coder-linux-amd64"
-                }
-
-            OS.MAC ->
-                when (arch) {
-                    Arch.AMD64 -> "coder-darwin-amd64"
-                    Arch.ARM64 -> "coder-darwin-arm64"
-                    else -> "coder-darwin-amd64"
-                }
+        val (osName, extension) = when (os) {
+            OS.WINDOWS -> "windows" to ".exe"
+            OS.LINUX -> "linux" to ""
+            OS.MAC -> "darwin" to ""
+            null -> {
+                logger.error("Could not resolve client OS and architecture, defaulting to WINDOWS AMD64")
+                return "coder-windows-amd64.exe"
+            }
         }
+
+        val archName = when (arch) {
+            Arch.AMD64 -> "amd64"
+            Arch.ARM64 -> "arm64"
+            Arch.ARMV7 -> "armv7"
+            else -> "amd64" // default fallback
+        }
+
+        return "coder-$osName-$archName$extension"
+    }
+
+    /**
+     * Returns the name of the signature file (.asc) for the provided OS and architecture.
+     */
+    private fun getCoderSignatureForOS(os: OS?, arch: Arch?): String {
+        logger.debug("Resolving signature for $os $arch")
+        return "${getCoderCLIForOS(os, arch)}.asc"
     }
 
     companion object {

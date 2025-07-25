@@ -1,6 +1,6 @@
 package com.coder.gateway.util
 
-class SemVer(private val major: Long = 0, private val minor: Long = 0, private val patch: Long = 0) : Comparable<SemVer> {
+class SemVer(val major: Long = 0, val minor: Long = 0, val patch: Long = 0) : Comparable<SemVer> {
     init {
         require(major >= 0) { "Coder major version must be a positive number" }
         require(minor >= 0) { "Coder minor version must be a positive number" }

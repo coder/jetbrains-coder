@@ -28,7 +28,7 @@ open class LinkHandler(
      * Throw if required arguments are not supplied or the workspace is not in a
      * connectable state.
      */
-    fun handle(
+    suspend fun handle(
         parameters: Map<String, String>,
         indicator: ((t: String) -> Unit)? = null,
     ): WorkspaceProjectIDE {
@@ -36,6 +36,10 @@ open class LinkHandler(
             parameters.url() ?: dialogUi.ask("Deployment URL", "Enter the full URL of your Coder deployment")
         if (deploymentURL.isNullOrBlank()) {
             throw MissingArgumentException("Query parameter \"$URL\" is missing")
+        }
+        val result = deploymentURL.validateStrictWebUrl()
+        if (result is WebUrlValidationResult.Invalid) {
+            throw IllegalArgumentException(result.reason)
         }
 
         val queryTokenRaw = parameters.token()

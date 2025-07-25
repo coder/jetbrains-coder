@@ -4,16 +4,16 @@ import java.util.Locale
 
 fun getOS(): OS? = OS.from(System.getProperty("os.name"))
 
-fun getArch(): Arch? = Arch.from(System.getProperty("os.arch").lowercase(Locale.getDefault()))
+fun getArch(): Arch? = Arch.from(System.getProperty("os.arch")?.lowercase(Locale.getDefault()))
 
 enum class OS {
     WINDOWS,
     LINUX,
-    MAC,
-    ;
+    MAC;
 
     companion object {
-        fun from(os: String): OS? = when {
+        fun from(os: String?): OS? = when {
+            os.isNullOrBlank() -> null
             os.contains("win", true) -> {
                 WINDOWS
             }
@@ -38,7 +38,8 @@ enum class Arch {
     ;
 
     companion object {
-        fun from(arch: String): Arch? = when {
+        fun from(arch: String?): Arch? = when {
+            arch.isNullOrBlank() -> null
             arch.contains("amd64", true) || arch.contains("x86_64", true) -> AMD64
             arch.contains("arm64", true) || arch.contains("aarch64", true) -> ARM64
             arch.contains("armv7", true) -> ARMV7
