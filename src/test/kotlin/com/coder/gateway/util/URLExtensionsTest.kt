@@ -117,7 +117,7 @@ internal class URLExtensionsTest {
         val url = "http://[invalid-uri]"
         val result = url.validateStrictWebUrl()
         assertEquals(
-            WebUrlValidationResult.Invalid("$url could not be parsed as a URI reference"),
+            WebUrlValidationResult.Invalid("Malformed IPv6 address at index 8: $url"),
             result
         )
     }
