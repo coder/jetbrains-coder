@@ -16,6 +16,70 @@ There are three ways to get into a workspace:
 
 Currently the first two will configure SSH but the third does not yet.
 
+## GPG Signature Verification
+
+The Coder Gateway plugin starting with version *2.22.0* implements a comprehensive GPG signature verification system to
+ensure the authenticity and integrity of downloaded Coder CLI binaries. This security feature helps protect users from
+running potentially malicious or tampered binaries.
+
+### How It Works
+
+1. **Binary Download**: When connecting to a Coder deployment, the plugin downloads the appropriate Coder CLI binary for
+   the user's operating system and architecture from the deployment's `/bin/` endpoint.
+
+2. **Signature Download**: After downloading the binary, the plugin attempts to download the corresponding `.asc`
+   signature file from the same location. The signature file is named according to the binary (e.g.,
+   `coder-linux-amd64.asc` for `coder-linux-amd64`).
+
+3. **Fallback Signature Sources**: If the signature is not available from the deployment, the plugin can optionally fall
+   back to downloading signatures from `releases.coder.com`. This is controlled by the `fallbackOnCoderForSignatures`
+   setting.
+
+4. **GPG Verification**: The plugin uses the BouncyCastle library shipped with Gateway app to verify the detached GPG
+   signature against the downloaded binary using Coder's trusted public key.
+
+5. **User Interaction**: If signature verification fails or signatures are unavailable, the plugin presents security
+   warnings
+   to users, allowing them to accept the risk and continue or abort the operation.
+
+### Verification Process
+
+The verification process involves several components:
+
+- **`GPGVerifier`**: Handles the core GPG signature verification logic using BouncyCastle
+- **`VerificationResult`**: Represents the outcome of verification (Valid, Invalid, Failed, SignatureNotFound)
+- **`CoderDownloadService`**: Manages downloading both binaries and their signatures
+- **`CoderCLIManager`**: Orchestrates the download and verification workflow
+
+### Configuration Options
+
+Users can control signature verification behavior through plugin settings:
+
+- **`disableSignatureVerification`**: When enabled, skips all signature verification. This is useful for clients running
+  custom CLI builds, or
+  customers with old deployment versions that don't have a signature published on `releases.coder.com`.
+- **`fallbackOnCoderForSignatures`**: When enabled, allows downloading signatures from `releases.coder.com` if not
+  available from the deployment
+
+### Security Considerations
+
+- The plugin embeds Coder's trusted public key in the plugin resources
+- Verification uses detached signatures, which are more secure than attached signatures
+- Users are warned about security risks when verification fails
+- The system gracefully handles cases where signatures are unavailable
+- All verification failures are logged for debugging purposes
+
+### Error Handling
+
+The system handles various failure scenarios:
+
+- **Missing signatures**: Prompts user to accept risk or abort
+- **Invalid signatures**: Warns user about potential tampering and prompts user to accept risk or abort
+- **Verification failures**: Prompts user to accept risk or abort
+
+This signature verification system ensures that users can trust the Coder CLI binaries they download through the plugin,
+protecting against supply chain attacks and ensuring binary integrity.
+
 ## Development
 
 To manually install a local build:
