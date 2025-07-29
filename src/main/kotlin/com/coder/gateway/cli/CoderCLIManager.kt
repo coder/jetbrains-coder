@@ -174,6 +174,11 @@ class CoderCLIManager(
                     else -> result as DownloadResult.Downloaded
                 }
             }
+            if (settings.disableSignatureVerification) {
+                downloader.commit()
+                logger.info("Skipping over CLI signature verification, it is disabled by the user")
+                return true
+            }
 
             var signatureResult = withContext(Dispatchers.IO) {
                 downloader.downloadSignature(showTextProgress)
