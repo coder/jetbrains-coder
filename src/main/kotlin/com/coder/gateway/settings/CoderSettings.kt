@@ -65,7 +65,12 @@ open class CoderSettingsState(
     open var enableBinaryDirectoryFallback: Boolean = false,
 
     /**
-     * Controls whether we fall back release.coder.com
+     * Controls whether we verify the cli signature
+     */
+    open var disableSignatureVerification: Boolean = false,
+
+    /**
+     * Controls whether we fall back release.coder.com if signature validation is enabled
      */
     open var fallbackOnCoderForSignatures: Boolean = false,
 
@@ -159,6 +164,12 @@ open class CoderSettings(
      */
     val enableBinaryDirectoryFallback: Boolean
         get() = state.enableBinaryDirectoryFallback
+
+    /**
+     * Controls whether we verify the cli signature
+     */
+    val disableSignatureVerification: Boolean
+        get() = state.disableSignatureVerification
 
     /**
      * Controls whether we fall back release.coder.com

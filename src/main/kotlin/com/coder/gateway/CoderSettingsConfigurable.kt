@@ -8,13 +8,17 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.options.BoundConfigurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.ValidationInfo
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.selected
 import com.intellij.ui.layout.ValidationInfoBuilder
+import com.intellij.ui.layout.not
 import java.net.URL
 import java.nio.file.Path
 
@@ -60,22 +64,27 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::binaryDirectory)
                     .comment(CoderGatewayBundle.message("gateway.connector.settings.binary-destination.comment"))
             }.layout(RowLayout.PARENT_GRID)
-            row {
-                cell() // For alignment.
-                checkBox(CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.title"))
-                    .bindSelected(state::enableBinaryDirectoryFallback)
-                    .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.enable-binary-directory-fallback.comment"),
-                    )
-            }.layout(RowLayout.PARENT_GRID)
-            row {
-                cell() // For alignment.
-                checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
-                    .bindSelected(state::fallbackOnCoderForSignatures)
-                    .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
-                    )
-            }.layout(RowLayout.PARENT_GRID)
+            group {
+                lateinit var signatureVerificationCheckBox: Cell<JBCheckBox>
+                row {
+                    cell() // For alignment.
+                    signatureVerificationCheckBox =
+                        checkBox(CoderGatewayBundle.message("gateway.connector.settings.disable-signature-validation.title"))
+                            .bindSelected(state::disableSignatureVerification)
+                            .comment(
+                                CoderGatewayBundle.message("gateway.connector.settings.disable-signature-validation.comment"),
+                            )
+                }.layout(RowLayout.PARENT_GRID)
+                row {
+                    cell() // For alignment.
+                    checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                        .bindSelected(state::fallbackOnCoderForSignatures)
+                        .comment(
+                            CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                        )
+                }.visibleIf(signatureVerificationCheckBox.selected.not())
+                    .layout(RowLayout.PARENT_GRID)
+            }
             row(CoderGatewayBundle.message("gateway.connector.settings.header-command.title")) {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::headerCommand)
@@ -122,7 +131,10 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 textArea().resizableColumn().align(AlignX.FILL)
                     .bindText(state::sshConfigOptions)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.comment", CODER_SSH_CONFIG_OPTIONS),
+                        CoderGatewayBundle.message(
+                            "gateway.connector.settings.ssh-config-options.comment",
+                            CODER_SSH_CONFIG_OPTIONS
+                        ),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.setup-command.title")) {
@@ -162,7 +174,7 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                     .bindText(state::defaultIde)
                     .comment(
                         "The default IDE version to display in the IDE selection dropdown. " +
-                            "Example format: CL 2023.3.6 233.15619.8",
+                                "Example format: CL 2023.3.6 233.15619.8",
                     )
             }
             row(CoderGatewayBundle.message("gateway.connector.settings.check-ide-updates.heading")) {
