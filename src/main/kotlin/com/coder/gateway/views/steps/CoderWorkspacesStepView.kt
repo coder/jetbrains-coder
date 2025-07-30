@@ -306,7 +306,7 @@ class CoderWorkspacesStepView :
                         CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
                     )
 
-            }.layout(RowLayout.PARENT_GRID)
+            }.visible(state.disableSignatureVerification.not()).layout(RowLayout.PARENT_GRID)
             row {
                 scrollCell(
                     toolbar.createPanel().apply {
