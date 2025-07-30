@@ -63,7 +63,7 @@ internal class CoderSettingsTest {
                             "HOME" to "/tmp/coder-gateway-test/home",
                             "XDG_DATA_HOME" to "/tmp/coder-gateway-test/xdg-data",
                         ),
-                    ),
+                    )
             )
         var expected =
             when (getOS()) {
@@ -408,7 +408,7 @@ internal class CoderSettingsTest {
                     disableAutostart = getOS() != OS.MAC,
                     setupCommand = "test setup",
                     ignoreSetupFailure = true,
-                    sshLogDirectory = "test ssh log directory",
+                    sshLogDirectory = "test ssh log directory"
                 ),
             )
 

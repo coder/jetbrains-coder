@@ -124,7 +124,7 @@ internal class CoderCLIManagerTest {
             CoderSettings(
                 CoderSettingsState(
                     dataDirectory = tmpdir.resolve("cli-data-dir").toString(),
-                    binaryDirectory = tmpdir.resolve("cli-bin-dir").toString(),
+                    binaryDirectory = tmpdir.resolve("cli-bin-dir").toString()
                 ),
             )
         val url = URL("http://localhost")

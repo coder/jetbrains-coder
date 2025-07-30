@@ -229,31 +229,44 @@ class CoderRestClientTest {
                 // Nothing, so no resources.
                 emptyList(),
                 // One workspace with an agent, but no resources.
-                listOf(TestWorkspace(DataGen.workspace("ws1", agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")))),
+                listOf(
+                    TestWorkspace(
+                        DataGen.workspace(
+                            "ws1",
+                            agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")
+                        )
+                    )
+                ),
                 // One workspace with an agent and resources that do not match the agent.
                 listOf(
                     TestWorkspace(
-                        workspace = DataGen.workspace("ws1", agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")),
-                        resources =
-                        listOf(
-                            DataGen.resource("agent2", "968eea5e-8787-439d-88cd-5bc440216a34"),
-                            DataGen.resource("agent3", "72fbc97b-952c-40c8-b1e5-7535f4407728"),
+                        workspace = DataGen.workspace(
+                            "ws1",
+                            agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")
                         ),
+                        resources =
+                            listOf(
+                                DataGen.resource("agent2", "968eea5e-8787-439d-88cd-5bc440216a34"),
+                                DataGen.resource("agent3", "72fbc97b-952c-40c8-b1e5-7535f4407728"),
+                            ),
                     ),
                 ),
                 // Multiple workspaces but only one has resources.
                 listOf(
                     TestWorkspace(
-                        workspace = DataGen.workspace("ws1", agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")),
+                        workspace = DataGen.workspace(
+                            "ws1",
+                            agents = mapOf("agent1" to "3f51da1d-306f-4a40-ac12-62bda5bc5f9a")
+                        ),
                         resources = emptyList(),
                     ),
                     TestWorkspace(
                         workspace = DataGen.workspace("ws2"),
                         resources =
-                        listOf(
-                            DataGen.resource("agent2", "968eea5e-8787-439d-88cd-5bc440216a34"),
-                            DataGen.resource("agent3", "72fbc97b-952c-40c8-b1e5-7535f4407728"),
-                        ),
+                            listOf(
+                                DataGen.resource("agent2", "968eea5e-8787-439d-88cd-5bc440216a34"),
+                                DataGen.resource("agent3", "72fbc97b-952c-40c8-b1e5-7535f4407728"),
+                            ),
                     ),
                     TestWorkspace(
                         workspace = DataGen.workspace("ws3"),
@@ -272,7 +285,8 @@ class CoderRestClientTest {
                     val matches = resourceEndpoint.find(exchange.requestURI.path)
                     if (matches != null) {
                         val templateVersionId = UUID.fromString(matches.destructured.toList()[0])
-                        val ws = workspaces.firstOrNull { it.workspace.latestBuild.templateVersionID == templateVersionId }
+                        val ws =
+                            workspaces.firstOrNull { it.workspace.latestBuild.templateVersionID == templateVersionId }
                         if (ws != null) {
                             val body =
                                 moshi.adapter<List<WorkspaceResource>>(
@@ -326,7 +340,8 @@ class CoderRestClientTest {
                 val buildMatch = buildEndpoint.find(exchange.requestURI.path)
                 if (buildMatch != null) {
                     val workspaceId = UUID.fromString(buildMatch.destructured.toList()[0])
-                    val json = moshi.adapter(CreateWorkspaceBuildRequest::class.java).fromJson(exchange.requestBody.source().buffer())
+                    val json = moshi.adapter(CreateWorkspaceBuildRequest::class.java)
+                        .fromJson(exchange.requestBody.source().buffer())
                     if (json == null) {
                         val response = Response("No body", "No body for create workspace build request")
                         val body = moshi.adapter(Response::class.java).toJson(response).toByteArray()
@@ -396,8 +411,8 @@ class CoderRestClientTest {
             CoderSettings(
                 CoderSettingsState(
                     tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
-                    tlsAlternateHostname = "localhost",
-                ),
+                    tlsAlternateHostname = "localhost"
+                )
             )
         val user = DataGen.user()
         val (srv, url) = mockTLSServer("self-signed")
@@ -422,8 +437,8 @@ class CoderRestClientTest {
             CoderSettings(
                 CoderSettingsState(
                     tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
-                    tlsAlternateHostname = "fake.example.com",
-                ),
+                    tlsAlternateHostname = "fake.example.com"
+                )
             )
         val (srv, url) = mockTLSServer("self-signed")
         val client = CoderRestClient(URL(url), "token", settings)
@@ -441,8 +456,8 @@ class CoderRestClientTest {
         val settings =
             CoderSettings(
                 CoderSettingsState(
-                    tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString(),
-                ),
+                    tlsCAPath = Path.of("src/test/fixtures/tls", "self-signed.crt").toString()
+                )
             )
         val (srv, url) = mockTLSServer("no-signing")
         val client = CoderRestClient(URL(url), "token", settings)
@@ -461,7 +476,7 @@ class CoderRestClientTest {
             CoderSettings(
                 CoderSettingsState(
                     tlsCAPath = Path.of("src/test/fixtures/tls", "chain-root.crt").toString(),
-                ),
+                )
             )
         val user = DataGen.user()
         val (srv, url) = mockTLSServer("chain")
@@ -505,7 +520,8 @@ class CoderRestClientTest {
                     "bar",
                     true,
                     object : ProxySelector() {
-                        override fun select(uri: URI): List<Proxy> = listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("localhost", srv2.address.port)))
+                        override fun select(uri: URI): List<Proxy> =
+                            listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress("localhost", srv2.address.port)))
 
                         override fun connectFailed(
                             uri: URI,

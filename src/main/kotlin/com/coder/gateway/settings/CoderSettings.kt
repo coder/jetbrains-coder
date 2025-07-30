@@ -114,7 +114,7 @@ open class CoderSettingsState(
     // Default version of IDE to display in IDE selection dropdown
     open var defaultIde: String = "",
     // Whether to check for IDE updates.
-    open var checkIDEUpdates: Boolean = true,
+    open var checkIDEUpdates: Boolean = true
 )
 
 /**
@@ -142,7 +142,7 @@ open class CoderSettings(
     // Overrides the default environment (for tests).
     private val env: Environment = Environment(),
     // Overrides the default binary name (for tests).
-    private val binaryName: String? = null,
+    private val binaryName: String? = null
 ) {
     val tls = CoderTLSSettings(state)
 
