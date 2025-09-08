@@ -23,9 +23,9 @@ jobs:
           - windows-latest
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: zulu
           java-version: 17
@@ -56,11 +56,11 @@ jobs:
     steps:
       # Check out current repository
       - name: Fetch Sources
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       # Setup Java 11 environment for the next steps
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: zulu
           java-version: 17
@@ -141,7 +141,7 @@ jobs:
 
       # Check out current repository
       - name: Fetch Sources
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v5.0.0
 
       # Remove old release drafts by using the curl request for the available releases with draft flag
       - name: Remove Old Release Drafts

@@ -288,6 +288,7 @@ class CoderCLIManager(
         return exec(
             "login",
             deploymentURL.toString(),
+            "--use-token-as-session",
             "--token",
             token,
             "--global-config",
