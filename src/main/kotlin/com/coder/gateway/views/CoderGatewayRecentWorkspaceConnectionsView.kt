@@ -5,7 +5,6 @@ package com.coder.gateway.views
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
-import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
@@ -75,8 +74,6 @@ data class DeploymentInfo(
     var items: List<WorkspaceAgentListModel>? = null,
     // Null if there have not been any errors yet.
     var error: String? = null,
-    // Null if unable to ensure the CLI is downloaded.
-    var cli: CoderCLIManager? = null,
 )
 
 class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback: (Component) -> Unit) :
@@ -178,13 +175,18 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         val me = deployment?.client?.me?.username
                         val workspaceWithAgent = deployment?.items?.firstOrNull {
                             it.workspace.ownerName + "/" + it.workspace.name == workspaceName ||
-                                (it.workspace.ownerName == me && it.workspace.name == workspaceName)
+                                    (it.workspace.ownerName == me && it.workspace.name == workspaceName)
                         }
                         val status =
                             if (deploymentError != null) {
                                 Triple(UIUtil.getErrorForeground(), deploymentError, UIUtil.getBalloonErrorIcon())
                             } else if (workspaceWithAgent != null) {
-                                val inLoadingState = listOf(WorkspaceStatus.STARTING, WorkspaceStatus.CANCELING, WorkspaceStatus.DELETING, WorkspaceStatus.STOPPING).contains(workspaceWithAgent.workspace.latestBuild.status)
+                                val inLoadingState = listOf(
+                                    WorkspaceStatus.STARTING,
+                                    WorkspaceStatus.CANCELING,
+                                    WorkspaceStatus.DELETING,
+                                    WorkspaceStatus.STOPPING
+                                ).contains(workspaceWithAgent.workspace.latestBuild.status)
 
                                 Triple(
                                     workspaceWithAgent.status.statusColor(),
@@ -196,7 +198,11 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                     },
                                 )
                             } else {
-                                Triple(UIUtil.getContextHelpForeground(), "Querying workspace status...", AnimatedIcon.Default())
+                                Triple(
+                                    UIUtil.getContextHelpForeground(),
+                                    "Querying workspace status...",
+                                    AnimatedIcon.Default()
+                                )
                             }
                         val gap =
                             if (top) {
@@ -216,7 +222,13 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             label("").resizableColumn().align(AlignX.FILL)
                         }.topGap(gap)
 
-                        val enableLinks = listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED, WorkspaceStatus.STARTING, WorkspaceStatus.RUNNING).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
+                        val enableLinks = listOf(
+                            WorkspaceStatus.STOPPED,
+                            WorkspaceStatus.CANCELED,
+                            WorkspaceStatus.FAILED,
+                            WorkspaceStatus.STARTING,
+                            WorkspaceStatus.RUNNING
+                        ).contains(workspaceWithAgent?.workspace?.latestBuild?.status)
 
                         // We only display an API error on the first workspace rather than duplicating it on each workspace.
                         if (deploymentError == null || showError) {
@@ -236,9 +248,29 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                 if (enableLinks) {
                                     cell(
                                         ActionLink(workspaceProjectIDE.projectPathDisplay) {
-                                            withoutNull(deployment?.cli, workspaceWithAgent?.workspace) { cli, workspace ->
+                                            withoutNull(
+                                                deployment?.client,
+                                                workspaceWithAgent?.workspace
+                                            ) { client, workspace ->
                                                 CoderRemoteConnectionHandle().connect {
-                                                    if (listOf(WorkspaceStatus.STOPPED, WorkspaceStatus.CANCELED, WorkspaceStatus.FAILED).contains(workspace.latestBuild.status)) {
+                                                    if (listOf(
+                                                            WorkspaceStatus.STOPPED,
+                                                            WorkspaceStatus.CANCELED,
+                                                            WorkspaceStatus.FAILED
+                                                        ).contains(workspace.latestBuild.status)
+                                                    ) {
+                                                        val cli = ensureCLI(
+                                                            deploymentURL.toURL(),
+                                                            client.buildInfo().version,
+                                                            settings,
+                                                        )
+                                                        // We only need to log the cli in if we have token-based auth.
+                                                        // Otherwise, we assume it is set up in the same way the plugin
+                                                        // is with mTLS.
+                                                        if (client.token != null) {
+                                                            cli.login(client.token)
+                                                        }
+
                                                         cli.startWorkspace(workspace.ownerName, workspace.name)
                                                     }
                                                     workspaceProjectIDE
@@ -289,33 +321,34 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
      * name, or just `workspace`, if the connection predates when we added owner
      * information, in which case it belongs to the current user.
      */
-    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> = recentConnectionsService.getAllRecentConnections()
-        // Validate and parse connections.
-        .mapNotNull {
-            try {
-                it.toWorkspaceProjectIDE()
-            } catch (e: Exception) {
-                logger.warn("Removing invalid recent connection $it", e)
-                recentConnectionsService.removeConnection(it)
-                null
+    private fun getConnectionsByDeployment(filter: Boolean): Map<String, Map<String, List<WorkspaceProjectIDE>>> =
+        recentConnectionsService.getAllRecentConnections()
+            // Validate and parse connections.
+            .mapNotNull {
+                try {
+                    it.toWorkspaceProjectIDE()
+                } catch (e: Exception) {
+                    logger.warn("Removing invalid recent connection $it", e)
+                    recentConnectionsService.removeConnection(it)
+                    null
+                }
             }
-        }
-        .filter { !filter || matchesFilter(it) }
-        // Group by the deployment.
-        .groupBy { it.deploymentURL.toString() }
-        // Group the connections in each deployment by workspace.
-        .mapValues { (_, connections) ->
-            connections
-                .groupBy { it.name.split(".", limit = 2).first() }
-        }
+            .filter { !filter || matchesFilter(it) }
+            // Group by the deployment.
+            .groupBy { it.deploymentURL.toString() }
+            // Group the connections in each deployment by workspace.
+            .mapValues { (_, connections) ->
+                connections
+                    .groupBy { it.name.split(".", limit = 2).first() }
+            }
 
     /**
      * Return true if the connection matches the current filter.
      */
     private fun matchesFilter(connection: WorkspaceProjectIDE): Boolean = filterString.let {
         it.isNullOrBlank() ||
-            connection.hostname.lowercase(Locale.getDefault()).contains(it) ||
-            connection.projectPath.lowercase(Locale.getDefault()).contains(it)
+                connection.hostname.lowercase(Locale.getDefault()).contains(it) ||
+                connection.projectPath.lowercase(Locale.getDefault()).contains(it)
     }
 
     /**
@@ -362,19 +395,6 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                         throw Exception("Unable to make request; token was not found in CLI config.")
                     }
 
-                    val cli = ensureCLI(
-                        deploymentURL.toURL(),
-                        client.buildInfo().version,
-                        settings,
-                    )
-
-                    // We only need to log the cli in if we have token-based auth.
-                    // Otherwise, we assume it is set up in the same way the plugin
-                    // is with mTLS.
-                    if (client.token != null) {
-                        cli.login(client.token)
-                    }
-
                     // This is purely to populate the current user, which is
                     // used to match workspaces that were not recorded with owner
                     // information.
@@ -386,7 +406,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     connectionsByWorkspace.forEach { (name, connections) ->
                         if (items.firstOrNull {
                                 it.workspace.ownerName + "/" + it.workspace.name == name ||
-                                    (it.workspace.ownerName == me && it.workspace.name == name)
+                                        (it.workspace.ownerName == me && it.workspace.name == name)
                             } == null
                         ) {
                             logger.info("Removing recent connections for deleted workspace $name (found ${connections.size})")
@@ -395,7 +415,6 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                     }
 
                     deployment.client = client
-                    deployment.cli = cli
                     deployment.items = items
                     deployment.error = null
                 } catch (e: Exception) {
