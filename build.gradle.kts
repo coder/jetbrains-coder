@@ -20,7 +20,7 @@ plugins {
     // Gradle Kover Plugin
     id("org.jetbrains.kotlinx.kover") version "0.9.1"
     // Generate Moshi adapters.
-    id("com.google.devtools.ksp") version "1.9.23-1.0.20"
+    id("com.google.devtools.ksp") version "2.2.10-2.0.2"
 }
 
 group = providers.gradleProperty("pluginGroup").get()
