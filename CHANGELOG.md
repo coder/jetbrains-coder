@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.22.2 - 2025-09-08
+
 ### Fixed
 
 - api keys are no longer created each time workspaces are polled
