@@ -182,9 +182,7 @@ class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, priv
         val params = socket.sslParameters
 
         params.serverNames = listOf(RelaxedSNIHostname(alternateName))
-        println(">>> dsjhfnjds")
         socket.sslParameters = params
-        println(">>> asas")
     }
 }
 
