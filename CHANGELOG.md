@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- relaxed SNI hostname resolution
+
 ## 2.22.2 - 2025-09-08
 
 ### Fixed

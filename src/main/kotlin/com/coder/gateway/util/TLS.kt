@@ -5,8 +5,10 @@ import okhttp3.internal.tls.OkHostnameVerifier
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
+import java.net.IDN
 import java.net.InetAddress
 import java.net.Socket
+import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.cert.CertificateException
@@ -19,11 +21,12 @@ import java.util.Locale
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SNIHostName
+import javax.net.ssl.SNIServerName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSession
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.StandardConstants
 import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
@@ -112,7 +115,8 @@ fun coderTrustManagers(tlsCAPath: String): Array<TrustManager> {
     return trustManagerFactory.trustManagers.map { MergedSystemTrustManger(it as X509TrustManager) }.toTypedArray()
 }
 
-class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, private val alternateName: String) : SSLSocketFactory() {
+class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, private val alternateName: String) :
+    SSLSocketFactory() {
     override fun getDefaultCipherSuites(): Array<String> = delegate.defaultCipherSuites
 
     override fun getSupportedCipherSuites(): Array<String> = delegate.supportedCipherSuites
@@ -176,10 +180,18 @@ class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, priv
 
     private fun customizeSocket(socket: SSLSocket) {
         val params = socket.sslParameters
-        params.serverNames = listOf(SNIHostName(alternateName))
+
+        params.serverNames = listOf(RelaxedSNIHostname(alternateName))
+        println(">>> dsjhfnjds")
         socket.sslParameters = params
+        println(">>> asas")
     }
 }
+
+private class RelaxedSNIHostname(hostname: String) : SNIServerName(
+    StandardConstants.SNI_HOST_NAME,
+    IDN.toASCII(hostname, 0).toByteArray(StandardCharsets.UTF_8)
+)
 
 class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifier {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -244,5 +256,6 @@ class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) :
         }
     }
 
-    override fun getAcceptedIssuers(): Array<X509Certificate> = otherTrustManager.acceptedIssuers + systemTrustManager.acceptedIssuers
+    override fun getAcceptedIssuers(): Array<X509Certificate> =
+        otherTrustManager.acceptedIssuers + systemTrustManager.acceptedIssuers
 }
