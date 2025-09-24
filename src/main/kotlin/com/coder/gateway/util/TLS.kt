@@ -5,10 +5,6 @@ import okhttp3.internal.tls.OkHostnameVerifier
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
-import java.net.IDN
-import java.net.InetAddress
-import java.net.Socket
-import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.cert.CertificateException
@@ -21,12 +17,9 @@ import java.util.Locale
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SNIServerName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSession
-import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.StandardConstants
 import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
@@ -60,7 +53,7 @@ fun sslContextFromPEMs(
                 val kf = KeyFactory.getInstance("RSA")
                 val keySpec = PKCS8EncodedKeySpec(pemBytes)
                 kf.generatePrivate(keySpec)
-            } catch (e: InvalidKeySpecException) {
+            } catch (_: InvalidKeySpecException) {
                 val kf = KeyFactory.getInstance("EC")
                 val keySpec = PKCS8EncodedKeySpec(pemBytes)
                 kf.generatePrivate(keySpec)
@@ -87,11 +80,7 @@ fun sslContextFromPEMs(
 
 fun coderSocketFactory(settings: CoderTLSSettings): SSLSocketFactory {
     val sslContext = sslContextFromPEMs(settings.certPath, settings.keyPath, settings.caPath)
-    if (settings.altHostname.isBlank()) {
-        return sslContext.socketFactory
-    }
-
-    return AlternateNameSSLSocketFactory(sslContext.socketFactory, settings.altHostname)
+    return sslContext.socketFactory
 }
 
 fun coderTrustManagers(tlsCAPath: String): Array<TrustManager> {
@@ -114,82 +103,6 @@ fun coderTrustManagers(tlsCAPath: String): Array<TrustManager> {
     trustManagerFactory.init(truststore)
     return trustManagerFactory.trustManagers.map { MergedSystemTrustManger(it as X509TrustManager) }.toTypedArray()
 }
-
-class AlternateNameSSLSocketFactory(private val delegate: SSLSocketFactory, private val alternateName: String) :
-    SSLSocketFactory() {
-    override fun getDefaultCipherSuites(): Array<String> = delegate.defaultCipherSuites
-
-    override fun getSupportedCipherSuites(): Array<String> = delegate.supportedCipherSuites
-
-    override fun createSocket(): Socket {
-        val socket = delegate.createSocket() as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(
-        host: String?,
-        port: Int,
-    ): Socket {
-        val socket = delegate.createSocket(host, port) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(
-        host: String?,
-        port: Int,
-        localHost: InetAddress?,
-        localPort: Int,
-    ): Socket {
-        val socket = delegate.createSocket(host, port, localHost, localPort) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(
-        host: InetAddress?,
-        port: Int,
-    ): Socket {
-        val socket = delegate.createSocket(host, port) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(
-        address: InetAddress?,
-        port: Int,
-        localAddress: InetAddress?,
-        localPort: Int,
-    ): Socket {
-        val socket = delegate.createSocket(address, port, localAddress, localPort) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    override fun createSocket(
-        s: Socket?,
-        host: String?,
-        port: Int,
-        autoClose: Boolean,
-    ): Socket {
-        val socket = delegate.createSocket(s, host, port, autoClose) as SSLSocket
-        customizeSocket(socket)
-        return socket
-    }
-
-    private fun customizeSocket(socket: SSLSocket) {
-        val params = socket.sslParameters
-
-        params.serverNames = listOf(RelaxedSNIHostname(alternateName))
-        socket.sslParameters = params
-    }
-}
-
-private class RelaxedSNIHostname(hostname: String) : SNIServerName(
-    StandardConstants.SNI_HOST_NAME,
-    IDN.toASCII(hostname, 0).toByteArray(StandardCharsets.UTF_8)
-)
 
 class CoderHostnameVerifier(private val alternateName: String) : HostnameVerifier {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -238,7 +151,7 @@ class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) :
     ) {
         try {
             otherTrustManager.checkClientTrusted(chain, authType)
-        } catch (e: CertificateException) {
+        } catch (_: CertificateException) {
             systemTrustManager.checkClientTrusted(chain, authType)
         }
     }
@@ -249,7 +162,7 @@ class MergedSystemTrustManger(private val otherTrustManager: X509TrustManager) :
     ) {
         try {
             otherTrustManager.checkServerTrusted(chain, authType)
-        } catch (e: CertificateException) {
+        } catch (_: CertificateException) {
             systemTrustManager.checkServerTrusted(chain, authType)
         }
     }
