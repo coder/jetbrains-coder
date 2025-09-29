@@ -98,6 +98,12 @@ open class CoderSettingsState(
     // around issues on macOS where it periodically wakes and Gateway
     // reconnects, keeping the workspace constantly up.
     open var disableAutostart: Boolean = getOS() == OS.MAC,
+
+    /**
+     * Whether SSH wildcard config is enabled
+     */
+    open var isSshWildcardConfigEnabled: Boolean = true,
+
     // Extra SSH config options.
     open var sshConfigOptions: String = "",
     // An external command to run in the directory of the IDE before connecting
@@ -198,6 +204,12 @@ open class CoderSettings(
      */
     val disableAutostart: Boolean
         get() = state.disableAutostart
+
+    /**
+     * Whether SSH wildcard config is enabled
+     */
+    val isSshWildcardConfigEnabled: Boolean
+        get() = state.isSshWildcardConfigEnabled
 
     /**
      * Extra SSH config to append to each host block.
