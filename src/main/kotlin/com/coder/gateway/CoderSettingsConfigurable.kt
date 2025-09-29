@@ -120,13 +120,24 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                         CoderGatewayBundle.message("gateway.connector.settings.tls-alt-name.comment"),
                     )
             }.layout(RowLayout.PARENT_GRID)
-            row(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.heading")) {
-                checkBox(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.title"))
-                    .bindSelected(state::disableAutostart)
-                    .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment"),
-                    )
-            }.layout(RowLayout.PARENT_GRID)
+            group {
+                row {
+                    cell() // For alignment.
+                    checkBox(CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.title"))
+                        .bindSelected(state::disableAutostart)
+                        .comment(
+                            CoderGatewayBundle.message("gateway.connector.settings.disable-autostart.comment"),
+                        )
+                }.layout(RowLayout.PARENT_GRID)
+                row {
+                    cell() // For alignment.
+                    checkBox(CoderGatewayBundle.message("gateway.connector.settings.wildcard-config.title"))
+                        .bindSelected(state::isSshWildcardConfigEnabled)
+                        .comment(
+                            CoderGatewayBundle.message("gateway.connector.settings.wildcard-config.comment"),
+                        )
+                }.layout(RowLayout.PARENT_GRID)
+            }
             row(CoderGatewayBundle.message("gateway.connector.settings.ssh-config-options.title")) {
                 textArea().resizableColumn().align(AlignX.FILL)
                     .bindText(state::sshConfigOptions)
