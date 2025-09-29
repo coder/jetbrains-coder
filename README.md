@@ -10,6 +10,10 @@ Follow](https://img.shields.io/twitter/follow/CoderHQ?label=%40CoderHQ&style=soc
 The Coder Gateway plugin lets you open [Coder](https://github.com/coder/coder)
 workspaces in your JetBrains IDEs with a single click.
 
+> [!NOTE]  
+> We recommend using the [Coder Toolbox plugin](https://github.com/coder/coder-jetbrains-toolbox), which offers significant stability and connectivity benefits over Gateway. Future updates of the Coder plugin on Jetbrains will be made to the Toolbox plugin. Reference our [documentation](https://coder.com/docs/user-guides/workspace-access/jetbrains/toolbox) for more information.
+
+
 **Manage less**
 
 - Ensure your entire team is using the same tools and resources
