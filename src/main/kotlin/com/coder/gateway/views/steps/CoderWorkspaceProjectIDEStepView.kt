@@ -214,7 +214,7 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        if (data.cliManager.features.wildcardSSH) {
+                        if (settings.isSshWildcardConfigEnabled && data.cliManager.features.wildcardSSH) {
                             data.cliManager.configSsh(emptySet(), data.client.me)
                         } else {
                             data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)

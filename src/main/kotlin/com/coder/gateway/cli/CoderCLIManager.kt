@@ -373,7 +373,7 @@ class CoderCLIManager(
             SetEnv CODER_SSH_SESSION_TYPE=JetBrains
         """.trimIndent()
         val blockContent =
-            if (feats.wildcardSSH) {
+            if (settings.isSshWildcardConfigEnabled && feats.wildcardSSH) {
                 startBlock + System.lineSeparator() +
                         """
                     Host ${getHostPrefix()}--*
@@ -622,7 +622,7 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String = if (features.wildcardSSH) {
+    ): String = if (settings.isSshWildcardConfigEnabled && features.wildcardSSH) {
         "${getHostPrefix()}--${workspace.ownerName}--${workspace.name}.${agent.name}"
     } else {
         // For a user's own workspace, we use the old syntax without a username for backwards compatibility,
@@ -638,7 +638,7 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String = if (features.wildcardSSH) {
+    ): String = if (settings.isSshWildcardConfigEnabled && features.wildcardSSH) {
         "${getHostPrefix()}-bg--${workspace.ownerName}--${workspace.name}.${agent.name}"
     } else {
         getHostName(workspace, currentUser, agent) + "--bg"

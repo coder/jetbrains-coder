@@ -74,7 +74,7 @@ open class LinkHandler(
         var workspace: Workspace
         var workspaces: List<Workspace> = emptyList()
         var workspacesAndAgents: Set<Pair<Workspace, WorkspaceAgent>> = emptySet()
-        if (cli.features.wildcardSSH) {
+        if (settings.isSshWildcardConfigEnabled && cli.features.wildcardSSH) {
             workspace = client.workspaceByOwnerAndName(owner, workspaceName)
         } else {
             workspaces = client.workspaces()
