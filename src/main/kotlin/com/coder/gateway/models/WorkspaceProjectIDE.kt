@@ -18,7 +18,7 @@ private val NON_STABLE_RELEASE_TYPES = setOf("EAP", "RC", "NIGHTLY", "PREVIEW")
  * Validated parameters for downloading and opening a project using an IDE on a
  * workspace.
  */
-class WorkspaceProjectIDE(
+data class WorkspaceProjectIDE(
     // Either `workspace.agent` for old connections or `user/workspace.agent`
     // for new connections.
     val name: String,
