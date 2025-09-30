@@ -12,7 +12,6 @@ import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
@@ -129,7 +128,7 @@ class CoderCLIManager(
     // The URL of the deployment this CLI is for.
     private val deploymentURL: URL,
     // Plugin configuration.
-    private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
+    private val settings: CoderSettings,
     // If the binary directory is not writable, this can be used to force the
     // manager to download to the data directory instead.
     private val forceDownloadToData: Boolean = false,
