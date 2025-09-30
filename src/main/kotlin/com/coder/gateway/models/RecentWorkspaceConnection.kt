@@ -82,7 +82,8 @@ class RecentWorkspaceConnection(
 
         other as RecentWorkspaceConnection
 
-        if (coderWorkspaceHostname != other.coderWorkspaceHostname) return false
+        if (name != other.name) return false
+        if (deploymentURL != other.deploymentURL) return false
         if (projectPath != other.projectPath) return false
         if (ideProductCode != other.ideProductCode) return false
         if (ideBuildNumber != other.ideBuildNumber) return false
@@ -92,7 +93,8 @@ class RecentWorkspaceConnection(
 
     override fun hashCode(): Int {
         var result = super.hashCode()
-        result = 31 * result + (coderWorkspaceHostname?.hashCode() ?: 0)
+        result = 31 * result + (name?.hashCode() ?: 0)
+        result = 31 * result + (deploymentURL?.hashCode() ?: 0)
         result = 31 * result + (projectPath?.hashCode() ?: 0)
         result = 31 * result + (ideProductCode?.hashCode() ?: 0)
         result = 31 * result + (ideBuildNumber?.hashCode() ?: 0)
@@ -101,17 +103,20 @@ class RecentWorkspaceConnection(
     }
 
     override fun compareTo(other: RecentWorkspaceConnection): Int {
-        val i = other.coderWorkspaceHostname?.let { coderWorkspaceHostname?.compareTo(it) }
+        val i = other.name?.let { name?.compareTo(it) }
         if (i != null && i != 0) return i
 
-        val j = other.projectPath?.let { projectPath?.compareTo(it) }
+        val j = other.deploymentURL?.let { deploymentURL?.compareTo(it) }
         if (j != null && j != 0) return j
 
-        val k = other.ideProductCode?.let { ideProductCode?.compareTo(it) }
+        val k = other.projectPath?.let { projectPath?.compareTo(it) }
         if (k != null && k != 0) return k
 
-        val l = other.ideBuildNumber?.let { ideBuildNumber?.compareTo(it) }
+        val l = other.ideProductCode?.let { ideProductCode?.compareTo(it) }
         if (l != null && l != 0) return l
+
+        val m = other.ideBuildNumber?.let { ideBuildNumber?.compareTo(it) }
+        if (m != null && m != 0) return m
 
         return 0
     }
