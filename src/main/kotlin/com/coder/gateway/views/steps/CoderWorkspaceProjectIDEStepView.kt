@@ -214,7 +214,7 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        if (data.cliManager.features.wildcardSSH) {
+                        if (settings.isSshWildcardConfigEnabled && data.cliManager.features.wildcardSSH) {
                             data.cliManager.configSsh(emptySet(), data.client.me)
                         } else {
                             data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
@@ -237,7 +237,7 @@ class CoderWorkspaceProjectIDEStepView(
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
                                 val executor = createRemoteExecutor(
-                                    CoderCLIManager(data.client.url).getBackgroundHostName(
+                                    CoderCLIManager(data.client.url, settings).getBackgroundHostName(
                                         data.workspace,
                                         data.client.me,
                                         data.agent
@@ -470,7 +470,11 @@ class CoderWorkspaceProjectIDEStepView(
     override fun data(): WorkspaceProjectIDE = withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
         selectedIDE.withWorkspaceProject(
             name = CoderCLIManager.getWorkspaceParts(state.workspace, state.agent),
-            hostname = CoderCLIManager(state.client.url).getHostName(state.workspace, state.client.me, state.agent),
+            hostname = CoderCLIManager(state.client.url, settings).getHostName(
+                state.workspace,
+                state.client.me,
+                state.agent
+            ),
             projectPath = tfProject.text,
             deploymentURL = state.client.url,
         )

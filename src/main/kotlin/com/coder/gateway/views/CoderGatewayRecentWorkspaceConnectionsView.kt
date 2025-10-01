@@ -5,6 +5,7 @@ package com.coder.gateway.views
 import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.CoderGatewayConstants
 import com.coder.gateway.CoderRemoteConnectionHandle
+import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.cli.ensureCLI
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceAgentListModel
@@ -177,6 +178,7 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                             it.workspace.ownerName + "/" + it.workspace.name == workspaceName ||
                                     (it.workspace.ownerName == me && it.workspace.name == workspaceName)
                         }
+
                         val status =
                             if (deploymentError != null) {
                                 Triple(UIUtil.getErrorForeground(), deploymentError, UIUtil.getBalloonErrorIcon())
@@ -250,10 +252,11 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                         ActionLink(workspaceProjectIDE.projectPathDisplay) {
                                             withoutNull(
                                                 deployment?.client,
-                                                workspaceWithAgent?.workspace
-                                            ) { client, workspace ->
+                                                workspaceWithAgent?.workspace,
+                                                workspaceWithAgent?.agent
+                                            ) { client, workspace, agent ->
                                                 CoderRemoteConnectionHandle().connect {
-                                                    if (listOf(
+                                                    val cli = if (listOf(
                                                             WorkspaceStatus.STOPPED,
                                                             WorkspaceStatus.CANCELED,
                                                             WorkspaceStatus.FAILED
@@ -272,8 +275,21 @@ class CoderGatewayRecentWorkspaceConnectionsView(private val setContentCallback:
                                                         }
 
                                                         cli.startWorkspace(workspace.ownerName, workspace.name)
+                                                        cli
+                                                    } else {
+                                                        CoderCLIManager(deploymentURL.toURL(), settings)
                                                     }
-                                                    workspaceProjectIDE
+                                                    // the ssh config could have changed in the meantime
+                                                    // so we want to make sure we use a proper hostname
+                                                    // depending on whether the ssh wildcard config
+                                                    // is enabled, otherwise the connection will fail.
+                                                    workspaceProjectIDE.copy(
+                                                        hostname = cli.getHostName(
+                                                            workspace,
+                                                            client.me(),
+                                                            agent
+                                                        )
+                                                    )
                                                 }
                                                 GatewayUI.getInstance().reset()
                                             }

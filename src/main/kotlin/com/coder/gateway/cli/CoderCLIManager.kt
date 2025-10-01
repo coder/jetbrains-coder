@@ -12,7 +12,6 @@ import com.coder.gateway.sdk.v2.models.User
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
 import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.settings.CoderSettingsState
 import com.coder.gateway.util.CoderHostnameVerifier
 import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
@@ -129,7 +128,7 @@ class CoderCLIManager(
     // The URL of the deployment this CLI is for.
     private val deploymentURL: URL,
     // Plugin configuration.
-    private val settings: CoderSettings = CoderSettings(CoderSettingsState()),
+    private val settings: CoderSettings,
     // If the binary directory is not writable, this can be used to force the
     // manager to download to the data directory instead.
     private val forceDownloadToData: Boolean = false,
@@ -373,7 +372,7 @@ class CoderCLIManager(
             SetEnv CODER_SSH_SESSION_TYPE=JetBrains
         """.trimIndent()
         val blockContent =
-            if (feats.wildcardSSH) {
+            if (settings.isSshWildcardConfigEnabled && feats.wildcardSSH) {
                 startBlock + System.lineSeparator() +
                         """
                     Host ${getHostPrefix()}--*
@@ -622,7 +621,7 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String = if (features.wildcardSSH) {
+    ): String = if (settings.isSshWildcardConfigEnabled && features.wildcardSSH) {
         "${getHostPrefix()}--${workspace.ownerName}--${workspace.name}.${agent.name}"
     } else {
         // For a user's own workspace, we use the old syntax without a username for backwards compatibility,
@@ -638,7 +637,7 @@ class CoderCLIManager(
         workspace: Workspace,
         currentUser: User,
         agent: WorkspaceAgent,
-    ): String = if (features.wildcardSSH) {
+    ): String = if (settings.isSshWildcardConfigEnabled && features.wildcardSSH) {
         "${getHostPrefix()}-bg--${workspace.ownerName}--${workspace.name}.${agent.name}"
     } else {
         getHostName(workspace, currentUser, agent) + "--bg"

@@ -106,7 +106,7 @@ internal class CoderCLIManagerTest {
     @Test
     fun testServerInternalError() {
         val (srv, url) = mockServer(HttpURLConnection.HTTP_INTERNAL_ERROR)
-        val ccm = CoderCLIManager(url)
+        val ccm = CoderCLIManager(url, CoderSettings(CoderSettingsState()))
 
         val ex =
             assertFailsWith(

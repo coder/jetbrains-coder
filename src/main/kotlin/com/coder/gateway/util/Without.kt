@@ -18,6 +18,22 @@ fun <A, Z> withoutNull(
  * Run block with provided arguments after checking they are all non-null.  This
  * is to enforce non-null values and should be used to signify developer error.
  */
+fun <A, B, C, Z> withoutNull(
+    a: A?,
+    b: B?,
+    c: C?,
+    block: (a: A, b: B, c: C) -> Z,
+): Z {
+    if (a == null || b == null || c == null) {
+        throw Exception("Unexpected null value")
+    }
+    return block(a, b, c)
+}
+
+/**
+ * Run block with provided arguments after checking they are all non-null.  This
+ * is to enforce non-null values and should be used to signify developer error.
+ */
 fun <A, B, Z> withoutNull(
     a: A?,
     b: B?,
