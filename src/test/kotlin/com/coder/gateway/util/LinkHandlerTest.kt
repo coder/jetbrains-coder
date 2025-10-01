@@ -55,15 +55,24 @@ internal class LinkHandlerTest {
         val tests =
             listOf(
                 Pair(mapOf("agent" to "agent_name"), "9a920eee-47fb-4571-9501-e4b3120c12f2"),
-                Pair(mapOf("agent_id" to "9a920eee-47fb-4571-9501-e4b3120c12f2"), "9a920eee-47fb-4571-9501-e4b3120c12f2"),
+                Pair(
+                    mapOf("agent_id" to "9a920eee-47fb-4571-9501-e4b3120c12f2"),
+                    "9a920eee-47fb-4571-9501-e4b3120c12f2"
+                ),
                 Pair(mapOf("agent" to "agent_name_2"), "fb3daea4-da6b-424d-84c7-36b90574cfef"),
-                Pair(mapOf("agent_id" to "fb3daea4-da6b-424d-84c7-36b90574cfef"), "fb3daea4-da6b-424d-84c7-36b90574cfef"),
+                Pair(
+                    mapOf("agent_id" to "fb3daea4-da6b-424d-84c7-36b90574cfef"),
+                    "fb3daea4-da6b-424d-84c7-36b90574cfef"
+                ),
                 Pair(mapOf("agent" to "agent_name_3"), "b0e4c54d-9ba9-4413-8512-11ca1e826a24"),
-                Pair(mapOf("agent_id" to "b0e4c54d-9ba9-4413-8512-11ca1e826a24"), "b0e4c54d-9ba9-4413-8512-11ca1e826a24"),
-                // Prefer agent_id.
+                Pair(
+                    mapOf("agent_id" to "b0e4c54d-9ba9-4413-8512-11ca1e826a24"),
+                    "b0e4c54d-9ba9-4413-8512-11ca1e826a24"
+                ),
+                // Prefer agent name.
                 Pair(
                     mapOf(
-                        "agent" to "agent_name",
+                        "agent" to "agent_name_3",
                         "agent_id" to "b0e4c54d-9ba9-4413-8512-11ca1e826a24",
                     ),
                     "b0e4c54d-9ba9-4413-8512-11ca1e826a24",
@@ -89,15 +98,19 @@ internal class LinkHandlerTest {
                 Triple(mapOf("agent" to "ws.agent_name"), IllegalArgumentException::class, "agent named"),
                 Triple(mapOf("agent" to "agent_name_4"), IllegalArgumentException::class, "agent named"),
                 Triple(mapOf("agent_id" to "not-a-uuid"), IllegalArgumentException::class, "agent with ID"),
-                Triple(mapOf("agent_id" to "ceaa7bcf-1612-45d7-b484-2e0da9349168"), IllegalArgumentException::class, "agent with ID"),
-                // Will ignore agent if agent_id is set even if agent matches.
+                Triple(
+                    mapOf("agent_id" to "ceaa7bcf-1612-45d7-b484-2e0da9349168"),
+                    IllegalArgumentException::class,
+                    "agent with ID"
+                ),
+                // Will ignore agent_id if agent is set even if agent_id matches.
                 Triple(
                     mapOf(
-                        "agent" to "agent_name",
+                        "agent" to "unknown_agent_name",
                         "agent_id" to "ceaa7bcf-1612-45d7-b484-2e0da9349168",
                     ),
                     IllegalArgumentException::class,
-                    "agent with ID",
+                    "The workspace \"ws\" does not have an agent named \"unknown_agent_name\"",
                 ),
             )
 
@@ -142,7 +155,11 @@ internal class LinkHandlerTest {
                 Triple(mapOf("agent" to "ws"), IllegalArgumentException::class, "agent named"),
                 Triple(mapOf("agent" to "ws.agent_name_3"), IllegalArgumentException::class, "agent named"),
                 Triple(mapOf("agent" to "agent_name_4"), IllegalArgumentException::class, "agent named"),
-                Triple(mapOf("agent_id" to "ceaa7bcf-1612-45d7-b484-2e0da9349168"), IllegalArgumentException::class, "agent with ID"),
+                Triple(
+                    mapOf("agent_id" to "ceaa7bcf-1612-45d7-b484-2e0da9349168"),
+                    IllegalArgumentException::class,
+                    "agent with ID"
+                ),
             )
 
         tests.forEach {
@@ -166,7 +183,11 @@ internal class LinkHandlerTest {
                 Triple(mapOf("agent" to null), IllegalArgumentException::class, "has no agents"),
                 Triple(mapOf("agent_id" to null), IllegalArgumentException::class, "has no agents"),
                 Triple(mapOf("agent" to "agent_name"), IllegalArgumentException::class, "has no agents"),
-                Triple(mapOf("agent_id" to "9a920eee-47fb-4571-9501-e4b3120c12f2"), IllegalArgumentException::class, "has no agents"),
+                Triple(
+                    mapOf("agent_id" to "9a920eee-47fb-4571-9501-e4b3120c12f2"),
+                    IllegalArgumentException::class,
+                    "has no agents"
+                ),
             )
 
         tests.forEach {
