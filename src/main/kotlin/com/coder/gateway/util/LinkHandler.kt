@@ -339,12 +339,12 @@ internal fun getMatchingAgent(
     }
 
     if (agent == null) {
-        if (!parameters.agentID().isNullOrBlank()) {
-            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters.agentID()}\"")
-        } else if (!parameters.agentName().isNullOrBlank()) {
+        if (!parameters.agentName().isNullOrBlank()) {
             throw IllegalArgumentException(
-                "The workspace \"${workspace.name}\"does not have an agent named \"${parameters.agentName()}\"",
+                "The workspace \"${workspace.name}\" does not have an agent named \"${parameters.agentName()}\"",
             )
+        } else if (!parameters.agentID().isNullOrBlank()) {
+            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters.agentID()}\"")
         } else {
             throw MissingArgumentException(
                 "Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because the workspace \"${workspace.name}\" has more than one agent",
