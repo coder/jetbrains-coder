@@ -29,6 +29,7 @@ fun Map<String, String>.owner() = this[OWNER]
 
 fun Map<String, String?>.agentName() = this[AGENT_NAME]
 
+@Deprecated("Use the agent name instead")
 fun Map<String, String?>.agentID() = this[AGENT_ID]
 
 fun Map<String, String>.folder() = this[FOLDER]
