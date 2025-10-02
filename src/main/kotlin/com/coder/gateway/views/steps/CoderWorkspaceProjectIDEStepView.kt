@@ -4,10 +4,12 @@ import com.coder.gateway.CoderGatewayBundle
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.icons.CoderIcons
 import com.coder.gateway.models.WorkspaceProjectIDE
+import com.coder.gateway.models.filterOutAvailableReleasedIdes
 import com.coder.gateway.models.toIdeWithStatus
 import com.coder.gateway.models.withWorkspaceProject
 import com.coder.gateway.sdk.v2.models.Workspace
 import com.coder.gateway.sdk.v2.models.WorkspaceAgent
+import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.util.Arch
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.humanizeDuration
@@ -20,6 +22,7 @@ import com.coder.gateway.views.LazyBrowserLink
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.ComponentValidator
@@ -79,15 +82,25 @@ import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 
+// Just extracting the way we display the IDE info into a helper function.
+private fun displayIdeWithStatus(ideWithStatus: IdeWithStatus): String =
+    "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${
+        ideWithStatus.status.name.lowercase(
+            Locale.getDefault(),
+        )
+    }"
+
 /**
  * View for a single workspace.  In particular, show available IDEs and a button
  * to select an IDE and project to run on the workspace.
  */
 class CoderWorkspaceProjectIDEStepView(
-    private val showTitle: Boolean = true,
+    private val showTitle: Boolean = true
 ) : CoderWizardStep<WorkspaceProjectIDE>(
     CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.next.text"),
 ) {
+    private val settings: CoderSettingsService = service<CoderSettingsService>()
+
     private val cs = CoroutineScope(Dispatchers.IO)
     private var ideComboBoxModel = DefaultComboBoxModel<IdeWithStatus>()
     private var state: CoderWorkspacesStepSelection? = null
@@ -187,7 +200,9 @@ class CoderWorkspaceProjectIDEStepView(
         val name = CoderCLIManager.getWorkspaceParts(data.workspace, data.agent)
         logger.info("Initializing workspace step for $name")
 
-        val homeDirectory = data.agent.expandedDirectory ?: data.agent.directory
+        val homeDirectory = data.remoteProjectPath.takeIf { !it.isNullOrBlank() }
+            ?: data.agent.expandedDirectory
+            ?: data.agent.directory
         tfProject.text = if (homeDirectory.isNullOrBlank()) "/home" else homeDirectory
         titleLabel.text = CoderGatewayBundle.message("gateway.connector.view.coder.remoteproject.choose.text", name)
         titleLabel.isVisible = showTitle
@@ -199,7 +214,11 @@ class CoderWorkspaceProjectIDEStepView(
                     logger.info("Configuring Coder CLI...")
                     cbIDE.renderer = IDECellRenderer("Configuring Coder CLI...")
                     withContext(Dispatchers.IO) {
-                        data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
+                        if (settings.isSshWildcardConfigEnabled && data.cliManager.features.wildcardSSH) {
+                            data.cliManager.configSsh(emptySet(), data.client.me)
+                        } else {
+                            data.cliManager.configSsh(data.client.withAgents(data.workspaces), data.client.me)
+                        }
                     }
 
                     val ides =
@@ -209,12 +228,21 @@ class CoderWorkspaceProjectIDEStepView(
                                 cbIDE.renderer =
                                     if (attempt > 1) {
                                         IDECellRenderer(
-                                            CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh.retry", attempt),
+                                            CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.connect-ssh.retry",
+                                                attempt
+                                            ),
                                         )
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.connect-ssh"))
                                     }
-                                val executor = createRemoteExecutor(CoderCLIManager.getBackgroundHostName(data.client.url, data.workspace, data.client.me, data.agent))
+                                val executor = createRemoteExecutor(
+                                    CoderCLIManager(data.client.url, settings).getBackgroundHostName(
+                                        data.workspace,
+                                        data.client.me,
+                                        data.agent
+                                    )
+                                )
 
                                 if (ComponentValidator.getInstance(tfProject).isEmpty) {
                                     logger.info("Installing remote path validator...")
@@ -225,7 +253,10 @@ class CoderWorkspaceProjectIDEStepView(
                                 cbIDE.renderer =
                                     if (attempt > 1) {
                                         IDECellRenderer(
-                                            CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides.retry", attempt),
+                                            CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.retrieve-ides.retry",
+                                                attempt
+                                            ),
                                         )
                                     } else {
                                         IDECellRenderer(CoderGatewayBundle.message("gateway.connector.view.coder.retrieve-ides"))
@@ -234,9 +265,9 @@ class CoderWorkspaceProjectIDEStepView(
                             },
                             retryIf = {
                                 it is ConnectionException ||
-                                    it is TimeoutException ||
-                                    it is SSHException ||
-                                    it is DeployException
+                                        it is TimeoutException ||
+                                        it is SSHException ||
+                                        it is DeployException
                             },
                             onException = { attempt, nextMs, e ->
                                 logger.error("Failed to retrieve IDEs (attempt $attempt; will retry in $nextMs ms)")
@@ -258,9 +289,24 @@ class CoderWorkspaceProjectIDEStepView(
                                     )
                             },
                         )
+
+                    // Check the provided setting to see if there's a default IDE to set.
+                    val defaultIde = ides.find { it ->
+                        // Using contains on the displayable version of the ide means they can be as specific or as vague as they want
+                        // CL 2023.3.6 233.15619.8 -> a specific Clion build
+                        // CL 2023.3.6 -> a specific Clion version
+                        // 2023.3.6 -> a specific version (some customers will only have one specific IDE in their list anyway)
+                        if (settings.defaultIde.isEmpty()) {
+                            false
+                        } else {
+                            displayIdeWithStatus(it).contains(settings.defaultIde)
+                        }
+                    }
+                    val index = ides.indexOf(defaultIde ?: ides.firstOrNull())
+
                     withContext(Dispatchers.IO) {
                         ideComboBoxModel.addAll(ides)
-                        cbIDE.selectedIndex = 0
+                        cbIDE.selectedIndex = index
                     }
                 } catch (e: Exception) {
                     if (isCancellation(e)) {
@@ -283,7 +329,10 @@ class CoderWorkspaceProjectIDEStepView(
      * Validate the remote path whenever it changes.
      */
     private fun installRemotePathValidator(executor: HighLevelHostAccessor) {
-        val disposable = Disposer.newDisposable(ApplicationManager.getApplication(), CoderWorkspaceProjectIDEStepView::class.java.name)
+        val disposable = Disposer.newDisposable(
+            ApplicationManager.getApplication(),
+            CoderWorkspaceProjectIDEStepView::class.java.name
+        )
         ComponentValidator(disposable).installOn(tfProject)
 
         tfProject.document.addDocumentListener(
@@ -296,7 +345,12 @@ class CoderWorkspaceProjectIDEStepView(
                                     val isPathPresent = validateRemotePath(tfProject.text, executor)
                                     if (isPathPresent.pathOrNull == null) {
                                         ComponentValidator.getInstance(tfProject).ifPresent {
-                                            it.updateInfo(ValidationInfo("Can't find directory: ${tfProject.text}", tfProject))
+                                            it.updateInfo(
+                                                ValidationInfo(
+                                                    "Can't find directory: ${tfProject.text}",
+                                                    tfProject
+                                                )
+                                            )
                                         }
                                     } else {
                                         ComponentValidator.getInstance(tfProject).ifPresent {
@@ -305,7 +359,12 @@ class CoderWorkspaceProjectIDEStepView(
                                     }
                                 } catch (e: Exception) {
                                     ComponentValidator.getInstance(tfProject).ifPresent {
-                                        it.updateInfo(ValidationInfo("Can't validate directory: ${tfProject.text}", tfProject))
+                                        it.updateInfo(
+                                            ValidationInfo(
+                                                "Can't validate directory: ${tfProject.text}",
+                                                tfProject
+                                            )
+                                        )
                                     }
                                 }
                             }
@@ -349,27 +408,34 @@ class CoderWorkspaceProjectIDEStepView(
             }
 
         logger.info("Resolved OS and Arch for $name is: $workspaceOS")
-        val installedIdesJob =
-            cs.async(Dispatchers.IO) {
-                executor.getInstalledIDEs().map { it.toIdeWithStatus() }
-            }
-        val idesWithStatusJob =
-            cs.async(Dispatchers.IO) {
-                IntelliJPlatformProduct.entries
-                    .filter { it.showInGateway }
-                    .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
-                    .map { it.toIdeWithStatus() }
-            }
+        val installedIdesJob = cs.async(Dispatchers.IO) {
+            executor.getInstalledIDEs()
+        }
+        val availableToDownloadIdesJob = cs.async(Dispatchers.IO) {
+            IntelliJPlatformProduct.entries
+                .filter { it.showInGateway }
+                .flatMap { CachingProductsJsonWrapper.getInstance().getAvailableIdes(it, workspaceOS) }
+        }
 
-        val installedIdes = installedIdesJob.await().sorted()
-        val idesWithStatus = idesWithStatusJob.await().sorted()
+        val installedIdes = installedIdesJob.await()
+        val availableIdes = availableToDownloadIdesJob.await()
+
         if (installedIdes.isEmpty()) {
             logger.info("No IDE is installed in $name")
         }
-        if (idesWithStatus.isEmpty()) {
+        if (availableIdes.isEmpty()) {
             logger.warn("Could not resolve any IDE for $name, probably $workspaceOS is not supported by Gateway")
         }
-        return installedIdes + idesWithStatus
+
+        val remainingInstalledIdes = installedIdes.filterOutAvailableReleasedIdes(availableIdes)
+        if (remainingInstalledIdes.size < installedIdes.size) {
+            logger.info(
+                "Skipping the following list of installed IDEs because there is already a released version " +
+                        "available for download: ${(installedIdes - remainingInstalledIdes).joinToString { "${it.product.productCode} ${it.presentableVersion}" }}"
+            )
+        }
+        return remainingInstalledIdes.map { it.toIdeWithStatus() }.sorted() + availableIdes.map { it.toIdeWithStatus() }
+            .sorted()
     }
 
     private fun toDeployedOS(
@@ -404,7 +470,11 @@ class CoderWorkspaceProjectIDEStepView(
     override fun data(): WorkspaceProjectIDE = withoutNull(cbIDE.selectedItem, state) { selectedIDE, state ->
         selectedIDE.withWorkspaceProject(
             name = CoderCLIManager.getWorkspaceParts(state.workspace, state.agent),
-            hostname = CoderCLIManager.getHostName(state.client.url, state.workspace, state.client.me, state.agent),
+            hostname = CoderCLIManager(state.client.url, settings).getHostName(
+                state.workspace,
+                state.client.me,
+                state.agent
+            ),
             projectPath = tfProject.text,
             deploymentURL = state.client.url,
         )
@@ -427,7 +497,8 @@ class CoderWorkspaceProjectIDEStepView(
         override fun getSelectedItem(): IdeWithStatus? = super.getSelectedItem() as IdeWithStatus?
     }
 
-    private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) : ListCellRenderer<IdeWithStatus> {
+    private class IDECellRenderer(message: String, cellIcon: Icon = AnimatedIcon.Default.INSTANCE) :
+        ListCellRenderer<IdeWithStatus> {
         private val loadingComponentRenderer: ListCellRenderer<IdeWithStatus> =
             object : ColoredListCellRenderer<IdeWithStatus>() {
                 override fun customizeCellRenderer(
@@ -457,9 +528,9 @@ class CoderWorkspaceProjectIDEStepView(
                 add(JLabel(ideWithStatus.product.ideName, ideWithStatus.product.icon, SwingConstants.LEFT))
                 add(
                     JLabel(
-                        "${ideWithStatus.product.productCode} ${ideWithStatus.presentableVersion} ${ideWithStatus.buildNumber} | ${ideWithStatus.status.name.lowercase(
-                            Locale.getDefault(),
-                        )}",
+                        displayIdeWithStatus(
+                            ideWithStatus,
+                        ),
                     ).apply {
                         foreground = UIUtil.getLabelDisabledForeground()
                     },

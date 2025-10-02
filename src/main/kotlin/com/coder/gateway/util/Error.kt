@@ -28,7 +28,7 @@ fun humanizeConnectionError(deploymentURL: URL, requireTokenAuth: Boolean, e: Ex
         }
         is SocketTimeoutException -> "Unable to connect to $deploymentURL; is it up?"
         is ResponseException, is ConnectException -> "Failed to download Coder CLI: $reason"
-        is SSLHandshakeException -> "Connection to $deploymentURL failed: $reason. See the <a href='https://coder.com/docs/v2/latest/ides/gateway#configuring-the-gateway-plugin-to-use-internal-certificates'>documentation for TLS certificates</a> for information on how to make your system trust certificates coming from your deployment."
+        is SSLHandshakeException -> "Connection to $deploymentURL failed: $reason. See the <a href='https://coder.com/docs/user-guides/workspace-access/jetbrains#configuring-the-gateway-plugin-to-use-internal-certificates'>documentation for TLS certificates</a> for information on how to make your system trust certificates coming from your deployment."
         else -> reason
     }
 }

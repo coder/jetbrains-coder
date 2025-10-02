@@ -12,10 +12,9 @@ import java.time.temporal.TemporalAccessor
 class InstantConverter {
     @ToJson fun toJson(src: Instant?): String = FORMATTER.format(src)
 
-    @FromJson fun fromJson(src: String): Instant? =
-        FORMATTER.parse(src) { temporal: TemporalAccessor? ->
-            Instant.from(temporal)
-        }
+    @FromJson fun fromJson(src: String): Instant? = FORMATTER.parse(src) { temporal: TemporalAccessor? ->
+        Instant.from(temporal)
+    }
 
     companion object {
         private val FORMATTER = DateTimeFormatter.ISO_INSTANT

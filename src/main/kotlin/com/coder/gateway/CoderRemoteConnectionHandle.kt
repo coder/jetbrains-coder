@@ -2,6 +2,7 @@
 
 package com.coder.gateway
 
+import com.coder.gateway.CoderGatewayConstants.GATEWAY_SETUP_COMMAND_ERROR
 import com.coder.gateway.cli.CoderCLIManager
 import com.coder.gateway.models.WorkspaceProjectIDE
 import com.coder.gateway.models.toIdeWithStatus
@@ -65,7 +66,7 @@ class CoderRemoteConnectionHandle {
     private val localTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm")
     private val dialogUi = DialogUi(settings)
 
-    fun connect(getParameters: (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
+    fun connect(getParameters: suspend (indicator: ProgressIndicator) -> WorkspaceProjectIDE) {
         val clientLifetime = LifetimeDefinition()
         clientLifetime.launchUnderBackgroundProgress(CoderGatewayBundle.message("gateway.connector.coder.connection.provider.title")) {
             try {
@@ -93,7 +94,7 @@ class CoderRemoteConnectionHandle {
                             },
                             true,
                         )
-                        if (attempt == 1) {
+                        if (settings.checkIDEUpdate && attempt == 1) {
                             // See if there is a newer (non-EAP) version of the IDE available.
                             checkUpdate(accessor, parameters, indicator)?.let { update ->
                                 // Store the old IDE to delete later.
@@ -160,22 +161,35 @@ class CoderRemoteConnectionHandle {
                 )
                 logger.info("Adding ${parameters.ideName} for ${parameters.hostname}:${parameters.projectPath} to recent connections")
                 recentConnectionsService.addRecentConnection(parameters.toRecentWorkspaceConnection())
+            } catch (e: CoderSetupCommandException) {
+                logger.error("Failed to run setup command", e)
+                showConnectionErrorMessage(
+                    e.message ?: "Unknown error",
+                    "gateway.connector.coder.setup-command.failed",
+                )
             } catch (e: Exception) {
                 if (isCancellation(e)) {
                     logger.info("Connection canceled due to ${e.javaClass.simpleName}")
                 } else {
                     logger.error("Failed to connect (will not retry)", e)
-                    // The dialog will close once we return so write the error
-                    // out into a new dialog.
-                    ApplicationManager.getApplication().invokeAndWait {
-                        Messages.showMessageDialog(
-                            e.message ?: e.javaClass.simpleName ?: "Aborted",
-                            CoderGatewayBundle.message("gateway.connector.coder.connection.failed"),
-                            Messages.getErrorIcon(),
-                        )
-                    }
+                    showConnectionErrorMessage(
+                        e.message ?: e.javaClass.simpleName ?: "Aborted",
+                        "gateway.connector.coder.connection.failed"
+                    )
                 }
             }
+        }
+    }
+
+    // The dialog will close once we return so write the error
+    // out into a new dialog.
+    private fun showConnectionErrorMessage(message: String, titleKey: String) {
+        ApplicationManager.getApplication().invokeAndWait {
+            Messages.showMessageDialog(
+                message,
+                CoderGatewayBundle.message(titleKey),
+                Messages.getErrorIcon(),
+            )
         }
     }
 
@@ -412,17 +426,14 @@ class CoderRemoteConnectionHandle {
     ) {
         if (setupCommand.isNotBlank()) {
             indicator.text = "Running setup command..."
-            try {
+            processSetupCommand(ignoreSetupFailure) {
                 exec(workspace, setupCommand)
-            } catch (ex: Exception) {
-                if (!ignoreSetupFailure) {
-                    throw ex
-                }
             }
         } else {
             logger.info("No setup command to run on ${workspace.hostname}")
         }
     }
+
 
     /**
      * Execute a command in the IDE's bin directory.
@@ -523,5 +534,26 @@ class CoderRemoteConnectionHandle {
 
     companion object {
         val logger = Logger.getInstance(CoderRemoteConnectionHandle::class.java.simpleName)
+        @Throws(CoderSetupCommandException::class)
+        fun processSetupCommand(
+            ignoreSetupFailure: Boolean,
+            execCommand: () -> String
+        ) {
+            try {
+                val errorText = execCommand
+                    .invoke()
+                    .lines()
+                    .firstOrNull { it.contains(GATEWAY_SETUP_COMMAND_ERROR) }
+                    ?.let { it.substring(it.indexOf(GATEWAY_SETUP_COMMAND_ERROR) + GATEWAY_SETUP_COMMAND_ERROR.length).trim() }
+
+                if (!errorText.isNullOrBlank()) {
+                    throw CoderSetupCommandException(errorText)
+                }
+            } catch (ex: Exception) {
+                if (!ignoreSetupFailure) {
+                    throw CoderSetupCommandException(ex.message ?: "Unknown error", ex)
+                }
+            }
+        }
     }
 }

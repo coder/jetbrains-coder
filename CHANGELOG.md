@@ -6,6 +6,109 @@
 
 ### Added
 
+- support for disabling SSH wildcard config.
+
+## 2.22.3 - 2025-09-19
+
+### Fixed
+
+- relaxed SNI hostname resolution
+
+## 2.22.2 - 2025-09-08
+
+### Fixed
+
+- api keys are no longer created each time workspaces are polled
+
+## 2.22.1 - 2025-07-30
+
+### Added
+
+- support for skipping CLI signature verification
+
+## 2.22.0 - 2025-07-25
+
+### Added
+
+- support for checking if CLI is signed
+- improved progress reporting while downloading the CLI
+- URL validation is stricter in the connection screen and URI protocol handler
+
+## 2.21.1 - 2025-06-26
+
+### Fixed
+
+- marketplace logo
+
+## 2.21.0 - 2025-06-25
+
+### Changed
+
+- the logos and icons now match the new branding
+- the plugin is functionally the same but built with the new plugin system
+
+## 2.20.1 - 2025-05-20
+
+### Changed
+
+- Retrieve workspace directly in link handler when using wildcardSSH feature
+
+### Fixed
+
+- installed EAP, RC, NIGHTLY and PREVIEW IDEs are no longer displayed if there is a higher released version available for download.
+- project path is prefilled with the `folder` URI parameter when the IDE&Project dialog opens for URI handling.
+
+## 2.19.0 - 2025-02-21
+
+### Added
+
+- Added functionality to show setup script error message to the end user.
+
+### Fixed
+
+- Fix bug where wildcard configs would not be written under certain conditions.
+
+## 2.18.1 - 2025-02-14
+
+### Changed
+
+- Update the `pluginUntilBuild` to latest EAP
+
+## 2.18.0 - 2025-02-04
+
+### Changed
+
+- Simplifies the written SSH config and avoids the need to make an API request for every workspace the filter returns.
+
+## 2.17.0 - 2025-01-27
+
+### Added
+
+- Added setting "Check for IDE updates" which controls whether the plugin
+  checks and prompts for available IDE backend updates.
+
+## 2.16.0 - 2025-01-17
+
+### Added
+
+- Added setting "Default IDE Selection" which will look for a matching IDE 
+  code/version/build number to set as the preselected IDE in the select 
+  component.
+
+## 2.15.2 - 2025-01-06
+
+### Changed
+
+- When starting a workspace, shell out to the Coder binary instead of making an
+  API call. This reduces drift between what the plugin does and the CLI does.
+- Increase workspace polling to one second on the workspace list view, to pick
+  up changes made via the CLI faster. The recent connections view remains
+  unchanged at five seconds.
+
+## 2.15.1 - 2024-10-04
+
+### Added
+
 - Support an "owner" parameter when launching an IDE from the dashboard. This
   makes it possible to reliably connect to the right workspace in the case where
   multiple users are using the same workspace name and the workspace filter is

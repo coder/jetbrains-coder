@@ -28,13 +28,18 @@ open class LinkHandler(
      * Throw if required arguments are not supplied or the workspace is not in a
      * connectable state.
      */
-    fun handle(
+    suspend fun handle(
         parameters: Map<String, String>,
         indicator: ((t: String) -> Unit)? = null,
     ): WorkspaceProjectIDE {
-        val deploymentURL = parameters.url() ?: dialogUi.ask("Deployment URL", "Enter the full URL of your Coder deployment")
+        val deploymentURL =
+            parameters.url() ?: dialogUi.ask("Deployment URL", "Enter the full URL of your Coder deployment")
         if (deploymentURL.isNullOrBlank()) {
             throw MissingArgumentException("Query parameter \"$URL\" is missing")
+        }
+        val result = deploymentURL.validateStrictWebUrl()
+        if (result is WebUrlValidationResult.Invalid) {
+            throw IllegalArgumentException(result.reason)
         }
 
         val queryTokenRaw = parameters.token()
@@ -50,36 +55,62 @@ open class LinkHandler(
         }
 
         // TODO: Show a dropdown and ask for the workspace if missing.
-        val workspaceName = parameters.workspace() ?: throw MissingArgumentException("Query parameter \"$WORKSPACE\" is missing")
+        val workspaceName =
+            parameters.workspace() ?: throw MissingArgumentException("Query parameter \"$WORKSPACE\" is missing")
 
         // The owner was added to support getting into another user's workspace
         // but may not exist if the Coder Gateway module is out of date.  If no
         // owner is included, assume the current user.
         val owner = (parameters.owner() ?: client.me.username).ifBlank { client.me.username }
 
-        val workspaces = client.workspaces()
-        val workspace =
-            workspaces.firstOrNull {
-                it.ownerName == owner && it.name == workspaceName
-            } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
+        val cli =
+            ensureCLI(
+                deploymentURL.toURL(),
+                client.buildInfo().version,
+                settings,
+                indicator,
+            )
+
+        var workspace: Workspace
+        var workspaces: List<Workspace> = emptyList()
+        var workspacesAndAgents: Set<Pair<Workspace, WorkspaceAgent>> = emptySet()
+        if (settings.isSshWildcardConfigEnabled && cli.features.wildcardSSH) {
+            workspace = client.workspaceByOwnerAndName(owner, workspaceName)
+        } else {
+            workspaces = client.workspaces()
+            workspace =
+                workspaces.firstOrNull {
+                    it.ownerName == owner && it.name == workspaceName
+                } ?: throw IllegalArgumentException("The workspace $workspaceName does not exist")
+            workspacesAndAgents = client.withAgents(workspaces)
+        }
 
         when (workspace.latestBuild.status) {
             WorkspaceStatus.PENDING, WorkspaceStatus.STARTING ->
                 // TODO: Wait for the workspace to turn on.
                 throw IllegalArgumentException(
-                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please wait then try again",
+                    "The workspace \"$workspaceName\" is ${
+                        workspace.latestBuild.status.toString().lowercase()
+                    }; please wait then try again",
                 )
+
             WorkspaceStatus.STOPPING, WorkspaceStatus.STOPPED,
             WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
-            ->
+                ->
                 // TODO: Turn on the workspace.
                 throw IllegalArgumentException(
-                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; please start the workspace and try again",
+                    "The workspace \"$workspaceName\" is ${
+                        workspace.latestBuild.status.toString().lowercase()
+                    }; please start the workspace and try again",
                 )
+
             WorkspaceStatus.FAILED, WorkspaceStatus.DELETING, WorkspaceStatus.DELETED ->
                 throw IllegalArgumentException(
-                    "The workspace \"$workspaceName\" is ${workspace.latestBuild.status.toString().lowercase()}; unable to connect",
+                    "The workspace \"$workspaceName\" is ${
+                        workspace.latestBuild.status.toString().lowercase()
+                    }; unable to connect",
                 )
+
             WorkspaceStatus.RUNNING -> Unit // All is well
         }
 
@@ -90,19 +121,17 @@ open class LinkHandler(
         if (status.pending()) {
             // TODO: Wait for the agent to be ready.
             throw IllegalArgumentException(
-                "The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; please wait then try again",
+                "The agent \"${agent.name}\" has a status of \"${
+                    status.toString().lowercase()
+                }\"; please wait then try again",
             )
         } else if (!status.ready()) {
-            throw IllegalArgumentException("The agent \"${agent.name}\" has a status of \"${status.toString().lowercase()}\"; unable to connect")
-        }
-
-        val cli =
-            ensureCLI(
-                deploymentURL.toURL(),
-                client.buildInfo().version,
-                settings,
-                indicator,
+            throw IllegalArgumentException(
+                "The agent \"${agent.name}\" has a status of \"${
+                    status.toString().lowercase()
+                }\"; unable to connect"
             )
+        }
 
         // We only need to log in if we are using token-based auth.
         if (client.token != null) {
@@ -111,23 +140,24 @@ open class LinkHandler(
         }
 
         indicator?.invoke("Configuring Coder CLI...")
-        cli.configSsh(workspacesAndAgents = client.withAgents(workspaces), currentUser = client.me)
+        cli.configSsh(workspacesAndAgents, currentUser = client.me)
 
         val openDialog =
             parameters.ideProductCode().isNullOrBlank() ||
-                parameters.ideBuildNumber().isNullOrBlank() ||
-                (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
-                parameters.folder().isNullOrBlank()
+                    parameters.ideBuildNumber().isNullOrBlank() ||
+                    (parameters.idePathOnHost().isNullOrBlank() && parameters.ideDownloadLink().isNullOrBlank()) ||
+                    parameters.folder().isNullOrBlank()
 
         return if (openDialog) {
-            askIDE(agent, workspace, cli, client, workspaces) ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
+            askIDE(agent, workspace, cli, client, workspaces, parameters.folder())
+                ?: throw MissingArgumentException("IDE selection aborted; unable to connect")
         } else {
             // Check that both the domain and the redirected domain are
             // allowlisted.  If not, check with the user whether to proceed.
             verifyDownloadLink(parameters)
             WorkspaceProjectIDE.fromInputs(
                 name = CoderCLIManager.getWorkspaceParts(workspace, agent),
-                hostname = CoderCLIManager.getHostName(deploymentURL.toURL(), workspace, client.me, agent),
+                hostname = CoderCLIManager(deploymentURL.toURL(), settings).getHostName(workspace, client.me, agent),
                 projectPath = parameters.folder(),
                 ideProductCode = parameters.ideProductCode(),
                 ideBuildNumber = parameters.ideBuildNumber(),
@@ -251,7 +281,7 @@ private fun isAllowlisted(url: URL): Triple<Boolean, Boolean, String> {
 
     val allowlisted =
         domainAllowlist.any { url.host == it || url.host.endsWith(".$it") } &&
-            domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
+                domainAllowlist.any { finalUrl.host == it || finalUrl.host.endsWith(".$it") }
     val https = url.protocol == "https" && finalUrl.protocol == "https"
     return Triple(allowlisted, https, linkWithRedirect)
 }
@@ -297,25 +327,24 @@ internal fun getMatchingAgent(
     }
 
     // If the agent is missing and the workspace has only one, use that.
-    // Prefer the ID over the name if both are set.
-    val agent =
-        if (!parameters.agentID().isNullOrBlank()) {
-            agents.firstOrNull { it.id.toString() == parameters.agentID() }
-        } else if (!parameters.agentName().isNullOrBlank()) {
-            agents.firstOrNull { it.name == parameters.agentName() }
-        } else if (agents.size == 1) {
-            agents.first()
-        } else {
-            null
-        }
+    // Prefer the name over the id if both are set.
+    val agent = if (!parameters.agentName().isNullOrBlank()) {
+        agents.firstOrNull { it.name == parameters.agentName() }
+    } else if (!parameters.agentID().isNullOrBlank()) {
+        agents.firstOrNull { it.id.toString() == parameters.agentID() }
+    } else if (agents.size == 1) {
+        agents.first()
+    } else {
+        null
+    }
 
     if (agent == null) {
-        if (!parameters.agentID().isNullOrBlank()) {
-            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters.agentID()}\"")
-        } else if (!parameters.agentName().isNullOrBlank()) {
+        if (!parameters.agentName().isNullOrBlank()) {
             throw IllegalArgumentException(
-                "The workspace \"${workspace.name}\"does not have an agent named \"${parameters.agentName()}\"",
+                "The workspace \"${workspace.name}\" does not have an agent named \"${parameters.agentName()}\"",
             )
+        } else if (!parameters.agentID().isNullOrBlank()) {
+            throw IllegalArgumentException("The workspace \"${workspace.name}\" does not have an agent with ID \"${parameters.agentID()}\"")
         } else {
             throw MissingArgumentException(
                 "Unable to determine which agent to connect to; one of \"$AGENT_NAME\" or \"$AGENT_ID\" must be set because the workspace \"${workspace.name}\" has more than one agent",

@@ -14,14 +14,17 @@ import com.coder.gateway.sdk.v2.models.WorkspaceStatus
 import com.coder.gateway.sdk.v2.models.toAgentList
 import com.coder.gateway.services.CoderRestClientService
 import com.coder.gateway.services.CoderSettingsService
+import com.coder.gateway.services.CoderSettingsStateService
 import com.coder.gateway.settings.Source
 import com.coder.gateway.util.DialogUi
 import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
+import com.coder.gateway.util.WebUrlValidationResult
 import com.coder.gateway.util.humanizeConnectionError
 import com.coder.gateway.util.isCancellation
 import com.coder.gateway.util.toURL
+import com.coder.gateway.util.validateStrictWebUrl
 import com.coder.gateway.util.withoutNull
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ActivityTracker
@@ -40,6 +43,7 @@ import com.intellij.openapi.wm.impl.welcomeScreen.WelcomeScreenUIManager
 import com.intellij.ui.AnActionButton
 import com.intellij.ui.RelativeFont
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
@@ -76,6 +80,8 @@ import javax.swing.JLabel
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
@@ -105,6 +111,7 @@ data class CoderWorkspacesStepSelection(
     // Pass along the latest workspaces so we can configure the CLI a bit
     // faster, otherwise this step would have to fetch the workspaces again.
     val workspaces: List<Workspace>,
+    val remoteProjectPath: String? = null
 )
 
 /**
@@ -115,6 +122,7 @@ class CoderWorkspacesStepView :
     CoderWizardStep<CoderWorkspacesStepSelection>(
         CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.next.text"),
     ) {
+    private val state: CoderSettingsStateService = service()
     private val settings: CoderSettingsService = service<CoderSettingsService>()
     private val dialogUi = DialogUi(settings)
     private val cs = CoroutineScope(Dispatchers.Main)
@@ -147,7 +155,8 @@ class CoderWorkspacesStepView :
             setEmptyState(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.disconnected"))
             setSelectionMode(ListSelectionModel.SINGLE_SELECTION)
             selectionModel.addListSelectionListener {
-                nextButton.isEnabled = selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
+                nextButton.isEnabled =
+                    selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem == OS.LINUX
                 if (selectedObject?.status?.ready() == true && selectedObject?.agent?.operatingSystem != OS.LINUX) {
                     notificationBanner.apply {
                         component.isVisible = true
@@ -202,7 +211,7 @@ class CoderWorkspacesStepView :
             row {
                 browserLink(
                     CoderGatewayBundle.message("gateway.connector.view.login.documentation.action"),
-                    "https://coder.com/docs/coder-oss/latest/workspaces",
+                    "https://coder.com/docs/user-guides/workspace-management",
                 )
             }
             row(CoderGatewayBundle.message("gateway.connector.view.login.url.label")) {
@@ -213,6 +222,31 @@ class CoderWorkspacesStepView :
                                 // Reconnect when the enter key is pressed.
                                 maybeAskTokenThenConnect()
                             }
+                            // Add document listener to clear error when user types
+                            document.addDocumentListener(object : DocumentListener {
+                                override fun insertUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun removeUpdate(e: DocumentEvent?) = clearErrorState()
+                                override fun changedUpdate(e: DocumentEvent?) = clearErrorState()
+
+                                private fun clearErrorState() {
+                                    tfUrlComment?.apply {
+                                        foreground = UIUtil.getContextHelpForeground()
+                                        if (tfUrl?.text.equals(client?.url?.toString())) {
+                                            text =
+                                                CoderGatewayBundle.message(
+                                                    "gateway.connector.view.coder.workspaces.connect.text.connected",
+                                                    client!!.url.host,
+                                                )
+                                        } else {
+                                            text = CoderGatewayBundle.message(
+                                                "gateway.connector.view.coder.workspaces.connect.text.comment",
+                                                CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text"),
+                                            )
+                                        }
+                                        icon = null
+                                    }
+                                }
+                            })
                         }.component
                 button(CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text")) {
                     // Reconnect when the connect button is pressed.
@@ -261,6 +295,19 @@ class CoderWorkspacesStepView :
                 }.layout(RowLayout.PARENT_GRID)
             }
             row {
+                cell() // For alignment.
+                checkBox(CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.title"))
+                    .bindSelected(state::fallbackOnCoderForSignatures).applyToComponent {
+                        addActionListener { event ->
+                            state.fallbackOnCoderForSignatures = (event.source as JBCheckBox).isSelected
+                        }
+                    }
+                    .comment(
+                        CoderGatewayBundle.message("gateway.connector.settings.fallback-on-coder-for-signatures.comment"),
+                    )
+
+            }.visible(state.disableSignatureVerification.not()).layout(RowLayout.PARENT_GRID)
+            row {
                 scrollCell(
                     toolbar.createPanel().apply {
                         add(notificationBanner.component.apply { isVisible = false }, "South")
@@ -303,13 +350,13 @@ class CoderWorkspacesStepView :
             CoderIcons.RUN,
         ) {
         override fun actionPerformed(p0: AnActionEvent) {
-            withoutNull(client, tableOfWorkspaces.selectedObject?.workspace) { c, workspace ->
+            withoutNull(cliManager, tableOfWorkspaces.selectedObject?.workspace) { cliManager, workspace ->
                 jobs[workspace.id]?.cancel()
                 jobs[workspace.id] =
                     cs.launch(ModalityState.current().asContextElement()) {
                         withContext(Dispatchers.IO) {
                             try {
-                                c.startWorkspace(workspace)
+                                cliManager.startWorkspace(workspace.ownerName, workspace.name)
                                 loadWorkspaces()
                             } catch (e: Exception) {
                                 logger.error("Could not start workspace ${workspace.name}", e)
@@ -343,22 +390,26 @@ class CoderWorkspacesStepView :
                                     val maxWait = Duration.ofMinutes(10)
                                     while (isActive) { // Wait for the workspace to fully stop.
                                         delay(timeout.toMillis())
-                                        val found = tableOfWorkspaces.items.firstOrNull { it.workspace.id == workspace.id }
+                                        val found =
+                                            tableOfWorkspaces.items.firstOrNull { it.workspace.id == workspace.id }
                                         when (val status = found?.workspace?.latestBuild?.status) {
                                             WorkspaceStatus.PENDING, WorkspaceStatus.STOPPING, WorkspaceStatus.RUNNING -> {
                                                 logger.info("Still waiting for ${workspace.name} to stop before updating")
                                             }
+
                                             WorkspaceStatus.STARTING, WorkspaceStatus.FAILED,
                                             WorkspaceStatus.CANCELING, WorkspaceStatus.CANCELED,
                                             WorkspaceStatus.DELETING, WorkspaceStatus.DELETED,
-                                            -> {
+                                                -> {
                                                 logger.warn("Canceled ${workspace.name} update due to status change to $status")
                                                 break
                                             }
+
                                             null -> {
                                                 logger.warn("Canceled ${workspace.name} update because it no longer exists")
                                                 break
                                             }
+
                                             WorkspaceStatus.STOPPED -> {
                                                 logger.info("${workspace.name} has stopped; updating now")
                                                 c.updateWorkspace(workspace)
@@ -514,8 +565,17 @@ class CoderWorkspacesStepView :
     private fun maybeAskTokenThenConnect(error: String? = null) {
         val oldURL = fields.coderURL
         component.apply() // Force bindings to be filled.
-        val newURL = fields.coderURL.toURL()
         if (settings.requireTokenAuth) {
+            val result = fields.coderURL.validateStrictWebUrl()
+            if (result is WebUrlValidationResult.Invalid) {
+                tfUrlComment.apply {
+                    this?.foreground = UIUtil.getErrorForeground()
+                    this?.text = result.reason
+                    this?.icon = UIUtil.getBalloonErrorIcon()
+                }
+                return
+            }
+            val newURL = fields.coderURL.toURL()
             val pastedToken =
                 dialogUi.askToken(
                     newURL,
@@ -530,7 +590,7 @@ class CoderWorkspacesStepView :
                 maybeAskTokenThenConnect(it)
             }
         } else {
-            connect(newURL, null)
+            connect(fields.coderURL.toURL(), null)
         }
     }
 
@@ -560,7 +620,10 @@ class CoderWorkspacesStepView :
                 deploymentURL.host,
             )
         tableOfWorkspaces.setEmptyState(
-            CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connecting", deploymentURL.host),
+            CoderGatewayBundle.message(
+                "gateway.connector.view.coder.workspaces.connect.text.connecting",
+                deploymentURL.host
+            ),
         )
 
         tableOfWorkspaces.listTableModel.items = emptyList()
@@ -600,7 +663,10 @@ class CoderWorkspacesStepView :
                 client = authedClient
 
                 tableOfWorkspaces.setEmptyState(
-                    CoderGatewayBundle.message("gateway.connector.view.coder.workspaces.connect.text.connected", deploymentURL.host),
+                    CoderGatewayBundle.message(
+                        "gateway.connector.view.coder.workspaces.connect.text.connected",
+                        deploymentURL.host
+                    ),
                 )
                 tfUrlComment?.text =
                     CoderGatewayBundle.message(
@@ -659,7 +725,7 @@ class CoderWorkspacesStepView :
             cs.launch(ModalityState.current().asContextElement()) {
                 while (isActive) {
                     loadWorkspaces()
-                    delay(5000)
+                    delay(1000)
                 }
             }
     }
@@ -788,7 +854,8 @@ class WorkspacesTableModel :
         WorkspaceVersionColumnInfo("Version"),
         WorkspaceStatusColumnInfo("Status"),
     ) {
-    private class WorkspaceIconColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceIconColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
         override fun getRenderer(item: WorkspaceAgentListModel?): TableCellRenderer {
@@ -820,7 +887,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceNameColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.name
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -850,7 +918,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceOwnerColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceOwnerColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.ownerName
 
         override fun getComparator(): Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -880,7 +949,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceTemplateNameColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceTemplateNameColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.workspace?.templateName
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
@@ -909,7 +979,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceVersionColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceVersionColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(workspace: WorkspaceAgentListModel?): String? = if (workspace == null) {
             "Unknown"
         } else if (workspace.workspace.outdated) {
@@ -940,7 +1011,8 @@ class WorkspacesTableModel :
         }
     }
 
-    private class WorkspaceStatusColumnInfo(columnName: String) : ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
+    private class WorkspaceStatusColumnInfo(columnName: String) :
+        ColumnInfo<WorkspaceAgentListModel, String>(columnName) {
         override fun valueOf(item: WorkspaceAgentListModel?): String? = item?.status?.label
 
         override fun getComparator(): java.util.Comparator<WorkspaceAgentListModel> = Comparator { a, b ->
