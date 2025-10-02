@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.23.0 - 2025-10-02
+
 ### Added
 
 - support for disabling SSH wildcard config.
