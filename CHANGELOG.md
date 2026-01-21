@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- updated GPD signatures for the CLI
+
 ## 2.23.0 - 2025-10-02
 
 ### Added
