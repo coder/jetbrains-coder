@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.23.1 - 2026-01-21
+
 ### Changed
 
 - updated GPD signatures for the CLI
