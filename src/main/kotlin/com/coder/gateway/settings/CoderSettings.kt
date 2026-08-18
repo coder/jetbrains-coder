@@ -77,9 +77,8 @@ open class CoderSettingsState(
 
     // An external command that outputs additional HTTP headers added to all
     // requests. The command must output each header as `key=value` on its own
-    // line. The following environment variables will be available to the
-    // process: CODER_URL. If blank, the CODER_HEADER_COMMAND environment
-    // variable is used, if set.
+    // line. When this setting is blank, the CODER_HEADER_COMMAND environment
+    // variable is used instead, if set.
     open var headerCommand: String = "",
     // Optionally set this to the path of a certificate to use for TLS
     // connections. The certificate should be in X.509 PEM format.
