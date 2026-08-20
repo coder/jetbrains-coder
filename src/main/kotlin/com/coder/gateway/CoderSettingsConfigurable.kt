@@ -2,6 +2,7 @@ package com.coder.gateway
 
 import com.coder.gateway.services.CoderSettingsService
 import com.coder.gateway.services.CoderSettingsStateService
+import com.coder.gateway.settings.CODER_HEADER_COMMAND
 import com.coder.gateway.settings.CODER_SSH_CONFIG_OPTIONS
 import com.coder.gateway.util.canCreateDirectory
 import com.intellij.openapi.components.service
@@ -89,7 +90,10 @@ class CoderSettingsConfigurable : BoundConfigurable("Coder") {
                 textField().resizableColumn().align(AlignX.FILL)
                     .bindText(state::headerCommand)
                     .comment(
-                        CoderGatewayBundle.message("gateway.connector.settings.header-command.comment"),
+                        CoderGatewayBundle.message(
+                            "gateway.connector.settings.header-command.comment",
+                            CODER_HEADER_COMMAND,
+                        ),
                     )
             }.layout(RowLayout.PARENT_GRID)
             row(CoderGatewayBundle.message("gateway.connector.settings.tls-cert-path.title")) {

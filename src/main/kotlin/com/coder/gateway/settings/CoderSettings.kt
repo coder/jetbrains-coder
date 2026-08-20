@@ -14,6 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+const val CODER_HEADER_COMMAND = "CODER_HEADER_COMMAND"
 const val CODER_SSH_CONFIG_OPTIONS = "CODER_SSH_CONFIG_OPTIONS"
 const val CODER_URL = "CODER_URL"
 
@@ -76,8 +77,8 @@ open class CoderSettingsState(
 
     // An external command that outputs additional HTTP headers added to all
     // requests. The command must output each header as `key=value` on its own
-    // line. The following environment variables will be available to the
-    // process: CODER_URL.
+    // line. When this setting is blank, the CODER_HEADER_COMMAND environment
+    // variable is used instead, if set.
     open var headerCommand: String = "",
     // Optionally set this to the path of a certificate to use for TLS
     // connections. The certificate should be in X.509 PEM format.
@@ -194,10 +195,12 @@ open class CoderSettings(
     val defaultSignatureNameByOsAndArch: String get() = getCoderSignatureForOS(getOS(), getArch())
 
     /**
-     * A command to run to set headers for API calls.
+     * A command to run to set headers for API calls. Falls back to the
+     * CODER_HEADER_COMMAND environment variable (the same variable the Coder
+     * CLI reads) when the setting is blank.
      */
     val headerCommand: String
-        get() = state.headerCommand
+        get() = state.headerCommand.ifBlank { env.get(CODER_HEADER_COMMAND) }
 
     /**
      * Whether to disable automatically starting a workspace when connecting.

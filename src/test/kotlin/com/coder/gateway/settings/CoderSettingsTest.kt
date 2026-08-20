@@ -244,6 +244,27 @@ internal class CoderSettingsTest {
     }
 
     @Test
+    fun testHeaderCommand() {
+        var settings = CoderSettings(CoderSettingsState(headerCommand = "header command from state"))
+        assertEquals("header command from state", settings.headerCommand)
+
+        settings =
+            CoderSettings(
+                CoderSettingsState(),
+                env = Environment(mapOf(CODER_HEADER_COMMAND to "header command from env")),
+            )
+        assertEquals("header command from env", settings.headerCommand)
+
+        // State has precedence.
+        settings =
+            CoderSettings(
+                CoderSettingsState(headerCommand = "header command from state"),
+                env = Environment(mapOf(CODER_HEADER_COMMAND to "header command from env")),
+            )
+        assertEquals("header command from state", settings.headerCommand)
+    }
+
+    @Test
     fun testSSHConfigOptions() {
         var settings = CoderSettings(CoderSettingsState(sshConfigOptions = "ssh config options from state"))
         assertEquals("ssh config options from state", settings.sshConfigOptions)
