@@ -10,7 +10,7 @@ plugins {
     // Groovy support
     id("groovy")
     // Kotlin support
-    id("org.jetbrains.kotlin.jvm") version "1.9.23"
+    id("org.jetbrains.kotlin.jvm") version "2.2.21"
     // Gradle IntelliJ Platform Plugin
     id("org.jetbrains.intellij.platform") version "2.6.0"
     // Gradle Changelog Plugin
