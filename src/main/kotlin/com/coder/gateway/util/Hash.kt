@@ -10,9 +10,16 @@ fun ByteArray.toHex() = joinToString(separator = "") { byte -> "%02x".format(byt
 /**
  * Return the SHA-1 for the provided stream.
  */
+fun sha1(stream: InputStream): String = digest("SHA-1", stream)
+
+/**
+ * Return the SHA-256 for the provided stream.
+ */
+fun sha256(stream: InputStream): String = digest("SHA-256", stream)
+
 @Suppress("ControlFlowWithEmptyBody")
-fun sha1(stream: InputStream): String {
-    val md = MessageDigest.getInstance("SHA-1")
+private fun digest(algorithm: String, stream: InputStream): String {
+    val md = MessageDigest.getInstance(algorithm)
     val dis = DigestInputStream(BufferedInputStream(stream), md)
     stream.use {
         while (dis.read() != -1) {

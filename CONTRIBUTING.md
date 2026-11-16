@@ -27,18 +27,23 @@ running potentially malicious or tampered binaries.
 1. **Binary Download**: When connecting to a Coder deployment, the plugin downloads the appropriate Coder CLI binary for
    the user's operating system and architecture from the deployment's `/bin/` endpoint.
 
-2. **Signature Download**: After downloading the binary, the plugin attempts to download the corresponding `.asc`
+2. **Signature Download**: After downloading the binary, the plugin attempts to download the corresponding `.v2.asc`
    signature file from the same location. The signature file is named according to the binary (e.g.,
-   `coder-linux-amd64.asc` for `coder-linux-amd64`).
+   `coder-linux-amd64.v2.asc` for `coder-linux-amd64`).
 
-3. **Fallback Signature Sources**: If the signature is not available from the deployment, the plugin can optionally fall
-   back to downloading signatures from `releases.coder.com`. This is controlled by the `fallbackOnCoderForSignatures`
+3. **Release Digests**: Deployments released before Coder's current release signing key have no `.v2.asc` signature.
+   If the signature is not available from the deployment, the plugin compares the SHA-256 digest of the binary with
+   the digests of Coder's published releases, which ship with the plugin. A binary that matches the release of the
+   deployment's version is accepted.
+
+4. **Fallback Signature Sources**: If the binary matches no release digest, the plugin can optionally fall back to
+   downloading signatures from `releases.coder.com`. This is controlled by the `fallbackOnCoderForSignatures`
    setting.
 
-4. **GPG Verification**: The plugin uses the BouncyCastle library shipped with Gateway app to verify the detached GPG
+5. **GPG Verification**: The plugin uses the BouncyCastle library shipped with Gateway app to verify the detached GPG
    signature against the downloaded binary using Coder's trusted public key.
 
-5. **User Interaction**: If signature verification fails or signatures are unavailable, the plugin presents security
+6. **User Interaction**: If signature verification fails or signatures are unavailable, the plugin presents security
    warnings
    to users, allowing them to accept the risk and continue or abort the operation.
 
@@ -47,6 +52,7 @@ running potentially malicious or tampered binaries.
 The verification process involves several components:
 
 - **`GPGVerifier`**: Handles the core GPG signature verification logic using BouncyCastle
+- **`ReleaseDigests`**: Compares a binary with the bundled SHA-256 digests of Coder's published releases
 - **`VerificationResult`**: Represents the outcome of verification (Valid, Invalid, Failed, SignatureNotFound)
 - **`CoderDownloadService`**: Manages downloading both binaries and their signatures
 - **`CoderCLIManager`**: Orchestrates the download and verification workflow
@@ -64,6 +70,7 @@ Users can control signature verification behavior through plugin settings:
 ### Security Considerations
 
 - The plugin embeds Coder's trusted public key in the plugin resources
+- The plugin embeds the SHA-256 digests of the Coder releases that are not signed with that key
 - Verification uses detached signatures, which are more secure than attached signatures
 - Users are warned about security risks when verification fails
 - The system gracefully handles cases where signatures are unavailable

@@ -447,11 +447,11 @@ open class CoderSettings(
     }
 
     /**
-     * Returns the name of the signature file (.asc) for the provided OS and architecture.
+     * Returns the name of the signature file (.v2.asc) for the provided OS and architecture.
      */
     private fun getCoderSignatureForOS(os: OS?, arch: Arch?): String {
         logger.debug("Resolving signature for $os $arch")
-        return "${getCoderCLIForOS(os, arch)}.asc"
+        return "${getCoderCLIForOS(os, arch)}.v2.asc"
     }
 
     companion object {

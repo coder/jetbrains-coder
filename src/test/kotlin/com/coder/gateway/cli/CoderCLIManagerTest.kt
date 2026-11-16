@@ -17,11 +17,13 @@ import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.escape
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.sha1
+import com.coder.gateway.util.sha256
 import com.coder.gateway.util.toURL
 import com.squareup.moshi.JsonEncodingException
 import com.sun.net.httpserver.HttpServer
 import io.mockk.every
 import io.mockk.mockkConstructor
+import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -240,6 +242,30 @@ internal class CoderCLIManagerTest {
 
         assertEquals(true, runBlocking { ccm.download(VERSION_FOR_PROGRESS_REPORTING, noOpTextProgress) })
         assertContains(ccm.localBinaryPath.toFile().readText(), "0.0.0")
+
+        srv.stop(0)
+    }
+
+    @Test
+    fun testDownloadAsksOnlyWhenNoReleaseDigestMatches() {
+        val (srv, url) = mockServer()
+        val servedDigest = sha256(mkbinVersion("${url.port}.0.0").byteInputStream())
+
+        listOf(servedDigest to 0, sha256("another binary".byteInputStream()) to 1).forEach { (releaseDigest, prompts) ->
+            val settings = CoderSettings(
+                CoderSettingsState(dataDirectory = tmpdir.resolve("release-digest-$prompts").toString()),
+            )
+            val ccm = CoderCLIManager(
+                url,
+                settings,
+                releaseDigests = ReleaseDigests {
+                    mapOf("2.13.1" to mapOf(settings.defaultCliBinaryNameByOsAndArch to releaseDigest))
+                },
+            )
+
+            assertTrue(runBlocking { ccm.download(VERSION_FOR_PROGRESS_REPORTING, noOpTextProgress) })
+            verify(exactly = prompts) { anyConstructed<DialogUi>().confirm(any(), any()) }
+        }
 
         srv.stop(0)
     }
