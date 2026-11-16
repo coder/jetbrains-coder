@@ -1,0 +1,39 @@
+name: Release Digests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/main/resources/META-INF/trusted-releases/release-digests.json
+      - .github/workflows/release-digests.yml
+  pull_request:
+    paths:
+      - src/main/resources/META-INF/trusted-releases/release-digests.json
+      - .github/workflows/release-digests.yml
+
+permissions:
+  contents: read
+
+env:
+  VSCODE_CODER_COMMIT: 7b0dff293bac87b6813ce8926383c62faf83749d
+
+jobs:
+  compare:
+    name: Compare with coder/vscode-coder
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6.0.1
+
+      # GitHub also serves the commits of forks by hash.
+      - name: Check that the commit is on the main branch
+        run: gh api "repos/coder/vscode-coder/compare/$VSCODE_CODER_COMMIT...main" --jq .status | grep -Eqx "ahead|identical"
+
+      - name: Compare the list
+        shell: bash
+        run: |
+          gh api "repos/coder/vscode-coder/contents/release-digests.json?ref=$VSCODE_CODER_COMMIT" \
+            -H "Accept: application/vnd.github.raw" \
+            | diff - src/main/resources/META-INF/trusted-releases/release-digests.json

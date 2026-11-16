@@ -34,7 +34,9 @@ running potentially malicious or tampered binaries.
 3. **Release Digests**: Deployments released before Coder's current release signing key have no `.v2.asc` signature.
    If the signature is not available from the deployment, the plugin compares the SHA-256 digest of the binary with
    the digests of Coder's published releases, which ship with the plugin. A binary that matches the release of the
-   deployment's version is accepted.
+   deployment's version is accepted. The list is a copy of `release-digests.json` from
+   [coder/vscode-coder](https://github.com/coder/vscode-coder), which generates it. To update the list, copy the file
+   again and set its commit in `.github/workflows/release-digests.yml`, which checks that the two files are equal.
 
 4. **Fallback Signature Sources**: If the binary matches no release digest, the plugin can optionally fall back to
    downloading signatures from `releases.coder.com`. This is controlled by the `fallbackOnCoderForSignatures`

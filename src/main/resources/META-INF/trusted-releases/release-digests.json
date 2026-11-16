@@ -17,6 +17,78 @@
 		"coder-windows-amd64.exe": "5636c0a768f8417077814e21bb1b3439e3ce4bbbba738901800d65791bd0a2d5",
 		"coder-windows-arm64.exe": "d4b738cf64188c7cee89e172ebc1f735c97bb0a40fe0daec83c9504526470891"
 	},
+	"2.29.2": {
+		"coder-darwin-amd64": "8d6bf919c6d5d0aa48c9e3092dd3c16dfcf4e00d29fb8b46f16c5c19d367bdde",
+		"coder-darwin-arm64": "675145554ea0742b6ecbdc414c71f10fb0e8a89bfc755d6e51721e408c371014",
+		"coder-linux-amd64": "ffb2be9171a4177a5db9bb0dfaa9261ae1c6466eb9bf5d0612bec5661f7caab8",
+		"coder-linux-arm64": "837fa59a2ded757a65819e8e4feb0399aea130df77d63555a2ea8e3c137ed08a",
+		"coder-linux-armv7": "4e5c57bb1b1985fd89bdc7c400629fe442aea69981929156133c91b0426672d5",
+		"coder-windows-amd64.exe": "b6a01581d8b4e4c7a157a4ce3a8adb9a81652db7b52796b70c6a80e4a41f227f",
+		"coder-windows-arm64.exe": "175f7c066a3e77ab54868c7dc45914fab7c7a953732a7bf436acdb8264801e77"
+	},
+	"2.29.3": {
+		"coder-darwin-amd64": "9132abcba4f1c2d891f7a6fded9f8393895c636b6d6d1f339306152f3d21be64",
+		"coder-darwin-arm64": "17c1831c5f35d80f46aeaefbf108ab24eec405b58f6223a2cb865b86e51ea6eb",
+		"coder-linux-amd64": "3f4dd9c713edd8c25843aa8f3dff81d5566b9ffc8b9b958d8179987a73ae3635",
+		"coder-linux-arm64": "0dbdaec36d24deb631f51afef669443618d1fd9f21ac89b66e08243f2761a55e",
+		"coder-linux-armv7": "bb2892d4ecda38d7ff21eb2718b31326b7a118baf5d03e20800fdfe1a3874e40",
+		"coder-windows-amd64.exe": "4b62693ae7541c9f1cd5722731297055916442ba5959c77a8804cad090dfc06b",
+		"coder-windows-arm64.exe": "134972b58372d3901b8d54435476b1726be0947cbe31146618f932af2fc907ab"
+	},
+	"2.29.4": {
+		"coder-darwin-amd64": "044092f6dd3cf6096be7211c1e903c696cbc1adbd398bee369f2f9817f8218a8",
+		"coder-darwin-arm64": "2171d53eff01cf8e83e86c84e29a0575f341d7b85d7aadd02e89c88e62933935",
+		"coder-linux-amd64": "70afa1ff751a2280e1de84b1062a5cfcb85069b75a5a636d3f4a9c28c1dd8c18",
+		"coder-linux-arm64": "3c62003de4b483b02b4764d0ce19efccd9ca9e4be653dd37651e6cd3b74df81d",
+		"coder-linux-armv7": "bff71c98119f6f4a5413b757c7896eb54a1b6a539f1808b8d1eebef02f612525",
+		"coder-windows-amd64.exe": "9a74ead86fb86b8f60b04665f0285436deeeafa362b57efac9f8a37de0ebedeb",
+		"coder-windows-arm64.exe": "191fbd45ae8a81bcd3c3ac9cba3b33454a041fef6356ee73f85b590da93efed8"
+	},
+	"2.29.5": {
+		"coder-darwin-amd64": "6d88d9bf9f1cddaa9c372d699dcac6158880b283ec9da830b27c032d442ea9c1",
+		"coder-darwin-arm64": "2ca6523f123a628287e27a82baecd64ab874bf9556e19b0e3d698605a4b6c9e2",
+		"coder-linux-amd64": "d5d7a9ccf88edf11bf7e1465d3578c5150d9618d9c4304961dbfa72b26fde30e",
+		"coder-linux-arm64": "9a1f633a74912d38b445df76c5ee0c24a81c99d1e1577dec47ec51ebf3bd9bee",
+		"coder-linux-armv7": "ce6bed00bc48302c6f3a371fc687cb83860f19d214de5f80cce279aea6136a79",
+		"coder-windows-amd64.exe": "b9202f0f72346a2c76a3c9a8cb06b3e9d0a71da34f2d5a8c2f997ec6d7ab4b05",
+		"coder-windows-arm64.exe": "39540f423f268381e86a778c8137d2de51605703c444bddb144fe1e8740773e9"
+	},
+	"2.29.6": {
+		"coder-darwin-amd64": "a60c22bcdd3a54e03bf071804dc7b51e150fb91e84c66f833f7de3142346ddf7",
+		"coder-darwin-arm64": "976b53ab0954e352a0e5e39f05d012f063003fa95f7bb330a4e06cfed8fb6903",
+		"coder-linux-amd64": "7f7f084c3ef54efdfaa5341354ff8eed7ef207067baa3d1490e2868f6f6de5b6",
+		"coder-linux-arm64": "22bf28c2edecc2bd57330a38e819dea33293e491ab334e0a1f4a0d454c385081",
+		"coder-linux-armv7": "80ef4c5f1261cb0757cdf9bdeccec45622be49e29194f161bc42a31721c2cfde",
+		"coder-windows-amd64.exe": "6eb1fcc59194786dbf55410b1ace629ac8edf6b37329e234f6323217be60e098",
+		"coder-windows-arm64.exe": "2c175f5a616ba12217e3c2609b1eb07c94c0055518d8f69ab2dcb93acd093d8e"
+	},
+	"2.29.7": {
+		"coder-darwin-amd64": "bd1dc46bcd96d9767fb6e496277126d8107720fe915cdae07e56a42ddca99219",
+		"coder-darwin-arm64": "0ef9f3af6b0e64fc18220529e99f499f00a61af732281d5a4d0f1fd733fe9963",
+		"coder-linux-amd64": "ddeb2750537cc5275f755bed7779b2e66fe6eebb073952e6c9440723d31ece82",
+		"coder-linux-arm64": "d421fcfa5d5f9366df592a39a2b4e2e4b29e1fb3fce6d09a7085fa28a6c83c3a",
+		"coder-linux-armv7": "f867f5152f5b98b9914651bd504b99b1da8f686793db84b705c00e58b9c1909a",
+		"coder-windows-amd64.exe": "1476d1236c26b7e73adf06151dcd6a630e6911e41bbf247801947b76e4c0cb6a",
+		"coder-windows-arm64.exe": "de39f4eb6832559bb4933dcd69365bca6c7ccd91ddbf5a284c922652ded82903"
+	},
+	"2.29.8": {
+		"coder-darwin-amd64": "e455e894a10cfeed513190e70ec0c75130acd0902b08e032ea65be07e4fd9978",
+		"coder-darwin-arm64": "fe74bb985b764aa1a1c2ddfaea59a94260f2138590005c5fe613aa842accc223",
+		"coder-linux-amd64": "b6bc6d6e3b71bff9baaac02e4dfbf7b4965ffa69036f50f37dfb96b5874dbb3b",
+		"coder-linux-arm64": "95fb6dce3b8031fa7a21415d36455d673bb15ed261fc3e98fc52b4ddad630d71",
+		"coder-linux-armv7": "f88848e126acf9c273361848097d94cd8536923af5d5f38fb5040353b645dfea",
+		"coder-windows-amd64.exe": "65d74ec85c0c124cbd0ba2c082c8ec7d269856bf9d044f9e01c68391caa3ec25",
+		"coder-windows-arm64.exe": "f5baa3e7508acd41b42c88b9c2edce1846c105e32c784d8d5c30a3e69229c069"
+	},
+	"2.29.9": {
+		"coder-darwin-amd64": "cc3e1198e1458fe94784db812df91f1ef4157db8ae4cbb163550ae1e1ae1ea7b",
+		"coder-darwin-arm64": "8a238ec2933255951d00f1ca71107feaba10c74673239061d53e4f5867e7c623",
+		"coder-linux-amd64": "82ef7175a90b23351915bf0680262400d1499c71f380b484b39692ef221ea85b",
+		"coder-linux-arm64": "8c00c15c00c2bf80149f3b88a98006472bf9443b3f013c1bcd2527fa1b64b010",
+		"coder-linux-armv7": "690e552a88b27c0b80a6ba54ac6b75d5f4839b6515691486e5acc256ba6425cc",
+		"coder-windows-amd64.exe": "2077ef8fcd2eab4b587741eaece63881e46e06ea9e5dfb00ccd491733675261a",
+		"coder-windows-arm64.exe": "7a802d2f1beea0becf4c4d1ecf6296541ad6881baab7c552350880735b3ace30"
+	},
 	"2.29.10": {
 		"coder-darwin-amd64": "5b59ef812af2968b3d3c3c276a82ac923c9dce10393a64ffd2720fb1ac11c4bd",
 		"coder-darwin-arm64": "30881683722fb8e07a0c5fbfd911279caceb26b0917b30a23b10343e676b6ead",
@@ -107,15 +179,6 @@
 		"coder-windows-amd64.exe": "78da15ed63ba6879a1d53f45ed4916647de37d3c9e22819cc6ab19bef44e481a",
 		"coder-windows-arm64.exe": "3fe5f2b9d3ec8425309b0441b3ae85d80c7a2a0912ad7a01ed659ac43be8160d"
 	},
-	"2.29.2": {
-		"coder-darwin-amd64": "8d6bf919c6d5d0aa48c9e3092dd3c16dfcf4e00d29fb8b46f16c5c19d367bdde",
-		"coder-darwin-arm64": "675145554ea0742b6ecbdc414c71f10fb0e8a89bfc755d6e51721e408c371014",
-		"coder-linux-amd64": "ffb2be9171a4177a5db9bb0dfaa9261ae1c6466eb9bf5d0612bec5661f7caab8",
-		"coder-linux-arm64": "837fa59a2ded757a65819e8e4feb0399aea130df77d63555a2ea8e3c137ed08a",
-		"coder-linux-armv7": "4e5c57bb1b1985fd89bdc7c400629fe442aea69981929156133c91b0426672d5",
-		"coder-windows-amd64.exe": "b6a01581d8b4e4c7a157a4ce3a8adb9a81652db7b52796b70c6a80e4a41f227f",
-		"coder-windows-arm64.exe": "175f7c066a3e77ab54868c7dc45914fab7c7a953732a7bf436acdb8264801e77"
-	},
 	"2.29.21": {
 		"coder-darwin-amd64": "79710163c463e8db6c14e3c1ef2ce5c47657be03e104d129709118faf922bb70",
 		"coder-darwin-arm64": "e5c790a1c44428d2765b7dba0120a7fcef1d8241f6fae35e02157e55145f8d99",
@@ -187,69 +250,6 @@
 		"coder-linux-armv7": "cebb6c4cb4c2458772ef6a75e61edfd77679a4adf8724004c82f336572f8aa20",
 		"coder-windows-amd64.exe": "ba3028803d8243abc2597045727b616a20340fcef7bdc697338f1ba2a4daa413",
 		"coder-windows-arm64.exe": "4139399bbb35c98dadc1e73792683a76546335f795af9373681a58f8829a6dbb"
-	},
-	"2.29.3": {
-		"coder-darwin-amd64": "9132abcba4f1c2d891f7a6fded9f8393895c636b6d6d1f339306152f3d21be64",
-		"coder-darwin-arm64": "17c1831c5f35d80f46aeaefbf108ab24eec405b58f6223a2cb865b86e51ea6eb",
-		"coder-linux-amd64": "3f4dd9c713edd8c25843aa8f3dff81d5566b9ffc8b9b958d8179987a73ae3635",
-		"coder-linux-arm64": "0dbdaec36d24deb631f51afef669443618d1fd9f21ac89b66e08243f2761a55e",
-		"coder-linux-armv7": "bb2892d4ecda38d7ff21eb2718b31326b7a118baf5d03e20800fdfe1a3874e40",
-		"coder-windows-amd64.exe": "4b62693ae7541c9f1cd5722731297055916442ba5959c77a8804cad090dfc06b",
-		"coder-windows-arm64.exe": "134972b58372d3901b8d54435476b1726be0947cbe31146618f932af2fc907ab"
-	},
-	"2.29.4": {
-		"coder-darwin-amd64": "044092f6dd3cf6096be7211c1e903c696cbc1adbd398bee369f2f9817f8218a8",
-		"coder-darwin-arm64": "2171d53eff01cf8e83e86c84e29a0575f341d7b85d7aadd02e89c88e62933935",
-		"coder-linux-amd64": "70afa1ff751a2280e1de84b1062a5cfcb85069b75a5a636d3f4a9c28c1dd8c18",
-		"coder-linux-arm64": "3c62003de4b483b02b4764d0ce19efccd9ca9e4be653dd37651e6cd3b74df81d",
-		"coder-linux-armv7": "bff71c98119f6f4a5413b757c7896eb54a1b6a539f1808b8d1eebef02f612525",
-		"coder-windows-amd64.exe": "9a74ead86fb86b8f60b04665f0285436deeeafa362b57efac9f8a37de0ebedeb",
-		"coder-windows-arm64.exe": "191fbd45ae8a81bcd3c3ac9cba3b33454a041fef6356ee73f85b590da93efed8"
-	},
-	"2.29.5": {
-		"coder-darwin-amd64": "6d88d9bf9f1cddaa9c372d699dcac6158880b283ec9da830b27c032d442ea9c1",
-		"coder-darwin-arm64": "2ca6523f123a628287e27a82baecd64ab874bf9556e19b0e3d698605a4b6c9e2",
-		"coder-linux-amd64": "d5d7a9ccf88edf11bf7e1465d3578c5150d9618d9c4304961dbfa72b26fde30e",
-		"coder-linux-arm64": "9a1f633a74912d38b445df76c5ee0c24a81c99d1e1577dec47ec51ebf3bd9bee",
-		"coder-linux-armv7": "ce6bed00bc48302c6f3a371fc687cb83860f19d214de5f80cce279aea6136a79",
-		"coder-windows-amd64.exe": "b9202f0f72346a2c76a3c9a8cb06b3e9d0a71da34f2d5a8c2f997ec6d7ab4b05",
-		"coder-windows-arm64.exe": "39540f423f268381e86a778c8137d2de51605703c444bddb144fe1e8740773e9"
-	},
-	"2.29.6": {
-		"coder-darwin-amd64": "a60c22bcdd3a54e03bf071804dc7b51e150fb91e84c66f833f7de3142346ddf7",
-		"coder-darwin-arm64": "976b53ab0954e352a0e5e39f05d012f063003fa95f7bb330a4e06cfed8fb6903",
-		"coder-linux-amd64": "7f7f084c3ef54efdfaa5341354ff8eed7ef207067baa3d1490e2868f6f6de5b6",
-		"coder-linux-arm64": "22bf28c2edecc2bd57330a38e819dea33293e491ab334e0a1f4a0d454c385081",
-		"coder-linux-armv7": "80ef4c5f1261cb0757cdf9bdeccec45622be49e29194f161bc42a31721c2cfde",
-		"coder-windows-amd64.exe": "6eb1fcc59194786dbf55410b1ace629ac8edf6b37329e234f6323217be60e098",
-		"coder-windows-arm64.exe": "2c175f5a616ba12217e3c2609b1eb07c94c0055518d8f69ab2dcb93acd093d8e"
-	},
-	"2.29.7": {
-		"coder-darwin-amd64": "bd1dc46bcd96d9767fb6e496277126d8107720fe915cdae07e56a42ddca99219",
-		"coder-darwin-arm64": "0ef9f3af6b0e64fc18220529e99f499f00a61af732281d5a4d0f1fd733fe9963",
-		"coder-linux-amd64": "ddeb2750537cc5275f755bed7779b2e66fe6eebb073952e6c9440723d31ece82",
-		"coder-linux-arm64": "d421fcfa5d5f9366df592a39a2b4e2e4b29e1fb3fce6d09a7085fa28a6c83c3a",
-		"coder-linux-armv7": "f867f5152f5b98b9914651bd504b99b1da8f686793db84b705c00e58b9c1909a",
-		"coder-windows-amd64.exe": "1476d1236c26b7e73adf06151dcd6a630e6911e41bbf247801947b76e4c0cb6a",
-		"coder-windows-arm64.exe": "de39f4eb6832559bb4933dcd69365bca6c7ccd91ddbf5a284c922652ded82903"
-	},
-	"2.29.8": {
-		"coder-darwin-amd64": "e455e894a10cfeed513190e70ec0c75130acd0902b08e032ea65be07e4fd9978",
-		"coder-darwin-arm64": "fe74bb985b764aa1a1c2ddfaea59a94260f2138590005c5fe613aa842accc223",
-		"coder-linux-amd64": "b6bc6d6e3b71bff9baaac02e4dfbf7b4965ffa69036f50f37dfb96b5874dbb3b",
-		"coder-linux-arm64": "95fb6dce3b8031fa7a21415d36455d673bb15ed261fc3e98fc52b4ddad630d71",
-		"coder-linux-armv7": "f88848e126acf9c273361848097d94cd8536923af5d5f38fb5040353b645dfea",
-		"coder-windows-amd64.exe": "65d74ec85c0c124cbd0ba2c082c8ec7d269856bf9d044f9e01c68391caa3ec25",
-		"coder-windows-arm64.exe": "f5baa3e7508acd41b42c88b9c2edce1846c105e32c784d8d5c30a3e69229c069"
-	},
-	"2.29.9": {
-		"coder-darwin-amd64": "cc3e1198e1458fe94784db812df91f1ef4157db8ae4cbb163550ae1e1ae1ea7b",
-		"coder-darwin-arm64": "8a238ec2933255951d00f1ca71107feaba10c74673239061d53e4f5867e7c623",
-		"coder-linux-amd64": "82ef7175a90b23351915bf0680262400d1499c71f380b484b39692ef221ea85b",
-		"coder-linux-arm64": "8c00c15c00c2bf80149f3b88a98006472bf9443b3f013c1bcd2527fa1b64b010",
-		"coder-linux-armv7": "690e552a88b27c0b80a6ba54ac6b75d5f4839b6515691486e5acc256ba6425cc",
-		"coder-windows-amd64.exe": "2077ef8fcd2eab4b587741eaece63881e46e06ea9e5dfb00ccd491733675261a",
-		"coder-windows-arm64.exe": "7a802d2f1beea0becf4c4d1ecf6296541ad6881baab7c552350880735b3ace30"
 	},
 	"2.30.0": {
 		"coder-darwin-amd64": "20692210763317310a96a7648b2ce0d88f51189d49637fdb1e98863b4b64189b",
@@ -350,51 +350,6 @@
 		"coder-windows-amd64.exe": "28ee5cfb07757d8929fef53bf74c627518327bd15d21b2bccdd1facc43a12bab",
 		"coder-windows-arm64.exe": "b4c24dfa91d26949d77d0502612bc37c2015a103edc401c303f1593a2d94661d"
 	},
-	"2.31.10": {
-		"coder-darwin-amd64": "8fa035650290bda5bf528f67155e1d7fde9f73595a71fb28b1d545aed490eb1c",
-		"coder-darwin-arm64": "f31548d08f62b7921b8920665d8ea3f8937ca6e3121be5b90a0b0a49f0990bbc",
-		"coder-linux-amd64": "e237e28a79824af606d46fc30b2291a138a652e52c739beeb6f5cbe318cd652d",
-		"coder-linux-arm64": "adb61247ec482f8dff4b163b4311d4b96724a4b91d5cc2be107872de383ef233",
-		"coder-linux-armv7": "98b92ae01621bdddcb1e1befe840e8317d33bc55e41cfce61c8de778cb695860",
-		"coder-windows-amd64.exe": "f5ece58feeb7c099d2f59e8a966ca2d5e34b0819a1f5b1dedda12c604332954a",
-		"coder-windows-arm64.exe": "034949abf2bdd446cdb7ddc1a66d3dba7b53524e07d394aeb1230bc90efcf11b"
-	},
-	"2.31.11": {
-		"coder-darwin-amd64": "328f1339aa2c974272db67ef39736bd1f52c7e9b885a0357a12c39b83244a934",
-		"coder-darwin-arm64": "2554a574256c50dcd0c3ef8518561eaa60e4d66d71a34486ab7c0556e1abdbd8",
-		"coder-linux-amd64": "cf39a92018870a8b2962be67923608f4450302c0cddf3853bcaa3356ddecace0",
-		"coder-linux-arm64": "c4a3e1ba55dc45ca5b3121f18b8cdc45a05cde02790474f5dd1584cae82e25c1",
-		"coder-linux-armv7": "3bba19df99ba9040cc73c6158e4a87fce4232f6a4cd71ce546faa9860cb4ed4e",
-		"coder-windows-amd64.exe": "2ab9677965854475388ea5d5525f5d8a6679ba79c5f04285adfb972b7dde21be",
-		"coder-windows-arm64.exe": "fb027d044ef19c78e4bfc303d973953e5b36e3105babbc0512769ec6032cfd66"
-	},
-	"2.31.12": {
-		"coder-darwin-amd64": "998a62b88f793af5c5b6f44bf57d0172a109aafceda4048f0d95a429a95e7119",
-		"coder-darwin-arm64": "ad248e996ffce5707700f58f9a750215aff0c3d823eaa7ad1a0b98b55b30530d",
-		"coder-linux-amd64": "ce9eae3a38cec6b6e4beb6cac6161d98d6f4468f3dbc78bf0c41633e4be92e1a",
-		"coder-linux-arm64": "a3f0c21e656bc5a4f79a4361060c00e43a13fd9f469a5824ff449e425ad5e843",
-		"coder-linux-armv7": "83a020b75fded685d9fc9d7d51ff7072cdee4520f97358997433f1c9bab265ba",
-		"coder-windows-amd64.exe": "f50b9226bcabcbb2323b53b0c2ef991eb2ca536449f3ee6d7d69b5b7384f586b",
-		"coder-windows-arm64.exe": "aed94f817253f2df46b9a47b21c9242340342dbe98e8cfbd300e6ffb9ff2701c"
-	},
-	"2.31.13": {
-		"coder-darwin-amd64": "dbdca311b8b0ff0aa7baeba57eeb04a28c9109c23b8c56bb1165382f590341f8",
-		"coder-darwin-arm64": "f196d0aa7deaf0577056c6cf5252382845eb5054f820e2106808633ee160a91a",
-		"coder-linux-amd64": "0cf9689a9afc01312ff8e2c23e0dfb7f3f7a6fa3914c989092dcf047ea8b549f",
-		"coder-linux-arm64": "4d6c986e06c9a44a2ff4b2ce928dfa195acf3dcbface4ac9cbccc25e99a18ae9",
-		"coder-linux-armv7": "5f347141cad2e2deb7b50e1fca8d9c80afe370ed0819f7a15416ef68eff9e1c0",
-		"coder-windows-amd64.exe": "24fe69fb34e4767d46b4456f124e44062a1437e5629091471f9a259760fc3392",
-		"coder-windows-arm64.exe": "f16ff69d9634ffb6efe2274e0a5a850e0ce7b5be534b17241bf53492dfcda1aa"
-	},
-	"2.31.14": {
-		"coder-darwin-amd64": "2bd786f2ac9bb75195d50f4d9495772f883b2247db64a23cee3e2eb43496e73a",
-		"coder-darwin-arm64": "af19680d50ce8089cad6c593c5c746df6243f7ee9f71fd06c05f453aea66f6ca",
-		"coder-linux-amd64": "e656eefa186d50ff611e34c9d76e0450a5e56bb283e2b9bc8cfcca889dc7c16c",
-		"coder-linux-arm64": "86cee24bdee3cd11f65b43ad13d1c9780a6ded941347ba93cf333b84b2d83050",
-		"coder-linux-armv7": "abc2c94b8c7bd2725da38618fce98336f9a644f10d62551f93e67cb4b352b4c4",
-		"coder-windows-amd64.exe": "a77abf9fdb75d0e1443ce20d682906c573384821019935b4c5542631dea1c8ca",
-		"coder-windows-arm64.exe": "af90d9a9e6b39847102da47f5fca138bf24acf00c43526b88f26650aaf966ed9"
-	},
 	"2.31.2": {
 		"coder-darwin-amd64": "5bfd798d1f44671ca70386941353d2cfc3e75c66ce4cb5aa319a43f1e87a14f4",
 		"coder-darwin-arm64": "5223d1fe95a071f99b0651c2fe787291207e23fe19727c8e83b9b4005817fc7b",
@@ -467,6 +422,51 @@
 		"coder-windows-amd64.exe": "4ca8bc3a7e59c9c2d3d148788c2e5ed09058f4c13810e17b9fe317b47b5c2a46",
 		"coder-windows-arm64.exe": "b79fc25515492680c7f1fe8372f9bbb08bfc77aa523323d6a2378767651ad65b"
 	},
+	"2.31.10": {
+		"coder-darwin-amd64": "8fa035650290bda5bf528f67155e1d7fde9f73595a71fb28b1d545aed490eb1c",
+		"coder-darwin-arm64": "f31548d08f62b7921b8920665d8ea3f8937ca6e3121be5b90a0b0a49f0990bbc",
+		"coder-linux-amd64": "e237e28a79824af606d46fc30b2291a138a652e52c739beeb6f5cbe318cd652d",
+		"coder-linux-arm64": "adb61247ec482f8dff4b163b4311d4b96724a4b91d5cc2be107872de383ef233",
+		"coder-linux-armv7": "98b92ae01621bdddcb1e1befe840e8317d33bc55e41cfce61c8de778cb695860",
+		"coder-windows-amd64.exe": "f5ece58feeb7c099d2f59e8a966ca2d5e34b0819a1f5b1dedda12c604332954a",
+		"coder-windows-arm64.exe": "034949abf2bdd446cdb7ddc1a66d3dba7b53524e07d394aeb1230bc90efcf11b"
+	},
+	"2.31.11": {
+		"coder-darwin-amd64": "328f1339aa2c974272db67ef39736bd1f52c7e9b885a0357a12c39b83244a934",
+		"coder-darwin-arm64": "2554a574256c50dcd0c3ef8518561eaa60e4d66d71a34486ab7c0556e1abdbd8",
+		"coder-linux-amd64": "cf39a92018870a8b2962be67923608f4450302c0cddf3853bcaa3356ddecace0",
+		"coder-linux-arm64": "c4a3e1ba55dc45ca5b3121f18b8cdc45a05cde02790474f5dd1584cae82e25c1",
+		"coder-linux-armv7": "3bba19df99ba9040cc73c6158e4a87fce4232f6a4cd71ce546faa9860cb4ed4e",
+		"coder-windows-amd64.exe": "2ab9677965854475388ea5d5525f5d8a6679ba79c5f04285adfb972b7dde21be",
+		"coder-windows-arm64.exe": "fb027d044ef19c78e4bfc303d973953e5b36e3105babbc0512769ec6032cfd66"
+	},
+	"2.31.12": {
+		"coder-darwin-amd64": "998a62b88f793af5c5b6f44bf57d0172a109aafceda4048f0d95a429a95e7119",
+		"coder-darwin-arm64": "ad248e996ffce5707700f58f9a750215aff0c3d823eaa7ad1a0b98b55b30530d",
+		"coder-linux-amd64": "ce9eae3a38cec6b6e4beb6cac6161d98d6f4468f3dbc78bf0c41633e4be92e1a",
+		"coder-linux-arm64": "a3f0c21e656bc5a4f79a4361060c00e43a13fd9f469a5824ff449e425ad5e843",
+		"coder-linux-armv7": "83a020b75fded685d9fc9d7d51ff7072cdee4520f97358997433f1c9bab265ba",
+		"coder-windows-amd64.exe": "f50b9226bcabcbb2323b53b0c2ef991eb2ca536449f3ee6d7d69b5b7384f586b",
+		"coder-windows-arm64.exe": "aed94f817253f2df46b9a47b21c9242340342dbe98e8cfbd300e6ffb9ff2701c"
+	},
+	"2.31.13": {
+		"coder-darwin-amd64": "dbdca311b8b0ff0aa7baeba57eeb04a28c9109c23b8c56bb1165382f590341f8",
+		"coder-darwin-arm64": "f196d0aa7deaf0577056c6cf5252382845eb5054f820e2106808633ee160a91a",
+		"coder-linux-amd64": "0cf9689a9afc01312ff8e2c23e0dfb7f3f7a6fa3914c989092dcf047ea8b549f",
+		"coder-linux-arm64": "4d6c986e06c9a44a2ff4b2ce928dfa195acf3dcbface4ac9cbccc25e99a18ae9",
+		"coder-linux-armv7": "5f347141cad2e2deb7b50e1fca8d9c80afe370ed0819f7a15416ef68eff9e1c0",
+		"coder-windows-amd64.exe": "24fe69fb34e4767d46b4456f124e44062a1437e5629091471f9a259760fc3392",
+		"coder-windows-arm64.exe": "f16ff69d9634ffb6efe2274e0a5a850e0ce7b5be534b17241bf53492dfcda1aa"
+	},
+	"2.31.14": {
+		"coder-darwin-amd64": "2bd786f2ac9bb75195d50f4d9495772f883b2247db64a23cee3e2eb43496e73a",
+		"coder-darwin-arm64": "af19680d50ce8089cad6c593c5c746df6243f7ee9f71fd06c05f453aea66f6ca",
+		"coder-linux-amd64": "e656eefa186d50ff611e34c9d76e0450a5e56bb283e2b9bc8cfcca889dc7c16c",
+		"coder-linux-arm64": "86cee24bdee3cd11f65b43ad13d1c9780a6ded941347ba93cf333b84b2d83050",
+		"coder-linux-armv7": "abc2c94b8c7bd2725da38618fce98336f9a644f10d62551f93e67cb4b352b4c4",
+		"coder-windows-amd64.exe": "a77abf9fdb75d0e1443ce20d682906c573384821019935b4c5542631dea1c8ca",
+		"coder-windows-arm64.exe": "af90d9a9e6b39847102da47f5fca138bf24acf00c43526b88f26650aaf966ed9"
+	},
 	"2.32.0": {
 		"coder-darwin-amd64": "384607ab3ea1fd0856e8c0f79c9d01aff6111bad62eb55ece8150be8f42a8b5a",
 		"coder-darwin-arm64": "a23cbba523dce0f7a122ae339baab4555e0ad6be56814fcc4a53ba68da7f51f8",
@@ -484,15 +484,6 @@
 		"coder-linux-armv7": "30b281130e533e1ef76c8bf37a6b2797f39db1ee3be2b84105d5e9aca5724ffd",
 		"coder-windows-amd64.exe": "7d48de99757c0ce85684b7ef498084bd347093d3f17685dc4f064ef0bf80d551",
 		"coder-windows-arm64.exe": "f189e2bc065010cb191819665c00b80ad36eed0a817aed3d350027a0b301af4e"
-	},
-	"2.32.10": {
-		"coder-darwin-amd64": "eddddb9656e1896b472d0ce52ebccd28c9bc16081010a56465ead076c83d1430",
-		"coder-darwin-arm64": "ce8655020f66b9cd0852a5664607707184cf314e0e71e422e93068bd967caedb",
-		"coder-linux-amd64": "04958c1f5987bfb864ada7f925b811c5bce4f440b6972caa62a2f71dc4f7972e",
-		"coder-linux-arm64": "d1a237103a5c5ed33fed0deccd67c8e58826a0ee51e1c2f3c2ca3b888c463372",
-		"coder-linux-armv7": "53aa6e232c5f56e7c82bec1cc71c0b69baa14408370913160f533ab2d2811612",
-		"coder-windows-amd64.exe": "7c4b9292bec2f946b1023bb01e63bee12cb0497608515b4cf49a8f400c61c48d",
-		"coder-windows-arm64.exe": "5fd57d3ded59bd1746402eca16b61e31a70b088e0666f9db87233b715e30fa18"
 	},
 	"2.32.2": {
 		"coder-darwin-amd64": "05b961995016553f8cf41414c58ca60bccb8d7743e0d0eb7dfba54c82493c1fa",
@@ -566,6 +557,15 @@
 		"coder-windows-amd64.exe": "e655f481c9a15d9dae4297b0afae924b5310cc3d6596de883416c011cb5d34ec",
 		"coder-windows-arm64.exe": "3c59e9f91c466e214befb570359f527e903690b9f815b16996034e75f5deba10"
 	},
+	"2.32.10": {
+		"coder-darwin-amd64": "eddddb9656e1896b472d0ce52ebccd28c9bc16081010a56465ead076c83d1430",
+		"coder-darwin-arm64": "ce8655020f66b9cd0852a5664607707184cf314e0e71e422e93068bd967caedb",
+		"coder-linux-amd64": "04958c1f5987bfb864ada7f925b811c5bce4f440b6972caa62a2f71dc4f7972e",
+		"coder-linux-arm64": "d1a237103a5c5ed33fed0deccd67c8e58826a0ee51e1c2f3c2ca3b888c463372",
+		"coder-linux-armv7": "53aa6e232c5f56e7c82bec1cc71c0b69baa14408370913160f533ab2d2811612",
+		"coder-windows-amd64.exe": "7c4b9292bec2f946b1023bb01e63bee12cb0497608515b4cf49a8f400c61c48d",
+		"coder-windows-arm64.exe": "5fd57d3ded59bd1746402eca16b61e31a70b088e0666f9db87233b715e30fa18"
+	},
 	"2.33.0": {
 		"coder-darwin-amd64": "29037a3a91ffea94b58c73b1d7aec51cfb0e5f7d412a51a6036fc4606c7da74d",
 		"coder-darwin-arm64": "aba8cf98721dc5e0e5b7dfd5fdc0a131696f537dff59d145f52fbed89ac79f4d",
@@ -583,24 +583,6 @@
 		"coder-linux-armv7": "362312fb3ab3bac06eabf4c580c63a6c870f705eca04a69966e8322071e1f2a2",
 		"coder-windows-amd64.exe": "30d7ae90fd3209fda9a98fab598cc1fcd195f8703639a46456c75ad015c6308a",
 		"coder-windows-arm64.exe": "e0be90c3768bbbbe6cec0e425a3b361e06a238b1dcb30fc8bb30625cbce7729c"
-	},
-	"2.33.10": {
-		"coder-darwin-amd64": "4176e2171d943a03a4503a61990bfc9f3e7afa2e60c8acae3f554c592c59d9b4",
-		"coder-darwin-arm64": "e60ced76ee86092b42f32513d4b096885e062aec13036ba0cbc1aac544e178b8",
-		"coder-linux-amd64": "b54a7839a1ef7346b0f5e59aff6302803275d389a0fee6fc4c91ffbb2975e3ce",
-		"coder-linux-arm64": "9b66e4da7a15b105dbf4e474e8c499d8799516757d13d0aa9bb167af16bfe34c",
-		"coder-linux-armv7": "158a455eb1105f5fb2b54d59f9b9b98ac8562112ffcb7ef1e5d350ceb095c3fe",
-		"coder-windows-amd64.exe": "bbbb4fc92ca1c9fe1c852585baa89150ef7ed00b0fd9963d88e1ee89684b1090",
-		"coder-windows-arm64.exe": "fcf6feb3b09a197d429a621dd2045b87cf9e6e9ea054dd77024f38cd75ea1644"
-	},
-	"2.33.11": {
-		"coder-darwin-amd64": "30fb96aba0e94f36b9f55d0b0348e33e0e378c69e24170a29a0f88b487990634",
-		"coder-darwin-arm64": "a05d4aff2d946d63ace6a90034237018afa68578ae0829c6f3e176c8d0b85e32",
-		"coder-linux-amd64": "c56458aadbb5cb794bfc488b935ab64c9d102f20945420ad59f29bc9e4f08f68",
-		"coder-linux-arm64": "1976ad66f7b01a53db7c11ab49d000f97ee0f09636cbb679ea06ea78f1ee4324",
-		"coder-linux-armv7": "0d3f826607aae930586393165b7c3a441f0da446b8000335b575dffb8022cd92",
-		"coder-windows-amd64.exe": "b540f907ff38d269b54447e17942f03e9950ba9c7456a549e23eded27510870f",
-		"coder-windows-arm64.exe": "7cac01c15115a2288c9e71e9c1ecc5dc2083cb86052d074b80b42dd6face6786"
 	},
 	"2.33.2": {
 		"coder-darwin-amd64": "6fca5cf10055c538457eb0c3cc5d365a047a3497a9cef7203e637ba0b828d3d8",
@@ -674,6 +656,24 @@
 		"coder-windows-amd64.exe": "d823bbfa2c73243dac6927cd9373408757eedffdbb8672d6a5e18eaf300c7b07",
 		"coder-windows-arm64.exe": "7f656a89fd7a15b72594e4faed9ecca384be6e8f992827df54fb99afd512ca4c"
 	},
+	"2.33.10": {
+		"coder-darwin-amd64": "4176e2171d943a03a4503a61990bfc9f3e7afa2e60c8acae3f554c592c59d9b4",
+		"coder-darwin-arm64": "e60ced76ee86092b42f32513d4b096885e062aec13036ba0cbc1aac544e178b8",
+		"coder-linux-amd64": "b54a7839a1ef7346b0f5e59aff6302803275d389a0fee6fc4c91ffbb2975e3ce",
+		"coder-linux-arm64": "9b66e4da7a15b105dbf4e474e8c499d8799516757d13d0aa9bb167af16bfe34c",
+		"coder-linux-armv7": "158a455eb1105f5fb2b54d59f9b9b98ac8562112ffcb7ef1e5d350ceb095c3fe",
+		"coder-windows-amd64.exe": "bbbb4fc92ca1c9fe1c852585baa89150ef7ed00b0fd9963d88e1ee89684b1090",
+		"coder-windows-arm64.exe": "fcf6feb3b09a197d429a621dd2045b87cf9e6e9ea054dd77024f38cd75ea1644"
+	},
+	"2.33.11": {
+		"coder-darwin-amd64": "30fb96aba0e94f36b9f55d0b0348e33e0e378c69e24170a29a0f88b487990634",
+		"coder-darwin-arm64": "a05d4aff2d946d63ace6a90034237018afa68578ae0829c6f3e176c8d0b85e32",
+		"coder-linux-amd64": "c56458aadbb5cb794bfc488b935ab64c9d102f20945420ad59f29bc9e4f08f68",
+		"coder-linux-arm64": "1976ad66f7b01a53db7c11ab49d000f97ee0f09636cbb679ea06ea78f1ee4324",
+		"coder-linux-armv7": "0d3f826607aae930586393165b7c3a441f0da446b8000335b575dffb8022cd92",
+		"coder-windows-amd64.exe": "b540f907ff38d269b54447e17942f03e9950ba9c7456a549e23eded27510870f",
+		"coder-windows-arm64.exe": "7cac01c15115a2288c9e71e9c1ecc5dc2083cb86052d074b80b42dd6face6786"
+	},
 	"2.34.0": {
 		"coder-darwin-amd64": "3ca37c355660c01bd0e0c60aa245cca5f6f0f55b4d7ab26c00a394c8c463cf25",
 		"coder-darwin-arm64": "b3270e52a841f3634ab8d92b11e5dd9bff2d173c1c517016a31901df5d425615",
@@ -691,6 +691,78 @@
 		"coder-linux-armv7": "062da484fc7c500c377ec03af7abe6f998382d39c95d8b94830ba65ca7daa580",
 		"coder-windows-amd64.exe": "56991ab161426eb1ac3a1adcf8c9d4046e13b5de3a48ca282d60e80438ed7836",
 		"coder-windows-arm64.exe": "d53801408f6a5bb377fee0f94a899e9071b77ee90e1b63d849e214c894611ac1"
+	},
+	"2.34.2": {
+		"coder-darwin-amd64": "b3fbfc4f8eb16bf4204e0705c06cdce52840ffecdd66643d8447bf701ff23004",
+		"coder-darwin-arm64": "db2ea9f8967f676a2bae85690c0c16f677f3056dbca73d5052738871c7c48249",
+		"coder-linux-amd64": "2ebcb8046fd335477afdbe80d00cfc848f9948132d8db690746c9ede21d80191",
+		"coder-linux-arm64": "703a0bf71086d516627cee477b10b30966dc71dd96228d00b8043063f93244cf",
+		"coder-linux-armv7": "57275a4e9df6fb3cc63b50cfed8901112955fdb5e093fab0ae737d97b9af715f",
+		"coder-windows-amd64.exe": "445d0015ad31560c9f46cb3db05d1a57b90e194ae6b7ccd34e6c96b3261a17f8",
+		"coder-windows-arm64.exe": "8f35edb16705bc569a02ad8a8dce0203e9d2070255ed0c1836f78b46c3103b92"
+	},
+	"2.34.3": {
+		"coder-darwin-amd64": "d799ad9a5a9612178c120e47b1ea7d82ff67f4d561e14e71774052e114bbecad",
+		"coder-darwin-arm64": "b700b3455f9348a41b6a5c224702a122cfe423aab6ef3968ba133296aaa0b027",
+		"coder-linux-amd64": "ec0e057628406280ee8a2e9b0888933520ba3a39031ce12bd1d8189e33f82126",
+		"coder-linux-arm64": "3e69543cd6a8c993343339e0d3f27d78e484e026c0db0fcc04d3db44279893fc",
+		"coder-linux-armv7": "9357f4e4434389fe34f68d5669568f9e0510ffa095cce74bb3c574d373bc98ab",
+		"coder-windows-amd64.exe": "147b0daf5ad3470efb0e97d8e3e065599a37c6f888a3b94bd057081c9d34bb52",
+		"coder-windows-arm64.exe": "2323f7f3bcc37bf5e12ab9b07ca9e472009e92f2e1c733f8684f9f988905ee1c"
+	},
+	"2.34.4": {
+		"coder-darwin-amd64": "20e52150352800a153f575d64c99cb793fa2fde624a0bee769965d740408e6ca",
+		"coder-darwin-arm64": "c9d703d3e5ee2fb88dddcc7b50cb3239c3803e4d6b686ebaca60c49ea3a84ff9",
+		"coder-linux-amd64": "c675b42ef03518028a689b4a9d0b7c1e350876befc8a9e307dde07fd46937f24",
+		"coder-linux-arm64": "bc6812916116aa8f1866bac6b0c8e5410e1f780515c25fa4dbf05b5bf42e90e9",
+		"coder-linux-armv7": "70424dbb0f3e01a29abb4c60e30b94680de437cd3d38e4ef6fb495ca0015bd76",
+		"coder-windows-amd64.exe": "cf83b236ecc2ea27019dac62474a1141a9412a2de090b7fcbe2934e8ca47d6fb",
+		"coder-windows-arm64.exe": "410ea44a877a236c9291f09229e993b8b5a73f68e3318082c5d012021134d136"
+	},
+	"2.34.5": {
+		"coder-darwin-amd64": "8ff7da5f87b966804d88ce6ddddbb6dd0eeea0dc0e80bacce0098796ddf33b50",
+		"coder-darwin-arm64": "839254d386ad48108fa7a060992256e807e54cb249612d50132b51560bc4c472",
+		"coder-linux-amd64": "c13478f806e72df9089727eda858ade35fe046f4ea6f072355ceea37231676c6",
+		"coder-linux-arm64": "ce1a060ee18d1f3da30c9580cf46dd308dee8959e6e0876658f2c2f7bfea8ced",
+		"coder-linux-armv7": "332b4e53823ca8e088f387b0e554036b140df6ef3c18e7558b0cce7caa3941c7",
+		"coder-windows-amd64.exe": "f82e08d446b83d71b1184c1ea3d4cf254d3a326dfd1b1f469fcb21a066af7e41",
+		"coder-windows-arm64.exe": "e8e54a5b663ffadb8450c4f11acff5f9ea6be6ac27630344ed093938c37bf8cb"
+	},
+	"2.34.6": {
+		"coder-darwin-amd64": "32e6d4913d6799cd8744cbf7163c9621480dd0403b9bdf1d8fe8a05ec9866a0e",
+		"coder-darwin-arm64": "3363fbb6af119cc4c4a4964b3493215da27944809ae558481f349e393273ed80",
+		"coder-linux-amd64": "a231e8692891bc8af0ce2a3a362206602878db8210efbd48375888eb8f80bdc3",
+		"coder-linux-arm64": "0a179471ab743bc81d802e3300e6c88bf8c08449906e6031ec6205a8497fa48e",
+		"coder-linux-armv7": "f96500a6a8db6c7ff81ee7c26957bc95b77242ed3cb4e541114775628e587360",
+		"coder-windows-amd64.exe": "4872b9c73b8d91bc13b4c896d0356a448f5603ee3159201e788c563855f11bb8",
+		"coder-windows-arm64.exe": "63717cbf5f2161ca9f60109025288383d9d08ca7866b74f3fb84bb5e96a02512"
+	},
+	"2.34.7": {
+		"coder-darwin-amd64": "4a6f77120c38004593340bd5cf766bff58aa93296d6c1a033383ee54380c9b1a",
+		"coder-darwin-arm64": "deccb94813e4777ec0a34fc310895a50c5d4a3665e1646043bb6a453764cf62d",
+		"coder-linux-amd64": "103d58801aa209bff03e2601053f51dee97e0fa58e712a256827e8da589c9f9a",
+		"coder-linux-arm64": "ce58f8c8998454d7ee69c34acabcd252357ad040e8b866ebabe549a5eee48378",
+		"coder-linux-armv7": "a6b9f65f1a1213c509797fa7b6b893a3b9cc1ebb15731cb983b1dba57857e5ff",
+		"coder-windows-amd64.exe": "5466c8a8af7216ba2ba06a95d154bfa56b3b4f5c1d17ac43c8a6a2a2c4d49990",
+		"coder-windows-arm64.exe": "0e5b3f2be707ab9ab74a4d654fb21e5cac2f1ad8bd76ba4c6d4e54a81fef72c0"
+	},
+	"2.34.8": {
+		"coder-darwin-amd64": "9d423a0f8c028c187bb827e14f70dabe952762c763e0378ca5504b9633ddc6c6",
+		"coder-darwin-arm64": "192e4206b52278ea1429de3ddc4ace48a6de9da8c60bb0d605926c58f9d37157",
+		"coder-linux-amd64": "3a9132e969f71c274c7db438a556243d6ceaa8627828faea1e619771737b6c4e",
+		"coder-linux-arm64": "92f7833be63d3653809b1ee8655932016ff40be0a97d72d19a13bcc8019d6ddf",
+		"coder-linux-armv7": "fbfb5f9775e33d3cac94c01617a7fbf908e921599717f7c8f717fbbdf87a6de7",
+		"coder-windows-amd64.exe": "3c5c891d982f0482f437b4376b339149af9f5406ad4d100c74a186ea66ae7ad6",
+		"coder-windows-arm64.exe": "0ef2f7164a45eb364452fa2820d4cc86e8db8cb1f31ab98e06f62e63a9af7022"
+	},
+	"2.34.9": {
+		"coder-darwin-amd64": "a902a4f8aa3ef156d6a4effcaa4ba93696b6fccdc2cd903b69145d53359ec22d",
+		"coder-darwin-arm64": "58e936de5bf688a4ff0d900f71ce28fe5eb5bcc06b6a8c741da0820d564ba20c",
+		"coder-linux-amd64": "ea0784e081f5735bcb26cdbfe1ff3ab8b83ed0b55f9dcfc59d67f47832e07578",
+		"coder-linux-arm64": "e352ff2cde464a5b4839b95be9aa31f011b0be5b32b85f0d6d08c7ecf86efac2",
+		"coder-linux-armv7": "32ad5fa968a85efefaaf329ea54a19cd377f53082f816404b1fbd0de7d87b5db",
+		"coder-windows-amd64.exe": "e7a6964c2e507ad222e493deb77ef6a664c5cc60c98176fce51262e618737255",
+		"coder-windows-arm64.exe": "c3fe54050c93c3d28ce76b6f4815aef32fb2e65f778a7cdad406562b2af8534f"
 	},
 	"2.34.10": {
 		"coder-darwin-amd64": "6b7c8febc546b66248995236af40e4904ef09db74c29cf6f5d51d3c3e062d34d",
@@ -782,15 +854,6 @@
 		"coder-windows-amd64.exe": "7b85faada9e295ebe030202f603c49f24fdb24b3e07bdaf847087287a547cf64",
 		"coder-windows-arm64.exe": "aa5dc99546acc8d612de7db8c41fc727ddda4e70754beb52ea026aa441add67a"
 	},
-	"2.34.2": {
-		"coder-darwin-amd64": "b3fbfc4f8eb16bf4204e0705c06cdce52840ffecdd66643d8447bf701ff23004",
-		"coder-darwin-arm64": "db2ea9f8967f676a2bae85690c0c16f677f3056dbca73d5052738871c7c48249",
-		"coder-linux-amd64": "2ebcb8046fd335477afdbe80d00cfc848f9948132d8db690746c9ede21d80191",
-		"coder-linux-arm64": "703a0bf71086d516627cee477b10b30966dc71dd96228d00b8043063f93244cf",
-		"coder-linux-armv7": "57275a4e9df6fb3cc63b50cfed8901112955fdb5e093fab0ae737d97b9af715f",
-		"coder-windows-amd64.exe": "445d0015ad31560c9f46cb3db05d1a57b90e194ae6b7ccd34e6c96b3261a17f8",
-		"coder-windows-arm64.exe": "8f35edb16705bc569a02ad8a8dce0203e9d2070255ed0c1836f78b46c3103b92"
-	},
 	"2.34.20": {
 		"coder-darwin-amd64": "5690ad722d664dfb94467f1256e2a9f24c8356a5af7aa07553c89c705f140ca1",
 		"coder-darwin-arm64": "d5a1b114fe29d82152bec33d0f6a9cf260cc760a0c24465313b3d16698fadcae",
@@ -809,69 +872,6 @@
 		"coder-windows-amd64.exe": "bcfea97ce4e109c30b1723624d0a8c2dc6025143d6f1358b8ad72885cbcb92fd",
 		"coder-windows-arm64.exe": "5990350c8c5abe4aa48ab5747095a500c210808ba33e4188de8af4e14e286534"
 	},
-	"2.34.3": {
-		"coder-darwin-amd64": "d799ad9a5a9612178c120e47b1ea7d82ff67f4d561e14e71774052e114bbecad",
-		"coder-darwin-arm64": "b700b3455f9348a41b6a5c224702a122cfe423aab6ef3968ba133296aaa0b027",
-		"coder-linux-amd64": "ec0e057628406280ee8a2e9b0888933520ba3a39031ce12bd1d8189e33f82126",
-		"coder-linux-arm64": "3e69543cd6a8c993343339e0d3f27d78e484e026c0db0fcc04d3db44279893fc",
-		"coder-linux-armv7": "9357f4e4434389fe34f68d5669568f9e0510ffa095cce74bb3c574d373bc98ab",
-		"coder-windows-amd64.exe": "147b0daf5ad3470efb0e97d8e3e065599a37c6f888a3b94bd057081c9d34bb52",
-		"coder-windows-arm64.exe": "2323f7f3bcc37bf5e12ab9b07ca9e472009e92f2e1c733f8684f9f988905ee1c"
-	},
-	"2.34.4": {
-		"coder-darwin-amd64": "20e52150352800a153f575d64c99cb793fa2fde624a0bee769965d740408e6ca",
-		"coder-darwin-arm64": "c9d703d3e5ee2fb88dddcc7b50cb3239c3803e4d6b686ebaca60c49ea3a84ff9",
-		"coder-linux-amd64": "c675b42ef03518028a689b4a9d0b7c1e350876befc8a9e307dde07fd46937f24",
-		"coder-linux-arm64": "bc6812916116aa8f1866bac6b0c8e5410e1f780515c25fa4dbf05b5bf42e90e9",
-		"coder-linux-armv7": "70424dbb0f3e01a29abb4c60e30b94680de437cd3d38e4ef6fb495ca0015bd76",
-		"coder-windows-amd64.exe": "cf83b236ecc2ea27019dac62474a1141a9412a2de090b7fcbe2934e8ca47d6fb",
-		"coder-windows-arm64.exe": "410ea44a877a236c9291f09229e993b8b5a73f68e3318082c5d012021134d136"
-	},
-	"2.34.5": {
-		"coder-darwin-amd64": "8ff7da5f87b966804d88ce6ddddbb6dd0eeea0dc0e80bacce0098796ddf33b50",
-		"coder-darwin-arm64": "839254d386ad48108fa7a060992256e807e54cb249612d50132b51560bc4c472",
-		"coder-linux-amd64": "c13478f806e72df9089727eda858ade35fe046f4ea6f072355ceea37231676c6",
-		"coder-linux-arm64": "ce1a060ee18d1f3da30c9580cf46dd308dee8959e6e0876658f2c2f7bfea8ced",
-		"coder-linux-armv7": "332b4e53823ca8e088f387b0e554036b140df6ef3c18e7558b0cce7caa3941c7",
-		"coder-windows-amd64.exe": "f82e08d446b83d71b1184c1ea3d4cf254d3a326dfd1b1f469fcb21a066af7e41",
-		"coder-windows-arm64.exe": "e8e54a5b663ffadb8450c4f11acff5f9ea6be6ac27630344ed093938c37bf8cb"
-	},
-	"2.34.6": {
-		"coder-darwin-amd64": "32e6d4913d6799cd8744cbf7163c9621480dd0403b9bdf1d8fe8a05ec9866a0e",
-		"coder-darwin-arm64": "3363fbb6af119cc4c4a4964b3493215da27944809ae558481f349e393273ed80",
-		"coder-linux-amd64": "a231e8692891bc8af0ce2a3a362206602878db8210efbd48375888eb8f80bdc3",
-		"coder-linux-arm64": "0a179471ab743bc81d802e3300e6c88bf8c08449906e6031ec6205a8497fa48e",
-		"coder-linux-armv7": "f96500a6a8db6c7ff81ee7c26957bc95b77242ed3cb4e541114775628e587360",
-		"coder-windows-amd64.exe": "4872b9c73b8d91bc13b4c896d0356a448f5603ee3159201e788c563855f11bb8",
-		"coder-windows-arm64.exe": "63717cbf5f2161ca9f60109025288383d9d08ca7866b74f3fb84bb5e96a02512"
-	},
-	"2.34.7": {
-		"coder-darwin-amd64": "4a6f77120c38004593340bd5cf766bff58aa93296d6c1a033383ee54380c9b1a",
-		"coder-darwin-arm64": "deccb94813e4777ec0a34fc310895a50c5d4a3665e1646043bb6a453764cf62d",
-		"coder-linux-amd64": "103d58801aa209bff03e2601053f51dee97e0fa58e712a256827e8da589c9f9a",
-		"coder-linux-arm64": "ce58f8c8998454d7ee69c34acabcd252357ad040e8b866ebabe549a5eee48378",
-		"coder-linux-armv7": "a6b9f65f1a1213c509797fa7b6b893a3b9cc1ebb15731cb983b1dba57857e5ff",
-		"coder-windows-amd64.exe": "5466c8a8af7216ba2ba06a95d154bfa56b3b4f5c1d17ac43c8a6a2a2c4d49990",
-		"coder-windows-arm64.exe": "0e5b3f2be707ab9ab74a4d654fb21e5cac2f1ad8bd76ba4c6d4e54a81fef72c0"
-	},
-	"2.34.8": {
-		"coder-darwin-amd64": "9d423a0f8c028c187bb827e14f70dabe952762c763e0378ca5504b9633ddc6c6",
-		"coder-darwin-arm64": "192e4206b52278ea1429de3ddc4ace48a6de9da8c60bb0d605926c58f9d37157",
-		"coder-linux-amd64": "3a9132e969f71c274c7db438a556243d6ceaa8627828faea1e619771737b6c4e",
-		"coder-linux-arm64": "92f7833be63d3653809b1ee8655932016ff40be0a97d72d19a13bcc8019d6ddf",
-		"coder-linux-armv7": "fbfb5f9775e33d3cac94c01617a7fbf908e921599717f7c8f717fbbdf87a6de7",
-		"coder-windows-amd64.exe": "3c5c891d982f0482f437b4376b339149af9f5406ad4d100c74a186ea66ae7ad6",
-		"coder-windows-arm64.exe": "0ef2f7164a45eb364452fa2820d4cc86e8db8cb1f31ab98e06f62e63a9af7022"
-	},
-	"2.34.9": {
-		"coder-darwin-amd64": "a902a4f8aa3ef156d6a4effcaa4ba93696b6fccdc2cd903b69145d53359ec22d",
-		"coder-darwin-arm64": "58e936de5bf688a4ff0d900f71ce28fe5eb5bcc06b6a8c741da0820d564ba20c",
-		"coder-linux-amd64": "ea0784e081f5735bcb26cdbfe1ff3ab8b83ed0b55f9dcfc59d67f47832e07578",
-		"coder-linux-arm64": "e352ff2cde464a5b4839b95be9aa31f011b0be5b32b85f0d6d08c7ecf86efac2",
-		"coder-linux-armv7": "32ad5fa968a85efefaaf329ea54a19cd377f53082f816404b1fbd0de7d87b5db",
-		"coder-windows-amd64.exe": "e7a6964c2e507ad222e493deb77ef6a664c5cc60c98176fce51262e618737255",
-		"coder-windows-arm64.exe": "c3fe54050c93c3d28ce76b6f4815aef32fb2e65f778a7cdad406562b2af8534f"
-	},
 	"2.35.1": {
 		"coder-darwin-amd64": "bb07bc327639f7235e493efed4fe1195f72ac5a429ab1b1bfa8388c5616c1b45",
 		"coder-darwin-arm64": "c65c3aea603b5998fef38557907ae5a5c492d7a8978dd6c32a39321e03ad9e91",
@@ -880,33 +880,6 @@
 		"coder-linux-armv7": "f2e0715281d0b1d80ee8f4217068a987102c5b01a7bfea9eb8c4e55125cab037",
 		"coder-windows-amd64.exe": "6ab152b37a6bd53555c43eb12fb65246cd9f6ef61384084736ea03dcbf1dacaf",
 		"coder-windows-arm64.exe": "4baa0ae77bd715789a725aa462cbb78634bd03599fdc2c7ac96579347a945a64"
-	},
-	"2.35.10": {
-		"coder-darwin-amd64": "7e3bf64a8551c401be1f9337b6de10115c8791957efb9dce90dc06d111757018",
-		"coder-darwin-arm64": "111ff2f2f41b9ce2de9e4a28e3ce3ce1e472442521342b2142d7fb5e82ed7ffe",
-		"coder-linux-amd64": "962d70f355be96c9521329dfcf100381cac694f3124159e41bbc875a752ff7c5",
-		"coder-linux-arm64": "fbc29458e74b1e8076ad3127db59b6a655d9d96fee341557fe1c38b1475a313c",
-		"coder-linux-armv7": "afcb1cb0be63dd56cad057cfdafe87d2ba89a71eaec8cc07d191fd14d49fc30a",
-		"coder-windows-amd64.exe": "9f58f7325117b9e1af276a948444ec5df8feaac0c2923e89360e215f8a7b9d93",
-		"coder-windows-arm64.exe": "95ac74cedeaa25e102a4d643601180ec5d0615b309874984773b2ca85d68fc22"
-	},
-	"2.35.11": {
-		"coder-darwin-amd64": "8a8a854671128471b534f6414b02b93f9a720c79390e8ef0cd796bfc086c1c04",
-		"coder-darwin-arm64": "d9752a849213f2d31268ae33b584d4ca852373c8ecbb27a03333e9277adb037b",
-		"coder-linux-amd64": "1cc8fab467614207c03244eda3d3ceeaac6fd4706f3f55d5e6cebee849621de9",
-		"coder-linux-arm64": "68507aaac95bdcb0666ac4ccfb2cd1209387db98ca89fdce90d591db13895da1",
-		"coder-linux-armv7": "74de56dbfbe765ffe7f990205929233d59cb1eb4b38efdb23c3001b940dd6f32",
-		"coder-windows-amd64.exe": "bd62d9dfdaf52031137dad8e9b3d93a40ca760e7a2ad96ff7ae202c59d591c15",
-		"coder-windows-arm64.exe": "7efbd6b347d0a543c7c45281dcb9d03621739e1e3ae991d7c144915b5037f6f3"
-	},
-	"2.35.12": {
-		"coder-darwin-amd64": "44b059ba0405d44cac799825a43fe6a3f0473506dec75b32aa577bb518c16b8e",
-		"coder-darwin-arm64": "e304ee3d1b8075cd27d79f6babecf8c2fe6a411eeb45e03695d343bab03fc19c",
-		"coder-linux-amd64": "8a8925d794d84b1ee6e98e0805424a61b092cdbf5e851db1894a15db0c29ad69",
-		"coder-linux-arm64": "af379fc42738c769348a7d6d4b7e2b898bc1a13a8ef6a57193332ce0c877b927",
-		"coder-linux-armv7": "0310aaafcd54758bf293d6baff7757a629ea3ee590b7007174944a4466972a65",
-		"coder-windows-amd64.exe": "daf3ddab18035438dbd7f84772dab3a4c9ea57e367ff0d5711ec47fb938b457c",
-		"coder-windows-arm64.exe": "a4d44984e98fbe8cfa8de509dda6d1bf503341a8a9fbba0ece78d93164d4a7cc"
 	},
 	"2.35.2": {
 		"coder-darwin-amd64": "8855a8c89678b39f076d3a8d4ae64b3b60fa1c7861a26f313c34e12a657c8d17",
@@ -971,6 +944,33 @@
 		"coder-windows-amd64.exe": "7e5abeee933ad1c197f424bf6e26810597b8c3a94be858f596a8cb85c4badeba",
 		"coder-windows-arm64.exe": "4d4f278dbd47472eb25ddf4fb6790e23cbcc13bfca89f4a79fda3fe6abdaaafb"
 	},
+	"2.35.10": {
+		"coder-darwin-amd64": "7e3bf64a8551c401be1f9337b6de10115c8791957efb9dce90dc06d111757018",
+		"coder-darwin-arm64": "111ff2f2f41b9ce2de9e4a28e3ce3ce1e472442521342b2142d7fb5e82ed7ffe",
+		"coder-linux-amd64": "962d70f355be96c9521329dfcf100381cac694f3124159e41bbc875a752ff7c5",
+		"coder-linux-arm64": "fbc29458e74b1e8076ad3127db59b6a655d9d96fee341557fe1c38b1475a313c",
+		"coder-linux-armv7": "afcb1cb0be63dd56cad057cfdafe87d2ba89a71eaec8cc07d191fd14d49fc30a",
+		"coder-windows-amd64.exe": "9f58f7325117b9e1af276a948444ec5df8feaac0c2923e89360e215f8a7b9d93",
+		"coder-windows-arm64.exe": "95ac74cedeaa25e102a4d643601180ec5d0615b309874984773b2ca85d68fc22"
+	},
+	"2.35.11": {
+		"coder-darwin-amd64": "8a8a854671128471b534f6414b02b93f9a720c79390e8ef0cd796bfc086c1c04",
+		"coder-darwin-arm64": "d9752a849213f2d31268ae33b584d4ca852373c8ecbb27a03333e9277adb037b",
+		"coder-linux-amd64": "1cc8fab467614207c03244eda3d3ceeaac6fd4706f3f55d5e6cebee849621de9",
+		"coder-linux-arm64": "68507aaac95bdcb0666ac4ccfb2cd1209387db98ca89fdce90d591db13895da1",
+		"coder-linux-armv7": "74de56dbfbe765ffe7f990205929233d59cb1eb4b38efdb23c3001b940dd6f32",
+		"coder-windows-amd64.exe": "bd62d9dfdaf52031137dad8e9b3d93a40ca760e7a2ad96ff7ae202c59d591c15",
+		"coder-windows-arm64.exe": "7efbd6b347d0a543c7c45281dcb9d03621739e1e3ae991d7c144915b5037f6f3"
+	},
+	"2.35.12": {
+		"coder-darwin-amd64": "44b059ba0405d44cac799825a43fe6a3f0473506dec75b32aa577bb518c16b8e",
+		"coder-darwin-arm64": "e304ee3d1b8075cd27d79f6babecf8c2fe6a411eeb45e03695d343bab03fc19c",
+		"coder-linux-amd64": "8a8925d794d84b1ee6e98e0805424a61b092cdbf5e851db1894a15db0c29ad69",
+		"coder-linux-arm64": "af379fc42738c769348a7d6d4b7e2b898bc1a13a8ef6a57193332ce0c877b927",
+		"coder-linux-armv7": "0310aaafcd54758bf293d6baff7757a629ea3ee590b7007174944a4466972a65",
+		"coder-windows-amd64.exe": "daf3ddab18035438dbd7f84772dab3a4c9ea57e367ff0d5711ec47fb938b457c",
+		"coder-windows-arm64.exe": "a4d44984e98fbe8cfa8de509dda6d1bf503341a8a9fbba0ece78d93164d4a7cc"
+	},
 	"2.36.0": {
 		"coder-darwin-amd64": "f23fff6fea04acc13b7cd74ff16008eb4809f3aa16b70ca02e7ca38a0dc556a4",
 		"coder-darwin-arm64": "ee1c7c344e4df2b977b217d35dee020cff2ab64cb4c42b7e58e058ecb18dc890",
@@ -988,33 +988,6 @@
 		"coder-linux-armv7": "7f36b4a1dcc41a197d8c020ccf56da1fcd176741d132a6748c33809fc0df2f34",
 		"coder-windows-amd64.exe": "d0f2b988e991953a4d95db2611d8c4c22c2d4219da7f361e8132a86e73bf9f58",
 		"coder-windows-arm64.exe": "9fdc51451f7c6a261e09dd0d3545b53af7ade017e96416e661656f0af80c8a09"
-	},
-	"2.36.10": {
-		"coder-darwin-amd64": "87ee0ce2e08d1992ecf2e1ece7bf9966298750f4acc05a90e8a63ce1dc56da33",
-		"coder-darwin-arm64": "e926d3558511fc1061d58d0089d542ed8c275b95fbb7fb5aa784a3c6e6f720da",
-		"coder-linux-amd64": "d85d0265fd0edd5d4e766c40c5c3d07d978f86473a78b2b737a4bb2df57658f0",
-		"coder-linux-arm64": "0bcd4d823e5533ef9bf54975adfee856aae3ed317318ace8feebb7755ca69a28",
-		"coder-linux-armv7": "4d5377e8981c6851629fdf79258f4eaa8315bf0ce48416099c2d6b2d6ac422d1",
-		"coder-windows-amd64.exe": "37093b44c099edfa5b55c57bc36ea25c1ce4e6470a44d95b7915ed36d39b0e02",
-		"coder-windows-arm64.exe": "bce30849ec8d7248587d409108812d2c7b14b5cd0734cd6cda23837f1e00262e"
-	},
-	"2.36.11": {
-		"coder-darwin-amd64": "4d280f330cd0d1a8ec868072a2c17507197d64189798689595b8856e418af4be",
-		"coder-darwin-arm64": "0fc30acb74e59493a9c96d18043adfb3e98d3c56814da16bae203b615efe79f2",
-		"coder-linux-amd64": "174cb19af31bf12afe5c64f2a073ec511bc1d5981342f37e200b28501ba140ed",
-		"coder-linux-arm64": "4864e739b6c97d92ff3c60f382ab01b7849988e88800b58d5438ef8452ba6270",
-		"coder-linux-armv7": "c365b3401e26a3c94ef0272d874db02f325692920f3779875754aedd51424b29",
-		"coder-windows-amd64.exe": "78a07ec28a53dce3a4be0c9a6c1a043da4ce043712a82f38756b907fd8da0eb0",
-		"coder-windows-arm64.exe": "38dba7a6b4c5f76407dd66395f6758729e713bee81cba51dfd15555f41ad7f5f"
-	},
-	"2.36.12": {
-		"coder-darwin-amd64": "48f1173ef8460e5c99ef8a7f62253591d6907a4e8bab01d0dbea7962391dd547",
-		"coder-darwin-arm64": "7022f419cc7ed2d16af0f40009513025a18ba9ca9e933802153ff69ee4ff9dff",
-		"coder-linux-amd64": "8a29c4717749cac9e6159ef2a1999e347be22718e9c5f4be6b5283252963807c",
-		"coder-linux-arm64": "4bcda352bca5effa736376207637ea3835a9c9bf40141848d0220d0565b81110",
-		"coder-linux-armv7": "6209f212eebfc8940a1a1f4a6f585a950e67faafe02b5a009f78d4b2e7a9c8af",
-		"coder-windows-amd64.exe": "bf51b580bda072c358fb4d72b8a4414a3fc49e70e0346c2e7b49348ecbb497ae",
-		"coder-windows-arm64.exe": "da95930572a48fdfe96b65cefef9a37f931db8f45d454ae43832cd17bc103173"
 	},
 	"2.36.3": {
 		"coder-darwin-amd64": "8c1162b533d2b14eaef40746c889b388e0ba01c86808933ba3575c074e1ae3c1",
@@ -1079,6 +1052,33 @@
 		"coder-windows-amd64.exe": "ce56e7a0d4edc9efd0860349522b60d7f28e422eb66c7d8628157a16db97d5db",
 		"coder-windows-arm64.exe": "fbd8296c2005883380680ba7ec70acee06d273980701c666a7906fc44662a293"
 	},
+	"2.36.10": {
+		"coder-darwin-amd64": "87ee0ce2e08d1992ecf2e1ece7bf9966298750f4acc05a90e8a63ce1dc56da33",
+		"coder-darwin-arm64": "e926d3558511fc1061d58d0089d542ed8c275b95fbb7fb5aa784a3c6e6f720da",
+		"coder-linux-amd64": "d85d0265fd0edd5d4e766c40c5c3d07d978f86473a78b2b737a4bb2df57658f0",
+		"coder-linux-arm64": "0bcd4d823e5533ef9bf54975adfee856aae3ed317318ace8feebb7755ca69a28",
+		"coder-linux-armv7": "4d5377e8981c6851629fdf79258f4eaa8315bf0ce48416099c2d6b2d6ac422d1",
+		"coder-windows-amd64.exe": "37093b44c099edfa5b55c57bc36ea25c1ce4e6470a44d95b7915ed36d39b0e02",
+		"coder-windows-arm64.exe": "bce30849ec8d7248587d409108812d2c7b14b5cd0734cd6cda23837f1e00262e"
+	},
+	"2.36.11": {
+		"coder-darwin-amd64": "4d280f330cd0d1a8ec868072a2c17507197d64189798689595b8856e418af4be",
+		"coder-darwin-arm64": "0fc30acb74e59493a9c96d18043adfb3e98d3c56814da16bae203b615efe79f2",
+		"coder-linux-amd64": "174cb19af31bf12afe5c64f2a073ec511bc1d5981342f37e200b28501ba140ed",
+		"coder-linux-arm64": "4864e739b6c97d92ff3c60f382ab01b7849988e88800b58d5438ef8452ba6270",
+		"coder-linux-armv7": "c365b3401e26a3c94ef0272d874db02f325692920f3779875754aedd51424b29",
+		"coder-windows-amd64.exe": "78a07ec28a53dce3a4be0c9a6c1a043da4ce043712a82f38756b907fd8da0eb0",
+		"coder-windows-arm64.exe": "38dba7a6b4c5f76407dd66395f6758729e713bee81cba51dfd15555f41ad7f5f"
+	},
+	"2.36.12": {
+		"coder-darwin-amd64": "48f1173ef8460e5c99ef8a7f62253591d6907a4e8bab01d0dbea7962391dd547",
+		"coder-darwin-arm64": "7022f419cc7ed2d16af0f40009513025a18ba9ca9e933802153ff69ee4ff9dff",
+		"coder-linux-amd64": "8a29c4717749cac9e6159ef2a1999e347be22718e9c5f4be6b5283252963807c",
+		"coder-linux-arm64": "4bcda352bca5effa736376207637ea3835a9c9bf40141848d0220d0565b81110",
+		"coder-linux-armv7": "6209f212eebfc8940a1a1f4a6f585a950e67faafe02b5a009f78d4b2e7a9c8af",
+		"coder-windows-amd64.exe": "bf51b580bda072c358fb4d72b8a4414a3fc49e70e0346c2e7b49348ecbb497ae",
+		"coder-windows-arm64.exe": "da95930572a48fdfe96b65cefef9a37f931db8f45d454ae43832cd17bc103173"
+	},
 	"2.37.0": {
 		"coder-darwin-amd64": "ea27f67d4858102799d96a69fe240e6d19486a5ad6651ac9e624b9977067c0a8",
 		"coder-darwin-arm64": "2a98fe92b07967aa03550bc0461ec99ed7176a553ec419a62df40191178c77e6",
@@ -1096,42 +1096,6 @@
 		"coder-linux-armv7": "c060400fdce0664ac099afc4215725a8586616d1b895969e66747872c48bc937",
 		"coder-windows-amd64.exe": "db6238b2dda7a9b70fe1110a7f81ddbbd70033df06409526f39e505ad7443481",
 		"coder-windows-arm64.exe": "e9a0acc09ce6a5aaaea01cffb9d9f16c2a6629bec6ddb27b2f0a558ebc284ba0"
-	},
-	"2.37.10": {
-		"coder-darwin-amd64": "fb7f28397e6001a385b99e6127f99dcb5260fae4c3117866d967815ca5b75da9",
-		"coder-darwin-arm64": "64ef7cf9c3dd2652efd45d45572887c5efc7ac56cbaa45b4ba20131aebf2285e",
-		"coder-linux-amd64": "073b321213af376ecd1eed7d86ee07fa07b9af70274299535b51f3fcd661f22a",
-		"coder-linux-arm64": "1b64cce1d0a478f3dcfbbadd24ef6190ef57240ed10320f961e61c2755e48b2c",
-		"coder-linux-armv7": "fbfa3e816ecc7da8df3b1193ca0a8b2e6df9703d2e0d7f6412e2be6cac3f59d1",
-		"coder-windows-amd64.exe": "694253ce61e3d2b1f3a6d1698792bf8f91889de65c10544e7d17c50db702eab1",
-		"coder-windows-arm64.exe": "aecad6362d44fa37e94327716607e965cac92da284764ad26d7252721d332dff"
-	},
-	"2.37.11": {
-		"coder-darwin-amd64": "40b9be19033f483ab820191eb9c90a7a765d1d3d5f3427211dbd56373b9ae2b8",
-		"coder-darwin-arm64": "a2b9c3a577b6e7c73245315f7bded1faed244d7adb9c1eb1b3cadaa504d0f82f",
-		"coder-linux-amd64": "3202fe3301274435d3c16d922ebd96989d82bcb5164704afaac43138b5eaaaf1",
-		"coder-linux-arm64": "d784d42f98cc75abe80465b2102d74d959fa0b09c9ce184d8987358d072fab1f",
-		"coder-linux-armv7": "da5421f458d028bd17ec5895a33eff409853f56506f88c428d8acd0d1713f866",
-		"coder-windows-amd64.exe": "41495fd7d82f6ad7972b954935cae11d3a60cfc95f70828baf990e7d900ae6bf",
-		"coder-windows-arm64.exe": "8885872c87dfc208bbfdca88ed29a93ac21f6ecd05e0225a39c560cd486fca6d"
-	},
-	"2.37.12": {
-		"coder-darwin-amd64": "cccde862c569fff3c8d5a5c19b87c2f63c0d8540ea7958d7085361771a5e95c8",
-		"coder-darwin-arm64": "8e87ed6ffb967f2764285d7ac95f8fea25c4dc579729db3ee939a79189b942a0",
-		"coder-linux-amd64": "d516170bbb2c955fac99f1a07f6ef9f5b066155d84a2c9f47a858fde74381b31",
-		"coder-linux-arm64": "0ec15f73cfc701145379faeeec2f13007bc33aef439fdd690ea5beaf13f5b4f2",
-		"coder-linux-armv7": "fb5871c596b88f4eb895d12ab13d041538fc51151a00649ea8b4065ef99f4d29",
-		"coder-windows-amd64.exe": "70a23844b7ae4206966695c46b7303fd458214fa662e43458939ed897345f642",
-		"coder-windows-arm64.exe": "5942bbdfee0e5aabfa76eaa7334f3d7c03a08b1a426d80285984578325f050f5"
-	},
-	"2.37.14": {
-		"coder-darwin-amd64": "747ff815e639960a12c5543d0a073b7fdf3be77abe005ec433f3341060fa8bf9",
-		"coder-darwin-arm64": "c7c6f77dafdc79264fe1db2249cb60fc8afbd3d730529009e5684453ce01f362",
-		"coder-linux-amd64": "7d83d3dfab7ce3ed72e27cc4873067a8dfae7bf1fc5316184c75eef382b3a131",
-		"coder-linux-arm64": "8c78a77e6fef201733a77cbf7934cf7529473aade0a76bbaecc2892e74fbdeb3",
-		"coder-linux-armv7": "bbbf028f31a26ec6f2197f70ff082facdfe8d19051a792fd6874b18b0620f2a8",
-		"coder-windows-amd64.exe": "d599d9f1b9740202671c3960cc30104b2e5ea6368fbcbc61c68bbb39029a1dcf",
-		"coder-windows-arm64.exe": "71a492b1a03c4848790d9405939d8e6b4234f55bc925da66f238754939ad8fdc"
 	},
 	"2.37.2": {
 		"coder-darwin-amd64": "c53c4e92cdfe1d4f7019ab2c531f76a30014669c32fb0c8362801172155e0446",
@@ -1205,6 +1169,42 @@
 		"coder-windows-amd64.exe": "662a9645b203db37abfa3a0d12f4352f4fff0071907e3aed4433d5b298aae759",
 		"coder-windows-arm64.exe": "5e8e5a15a5b4451e235f12af052befddf8cb300b16295e23bc6bdea09d28db66"
 	},
+	"2.37.10": {
+		"coder-darwin-amd64": "fb7f28397e6001a385b99e6127f99dcb5260fae4c3117866d967815ca5b75da9",
+		"coder-darwin-arm64": "64ef7cf9c3dd2652efd45d45572887c5efc7ac56cbaa45b4ba20131aebf2285e",
+		"coder-linux-amd64": "073b321213af376ecd1eed7d86ee07fa07b9af70274299535b51f3fcd661f22a",
+		"coder-linux-arm64": "1b64cce1d0a478f3dcfbbadd24ef6190ef57240ed10320f961e61c2755e48b2c",
+		"coder-linux-armv7": "fbfa3e816ecc7da8df3b1193ca0a8b2e6df9703d2e0d7f6412e2be6cac3f59d1",
+		"coder-windows-amd64.exe": "694253ce61e3d2b1f3a6d1698792bf8f91889de65c10544e7d17c50db702eab1",
+		"coder-windows-arm64.exe": "aecad6362d44fa37e94327716607e965cac92da284764ad26d7252721d332dff"
+	},
+	"2.37.11": {
+		"coder-darwin-amd64": "40b9be19033f483ab820191eb9c90a7a765d1d3d5f3427211dbd56373b9ae2b8",
+		"coder-darwin-arm64": "a2b9c3a577b6e7c73245315f7bded1faed244d7adb9c1eb1b3cadaa504d0f82f",
+		"coder-linux-amd64": "3202fe3301274435d3c16d922ebd96989d82bcb5164704afaac43138b5eaaaf1",
+		"coder-linux-arm64": "d784d42f98cc75abe80465b2102d74d959fa0b09c9ce184d8987358d072fab1f",
+		"coder-linux-armv7": "da5421f458d028bd17ec5895a33eff409853f56506f88c428d8acd0d1713f866",
+		"coder-windows-amd64.exe": "41495fd7d82f6ad7972b954935cae11d3a60cfc95f70828baf990e7d900ae6bf",
+		"coder-windows-arm64.exe": "8885872c87dfc208bbfdca88ed29a93ac21f6ecd05e0225a39c560cd486fca6d"
+	},
+	"2.37.12": {
+		"coder-darwin-amd64": "cccde862c569fff3c8d5a5c19b87c2f63c0d8540ea7958d7085361771a5e95c8",
+		"coder-darwin-arm64": "8e87ed6ffb967f2764285d7ac95f8fea25c4dc579729db3ee939a79189b942a0",
+		"coder-linux-amd64": "d516170bbb2c955fac99f1a07f6ef9f5b066155d84a2c9f47a858fde74381b31",
+		"coder-linux-arm64": "0ec15f73cfc701145379faeeec2f13007bc33aef439fdd690ea5beaf13f5b4f2",
+		"coder-linux-armv7": "fb5871c596b88f4eb895d12ab13d041538fc51151a00649ea8b4065ef99f4d29",
+		"coder-windows-amd64.exe": "70a23844b7ae4206966695c46b7303fd458214fa662e43458939ed897345f642",
+		"coder-windows-arm64.exe": "5942bbdfee0e5aabfa76eaa7334f3d7c03a08b1a426d80285984578325f050f5"
+	},
+	"2.37.14": {
+		"coder-darwin-amd64": "747ff815e639960a12c5543d0a073b7fdf3be77abe005ec433f3341060fa8bf9",
+		"coder-darwin-arm64": "c7c6f77dafdc79264fe1db2249cb60fc8afbd3d730529009e5684453ce01f362",
+		"coder-linux-amd64": "7d83d3dfab7ce3ed72e27cc4873067a8dfae7bf1fc5316184c75eef382b3a131",
+		"coder-linux-arm64": "8c78a77e6fef201733a77cbf7934cf7529473aade0a76bbaecc2892e74fbdeb3",
+		"coder-linux-armv7": "bbbf028f31a26ec6f2197f70ff082facdfe8d19051a792fd6874b18b0620f2a8",
+		"coder-windows-amd64.exe": "d599d9f1b9740202671c3960cc30104b2e5ea6368fbcbc61c68bbb39029a1dcf",
+		"coder-windows-arm64.exe": "71a492b1a03c4848790d9405939d8e6b4234f55bc925da66f238754939ad8fdc"
+	},
 	"2.38.0": {
 		"coder-darwin-amd64": "7876b9701fb0258c9c4b948fb03db8c329c2c72c10134ae9da8ec7a34e141e49",
 		"coder-darwin-arm64": "5fe94a464e7dd11915408e62bdd6b5fd069899929151f01352b5035125b8bdb3",
@@ -1222,15 +1222,6 @@
 		"coder-linux-armv7": "79132ce78ef1fc5e8c6219f25c3913167600e6578d28853e10fe0d65dea557bc",
 		"coder-windows-amd64.exe": "3c8e5ee5badb96459f7a7842f79a331d0f26566360278bebdaa9f957a7d537fb",
 		"coder-windows-arm64.exe": "b42f0baeadca84e80e2ac6300bf3555d32dd109ada4968436687cf00a81f9c97"
-	},
-	"2.38.10": {
-		"coder-darwin-amd64": "24075ba4996f1ecc7fdecdd5b2440ff41a8450b302329100424129f3503428f3",
-		"coder-darwin-arm64": "f19dd35ee0eae0a2ce7e7d995b9edcde3a27ca78f024b32591ca11cb855d20b5",
-		"coder-linux-amd64": "4ffb551e3fdb2866b13527a1f55237a52f43f3fbf51b52254fdbacf90e84911f",
-		"coder-linux-arm64": "c9f408399cee2125611ad8777a140fb96075c0853bf842371ed07f01a97540a2",
-		"coder-linux-armv7": "b4579b8e385080a5c0e6978e18b370358b6ffd44f7a5b244e8a6fede5810bf5b",
-		"coder-windows-amd64.exe": "82c77c53036dabf9231890d501b0aa72cf1f8f131b19b6a4d567e8ab9196820b",
-		"coder-windows-arm64.exe": "d88bd8813dfc9e20824e4e1744a2ac33bde70bf79ac660bc3c0817978fdaa79a"
 	},
 	"2.38.2": {
 		"coder-darwin-amd64": "3f7c27ef2e14cf629089b8084ea45f13f0cc42a1cd16e26b84e9554f621067fe",
@@ -1294,6 +1285,15 @@
 		"coder-linux-armv7": "78e71a33646361a9935c0e431f2b801cb00eb3d340cbc24c421cd69ec27fe5a2",
 		"coder-windows-amd64.exe": "f6e0f93c9c6b68a540133957faa3b7722149a4699990aae282ad4327483a9de7",
 		"coder-windows-arm64.exe": "a7baae9778f8554829073f3b283a3b38d2634413eb5771eb5d29492bab56cfbb"
+	},
+	"2.38.10": {
+		"coder-darwin-amd64": "24075ba4996f1ecc7fdecdd5b2440ff41a8450b302329100424129f3503428f3",
+		"coder-darwin-arm64": "f19dd35ee0eae0a2ce7e7d995b9edcde3a27ca78f024b32591ca11cb855d20b5",
+		"coder-linux-amd64": "4ffb551e3fdb2866b13527a1f55237a52f43f3fbf51b52254fdbacf90e84911f",
+		"coder-linux-arm64": "c9f408399cee2125611ad8777a140fb96075c0853bf842371ed07f01a97540a2",
+		"coder-linux-armv7": "b4579b8e385080a5c0e6978e18b370358b6ffd44f7a5b244e8a6fede5810bf5b",
+		"coder-windows-amd64.exe": "82c77c53036dabf9231890d501b0aa72cf1f8f131b19b6a4d567e8ab9196820b",
+		"coder-windows-arm64.exe": "d88bd8813dfc9e20824e4e1744a2ac33bde70bf79ac660bc3c0817978fdaa79a"
 	},
 	"2.39.0": {
 		"coder-darwin-amd64": "5f0c992261af7f7852548dc796f064de35f47fbbf5fa791e614dc5e974b66f3d",
