@@ -133,6 +133,8 @@ jobs:
   # Prepare a draft release for GitHub Releases page for the manual verification
   # If accepted and published, release workflow would be triggered
   releaseDraft:
+    permissions:
+      contents: write
     name: Release Draft
     if: github.event_name != 'pull_request'
     needs: build
