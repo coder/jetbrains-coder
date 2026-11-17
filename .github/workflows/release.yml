@@ -9,6 +9,9 @@ jobs:
 
   # Prepare and publish the plugin to the Marketplace repository
   release:
+    permissions:
+      contents: write
+      pull-requests: write
     name: Publish Plugin
     runs-on: ubuntu-latest
     steps:
