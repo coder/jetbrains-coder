@@ -1,8 +1,11 @@
 package com.coder.gateway.cli
 
+import com.coder.gateway.cli.downloader.bundledSignatures
 import com.coder.gateway.cli.ex.MissingVersionException
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.cli.ex.SSHConfigFormatException
+import com.coder.gateway.cli.gpg.GPGVerifier
+import com.coder.gateway.cli.gpg.VerificationResult
 import com.coder.gateway.sdk.DataGen
 import com.coder.gateway.sdk.DataGen.Companion.workspace
 import com.coder.gateway.sdk.v2.models.Workspace
@@ -17,12 +20,13 @@ import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.escape
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.sha1
-import com.coder.gateway.util.sha256
 import com.coder.gateway.util.toURL
 import com.squareup.moshi.JsonEncodingException
 import com.sun.net.httpserver.HttpServer
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkConstructor
+import io.mockk.unmockkConstructor
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
@@ -35,6 +39,7 @@ import java.net.URL
 import java.nio.file.AccessDeniedException
 import java.nio.file.Path
 import java.util.UUID
+import kotlin.io.path.readText
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -247,26 +252,26 @@ internal class CoderCLIManagerTest {
     }
 
     @Test
-    fun testDownloadAsksOnlyWhenNoReleaseDigestMatches() {
+    fun testDownloadVerifiesUnsignedCLIWithBundledSignature() {
         val (srv, url) = mockServer()
-        val servedDigest = sha256(mkbinVersion("${url.port}.0.0").byteInputStream())
+        val settings = CoderSettings(
+            CoderSettingsState(dataDirectory = tmpdir.resolve("bundled-signature").toString()),
+        )
+        val bundledSignature = bundledSignatures(javaClass.getResource("/META-INF/release-signatures.json")!!)
+            .getValue("2.29.0")
+            .getValue(settings.defaultCliBinaryNameByOsAndArch)
+        mockkConstructor(GPGVerifier::class)
+        coEvery {
+            anyConstructed<GPGVerifier>().verifySignature(any(), match { it.readText() == bundledSignature })
+        } returns VerificationResult.Valid
 
-        listOf(servedDigest to 0, sha256("another binary".byteInputStream()) to 1).forEach { (releaseDigest, prompts) ->
-            val settings = CoderSettings(
-                CoderSettingsState(dataDirectory = tmpdir.resolve("release-digest-$prompts").toString()),
-            )
-            val ccm = CoderCLIManager(
-                url,
-                settings,
-                releaseDigests = ReleaseDigests {
-                    mapOf("2.13.1" to mapOf(settings.defaultCliBinaryNameByOsAndArch to releaseDigest))
-                },
-            )
-
-            assertTrue(runBlocking { ccm.download(VERSION_FOR_PROGRESS_REPORTING, noOpTextProgress) })
-            verify(exactly = prompts) { anyConstructed<DialogUi>().confirm(any(), any()) }
+        try {
+            assertTrue(runBlocking { CoderCLIManager(url, settings).download("2.29.0", noOpTextProgress) })
+        } finally {
+            unmockkConstructor(GPGVerifier::class)
         }
 
+        verify(exactly = 0) { anyConstructed<DialogUi>().confirm(any(), any()) }
         srv.stop(0)
     }
 

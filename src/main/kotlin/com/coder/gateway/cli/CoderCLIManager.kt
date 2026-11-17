@@ -132,7 +132,6 @@ class CoderCLIManager(
     // If the binary directory is not writable, this can be used to force the
     // manager to download to the data directory instead.
     private val forceDownloadToData: Boolean = false,
-    private val releaseDigests: ReleaseDigests = ReleaseDigests(),
 ) {
     private val downloader = createDownloadService()
     private val gpgVerifier = GPGVerifier(settings)
@@ -185,15 +184,12 @@ class CoderCLIManager(
             }
 
             if (signatureResult.isNotDownloaded()) {
-                val isReleasedBinary = withContext(Dispatchers.IO) {
-                    releaseDigests.matches(cliResult.dst, buildVersion, settings.defaultCliBinaryNameByOsAndArch)
+                signatureResult = withContext(Dispatchers.IO) {
+                    downloader.bundledSignature(buildVersion)
                 }
-                if (isReleasedBinary) {
-                    downloader.commit()
-                    logger.info("${cliResult.source} matches the digest of the $buildVersion release")
-                    return true
-                }
+            }
 
+            if (signatureResult.isNotDownloaded()) {
                 if (settings.fallbackOnCoderForSignatures) {
                     logger.info("Trying to download signature file from releases.coder.com")
                     signatureResult = withContext(Dispatchers.IO) {

@@ -31,14 +31,12 @@ running potentially malicious or tampered binaries.
    signature file from the same location. The signature file is named according to the binary (e.g.,
    `coder-linux-amd64.v2.asc` for `coder-linux-amd64`).
 
-3. **Release Digests**: Deployments released before Coder's current release signing key have no `.v2.asc` signature.
-   If the signature is not available from the deployment, the plugin compares the SHA-256 digest of the binary with
-   the digests of Coder's published releases, which ship with the plugin. A binary that matches the release of the
-   deployment's version is accepted. The list is a copy of `release-digests.json` from
-   [coder/vscode-coder](https://github.com/coder/vscode-coder), which generates it. To update the list, copy the file
-   again and set its commit in `.github/workflows/release-digests.yml`, which checks that the two files are equal.
+3. **Bundled Signatures**: Deployments released before Coder's current release signing key have no `.v2.asc` signature.
+   If the signature is not available from the deployment, the plugin uses the signature that ships with the plugin for
+   the release of the deployment's version. Coder made these signatures with the current key for the releases from
+   2.29.0 to 2.39.4. They are the signatures that `releases.coder.com` serves for those releases.
 
-4. **Fallback Signature Sources**: If the binary matches no release digest, the plugin can optionally fall back to
+4. **Fallback Signature Sources**: If the plugin has no signature for the release, it can optionally fall back to
    downloading signatures from `releases.coder.com`. This is controlled by the `fallbackOnCoderForSignatures`
    setting.
 
@@ -54,7 +52,6 @@ running potentially malicious or tampered binaries.
 The verification process involves several components:
 
 - **`GPGVerifier`**: Handles the core GPG signature verification logic using BouncyCastle
-- **`ReleaseDigests`**: Compares a binary with the bundled SHA-256 digests of Coder's published releases
 - **`VerificationResult`**: Represents the outcome of verification (Valid, Invalid, Failed, SignatureNotFound)
 - **`CoderDownloadService`**: Manages downloading both binaries and their signatures
 - **`CoderCLIManager`**: Orchestrates the download and verification workflow
@@ -72,7 +69,7 @@ Users can control signature verification behavior through plugin settings:
 ### Security Considerations
 
 - The plugin embeds Coder's trusted public key in the plugin resources
-- The plugin embeds the SHA-256 digests of the Coder releases that are not signed with that key
+- The plugin embeds the signatures that Coder made with that key for the releases published before it
 - Verification uses detached signatures, which are more secure than attached signatures
 - Users are warned about security risks when verification fails
 - The system gracefully handles cases where signatures are unavailable
