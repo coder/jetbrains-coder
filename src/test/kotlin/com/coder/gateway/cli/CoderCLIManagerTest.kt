@@ -276,16 +276,19 @@ internal class CoderCLIManagerTest {
     }
 
     @Test
-    fun testDownloadSkipsBundledSignatureForPrerelease() {
+    fun testDownloadFindsNoSignatureForPrerelease() {
         val (srv, url) = mockServer()
         val settings = CoderSettings(
-            CoderSettingsState(dataDirectory = tmpdir.resolve("bundled-signature-prerelease").toString()),
+            CoderSettingsState(
+                dataDirectory = tmpdir.resolve("prerelease-signature").toString(),
+                fallbackOnCoderForSignatures = true,
+            ),
         )
 
         assertTrue(runBlocking { CoderCLIManager(url, settings).download("v2.29.0-devel+de07351b8", noOpTextProgress) })
 
         verify(exactly = 1) {
-            anyConstructed<DialogUi>().confirm(any(), match { it.startsWith("No signatures were found") })
+            anyConstructed<DialogUi>().confirm(any(), match { it.startsWith("Could not fetch any signatures") })
         }
         srv.stop(0)
     }

@@ -3,7 +3,6 @@ package com.coder.gateway.cli.downloader
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.settings.CoderSettings
 import com.coder.gateway.util.OS
-import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.getHeaders
 import com.coder.gateway.util.getOS
 import com.coder.gateway.util.sha1
@@ -30,6 +29,7 @@ import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
 private const val BUNDLED_SIGNATURES = "/META-INF/release-signatures.json"
+private val RELEASE_BUILD = Regex("""v?(\d+\.\d+\.\d+)(\+.*)?""")
 
 /**
  * Handles the download steps of Coder CLI
@@ -230,17 +230,21 @@ class CoderDownloadService(
         buildVersion: String,
         showTextProgress: ((t: String) -> Unit)? = null
     ): DownloadResult {
-        val semVer = SemVer.parse(buildVersion)
+        val release = releaseVersion(buildVersion)
+        if (release == null) {
+            logger.info("No signature is published on releases.coder.com for $buildVersion")
+            return DownloadResult.NotFound
+        }
         return downloadSignature(
-            URI.create("https://releases.coder.com/coder-cli/${semVer.major}.${semVer.minor}.${semVer.patch}/").toURL(),
+            URI.create("https://releases.coder.com/coder-cli/$release/").toURL(),
             showTextProgress
         )
     }
 
     fun bundledSignature(buildVersion: String): DownloadResult {
         val source = javaClass.getResource(BUNDLED_SIGNATURES) ?: return DownloadResult.NotFound
-        val version = buildVersion.trimStart('v').substringBefore('+')
-        val signature = bundledSignatures(source)[version]
+        val signature = releaseVersion(buildVersion)
+            ?.let { bundledSignatures(source)[it] }
             ?.get(settings.defaultCliBinaryNameByOsAndArch)
         if (signature == null) {
             logger.info("No signature is bundled with the plugin for $buildVersion")
@@ -256,6 +260,9 @@ class CoderDownloadService(
         val logger = Logger.getInstance(CoderDownloadService::class.java.simpleName)
     }
 }
+
+private fun releaseVersion(buildVersion: String): String? =
+    RELEASE_BUILD.matchEntire(buildVersion)?.groupValues?.get(1)
 
 internal fun bundledSignatures(source: URL): Map<String, Map<String, String>> {
     val type = Types.newParameterizedType(
