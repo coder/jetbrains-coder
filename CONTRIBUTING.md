@@ -129,18 +129,26 @@ stable and latest EAP.
 
 ## Releasing
 
-1. Check that the changelog lists all the important changes.
-2. Update the gradle.properties version.
-3. Publish the resulting draft release after validating it.
-4. Merge the resulting changelog PR.
+Releases are cut from `main` by the `Release` workflow (`.github/workflows/release.yml`). One
+person starts a release and a member of `clients` other than that person approves it.
+
+1. Check that the changelog lists all the important changes under `Unreleased`.
+2. Update `pluginVersion` in `gradle.properties` and merge that to `main`.
+3. Start the release: Actions > Release > Run workflow on `main`, with the version (for example
+   `v2.23.2`, matching `pluginVersion`) and the full SHA of the commit on `main` to release. Or:
+   `gh workflow run release.yml -f version=v2.23.2 -f commit=<sha>`.
+4. A member of `clients` other than you approves the `release-approval` deployment. The workflow
+   then creates the tag, publishes the plugin to the JetBrains Marketplace, creates the GitHub
+   release and opens the changelog pull request. Nobody can push release tags by hand.
+5. Merge the changelog pull request.
 
 ## `main` vs `eap` branch
 
 Sometimes there can be API incompatibilities between the latest stable version
 of Gateway and EAP ones (Early Access Program).
 
-If this happens, use the `eap` branch to make a separate release. Once it
-becomes stable, update the versions in `main`.
+If this happens, develop the EAP changes on the `eap` branch. Releases are only cut from `main`,
+so EAP work ships once it is merged to `main`, when that Gateway version becomes stable.
 
 ## Supported Coder versions
 

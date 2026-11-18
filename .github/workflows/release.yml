@@ -1,92 +1,228 @@
-# GitHub Actions Workflow created for handling the release process based on the draft release prepared with the Build workflow.
-
 name: Release
+
+# Releases the plugin to the JetBrains Marketplace. See CONTRIBUTING.md#releasing.
+#
+# Someone with write access dispatches this workflow on main with a version and a commit on main.
+# A member of clients other than that person approves the approve job (environment
+# release-approval). Only then is the tag created, at that commit, by the coder-release-publisher
+# App. The publish job then builds the tagged commit and publishes it from the publish
+# environment, which holds the Marketplace token.
+#
+# Only the coder-release-publisher App may create tags (ruleset "Release tags (App only)"). Its key
+# is in Cloud KMS, and in this repository only the approve job of main's copy of this file, in
+# release-approval, may sign with it.
+
 on:
-  release:
-    types: [prereleased, released]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. v2.23.2. Must match pluginVersion in gradle.properties at the commit. A suffix (v2.24.0-alpha.1) makes it a pre-release"
+        required: true
+        type: string
+      commit:
+        description: "Full SHA of the commit on main to release"
+        required: true
+        type: string
+
+permissions: {}
+
+# One release at a time, and a release is never cancelled halfway.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
-
-  # Prepare and publish the plugin to the Marketplace repository
-  release:
-    permissions:
-      contents: write
-      pull-requests: write
-    name: Publish Plugin
+  # The later jobs run the build of the commit they release, so only a commit on main (which went
+  # through review) may be released.
+  validate:
+    name: Check the request
     runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'coder' }}
+    permissions:
+      contents: read
     steps:
-
-      # Check out current repository
-      - name: Fetch Sources
-        uses: actions/checkout@v6.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
 
-      # Setup Java 17 environment for the next steps
+      - name: Check the request
+        env:
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+
+          # Also stops a run started from a tag or from another branch.
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || fail "This workflow only runs on main, not on $GITHUB_REF."
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || fail "version must look like v1.2.3 or v1.2.3-alpha.1, got '$VERSION'."
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || fail "commit must be a full 40-character SHA, got '$COMMIT'."
+          git merge-base --is-ancestor "$COMMIT" "$GITHUB_SHA" || fail "$COMMIT is not on main."
+
+          # The Marketplace version comes from gradle.properties, so the tag must match it.
+          plugin_version="$(git show "$COMMIT:gradle.properties" | sed -n 's/^pluginVersion=//p' | tr -d '[:space:]')"
+          [[ "v$plugin_version" == "$VERSION" ]] || fail "gradle.properties at $COMMIT has pluginVersion=$plugin_version, not ${VERSION#v}."
+
+  # The release is tagged only after a member of clients other than the person who started it
+  # approves this job.
+  approve:
+    name: Approve and tag the release
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: release-approval
+    permissions:
+      contents: read
+      id-token: write # Cloud KMS signs the App's JWT
+    steps:
+      # For the tags and the history of main. Nothing from the tree runs in this job.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      # Here and not in the validate job, because the tags can change while the run waits for
+      # approval.
+      - name: Check the tag
+        id: check
+        env:
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || fail "version must look like v1.2.3 or v1.2.3-alpha.1, got '$VERSION'."
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || fail "commit must be a full 40-character SHA, got '$COMMIT'."
+          git merge-base --is-ancestor "$COMMIT" "$GITHUB_SHA" || fail "$COMMIT is not on main."
+
+          # A re-run finds the tag that the first attempt created.
+          if existing="$(git rev-parse --verify --quiet "refs/tags/$VERSION^{commit}")"; then
+            [[ "$existing" == "$COMMIT" ]] || fail "Tag $VERSION already exists at $existing, not at $COMMIT."
+            echo "Tag $VERSION already exists at $COMMIT."
+            echo "create=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          released="$(git tag --points-at "$COMMIT" --list 'v*' | paste -sd ' ' -)"
+          [[ -z "$released" ]] || fail "$COMMIT was already released as $released. Release a newer commit."
+
+          # Versions only go up, and a release never comes from before the last stable one.
+          tags="$(git tag --list 'v*' --sort=-version:refname)"
+          latest="$(grep -E -m 1 '^v[0-9]+\.[0-9]+\.[0-9]+$' <<<"$tags" || true)"
+          if [[ -n "$latest" ]]; then
+            printf '%s\n' "$latest" "$VERSION" | sort -V -C || fail "$VERSION is not newer than $latest, the latest release."
+            git merge-base --is-ancestor "$latest" "$COMMIT" || fail "$COMMIT is older than the commit released as $latest."
+          fi
+
+          echo "create=true" >> "$GITHUB_OUTPUT"
+
+      # The App can also write to other repositories, so the token is asked for this one only.
+      - name: Generate release App token
+        id: app_token
+        if: ${{ steps.check.outputs.create == 'true' }}
+        uses: coder/github-app-token-action@00eaec58ee1bfea9c8b48655b7ab7470b07739e5 # main 2026-11-17
+        with:
+          client-id: ${{ secrets.CODER_RELEASE_PUBLISHER_APP_ID }}
+          kms-key: ${{ secrets.CODER_RELEASE_PUBLISHER_APP_KMS_KEY }}
+          workload-identity-provider: ${{ secrets.APP_KEYS_WORKLOAD_ID_PROVIDER }}
+          owner: coder
+          repositories: jetbrains-coder
+          permissions: |
+            contents: write
+            workflows: write
+
+      # An annotated tag, through the API: nothing is pushed from this job's checkout.
+      - name: Create the tag
+        if: ${{ steps.check.outputs.create == 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          tag_object="$(gh api "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="$VERSION" -f message="Release $VERSION" -f object="$COMMIT" -f type=commit \
+            --jq .sha)"
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$VERSION" -f sha="$tag_object" >/dev/null
+          echo "Created tag $VERSION at $COMMIT."
+
+  publish:
+    name: Publish the plugin
+    needs: [validate, approve]
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      contents: write # create the GitHub release and push the changelog branch
+      pull-requests: write # open the changelog pull request
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.version }}
+          persist-credentials: false
+
+      - name: Check the tag
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          [[ "$head" == "$COMMIT" ]] || { echo "::error::The tag points at $head, not at $COMMIT."; exit 1; }
+
+      # No Gradle cache: the release builds from a clean state.
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: zulu
           java-version: 17
-          cache: gradle
 
-      # Set environment variables
-      - name: Export Properties
-        id: properties
-        shell: bash
-        run: |
-          CHANGELOG="$(cat << 'EOM' | sed -e 's/^[[:space:]]*$//g' -e '/./,$!d'
-          ${{ github.event.release.body }}
-          EOM
-          )"
-          
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+      # The unreleased section of the changelog, before publishPlugin moves it under the version.
+      - name: Collect the release notes
+        run: ./gradlew getChangelog --unreleased --no-header --console=plain -q > "$RUNNER_TEMP/RELEASE_NOTES.md"
 
-          echo "::set-output name=changelog::$CHANGELOG"
-
-      # Update Unreleased section with the current release note
-      - name: Patch Changelog
-        if: ${{ steps.properties.outputs.changelog != '' }}
-        env:
-          CHANGELOG: ${{ steps.properties.outputs.changelog }}
-        run: |
-          ./gradlew patchChangelog --release-note="$CHANGELOG"
-
-      # Publish the plugin to the Marketplace
-      - name: Publish Plugin
+      # publishPlugin also patches CHANGELOG.md (it depends on patchChangelog).
+      - name: Publish to the JetBrains Marketplace
         env:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
         run: ./gradlew publishPlugin --info
 
-      # Upload artifact as a release asset
-      - name: Upload Release Asset
+      - name: Create the GitHub release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./build/distributions/*
-
-      # Create pull request
-      - name: Create Pull Request
-        if: ${{ steps.properties.outputs.changelog != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          BRANCH="changelog-update-$VERSION"
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" ./build/distributions/* --clobber
+            exit 0
+          fi
+          prerelease=()
+          [[ "$VERSION" != *-* ]] || prerelease=(--prerelease --latest=false)
+          gh release create "$VERSION" ./build/distributions/* --verify-tag --title "$VERSION" \
+            --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" "${prerelease[@]}"
 
+      - name: Open the changelog pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md is unchanged."
+            exit 0
+          fi
+          branch="changelog-update-$VERSION"
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
-
-          git checkout -b $BRANCH
-          git commit -am "Changelog update - $VERSION"
-          git push --set-upstream origin $BRANCH
-
+          git checkout -b "$branch"
+          git commit -m "Changelog update - $VERSION" -- CHANGELOG.md
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
           gh pr create \
             --title "Changelog update - \`$VERSION\`" \
             --body "Current pull request contains patched \`CHANGELOG.md\` file for the \`$VERSION\` version." \
             --base main \
-            --head $BRANCH
+            --head "$branch"
