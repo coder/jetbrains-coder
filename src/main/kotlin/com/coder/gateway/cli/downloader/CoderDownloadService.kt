@@ -2,7 +2,6 @@ package com.coder.gateway.cli.downloader
 
 import com.coder.gateway.cli.ex.ResponseException
 import com.coder.gateway.settings.CoderSettings
-import com.coder.gateway.util.InvalidVersionException
 import com.coder.gateway.util.OS
 import com.coder.gateway.util.SemVer
 import com.coder.gateway.util.getHeaders
@@ -239,15 +238,14 @@ class CoderDownloadService(
     }
 
     fun bundledSignature(buildVersion: String): DownloadResult {
-        val semVer = try {
-            SemVer.parse(buildVersion)
-        } catch (_: InvalidVersionException) {
+        val source = javaClass.getResource(BUNDLED_SIGNATURES) ?: return DownloadResult.NotFound
+        val version = buildVersion.trimStart('v').substringBefore('+')
+        val signature = bundledSignatures(source)[version]
+            ?.get(settings.defaultCliBinaryNameByOsAndArch)
+        if (signature == null) {
+            logger.info("No signature is bundled with the plugin for $buildVersion")
             return DownloadResult.NotFound
         }
-        val source = javaClass.getResource(BUNDLED_SIGNATURES) ?: return DownloadResult.NotFound
-        val signature = bundledSignatures(source)["${semVer.major}.${semVer.minor}.${semVer.patch}"]
-            ?.get(settings.defaultCliBinaryNameByOsAndArch)
-            ?: return DownloadResult.NotFound
         val localSignaturePath = cliFinalDst.parent.resolve(settings.defaultSignatureNameByOsAndArch)
         logger.info("Using the signature bundled with the plugin for the $buildVersion release")
         localSignaturePath.writeText(signature)

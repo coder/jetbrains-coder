@@ -10,8 +10,9 @@
 
 ### Changed
 
-- the Coder CLI is now verified with Coder's new release signing key, using the `.v2.asc` signature next to the binary; the previous key is no longer trusted
-- a CLI from a deployment released before the new key is verified with the signature that Coder made for that release (2.29.0 and newer) with the new key, which ships with the plugin; any other CLI asks for confirmation before it runs, as a missing signature did
+- the Coder CLI is now verified with Coder's new release signing key; the previous key is no longer trusted
+- Coder 2.29.0 to 2.39.4 were released before the new key, so the plugin ships with new signatures for them
+- a CLI from a deployment older than 2.29.0 can no longer be verified, and asks for confirmation before it runs
 
 ## 2.23.1 - 2026-01-21
 

@@ -266,12 +266,27 @@ internal class CoderCLIManagerTest {
         } returns VerificationResult.Valid
 
         try {
-            assertTrue(runBlocking { CoderCLIManager(url, settings).download("2.29.0", noOpTextProgress) })
+            assertTrue(runBlocking { CoderCLIManager(url, settings).download("v2.29.0+de07351b8", noOpTextProgress) })
         } finally {
             unmockkConstructor(GPGVerifier::class)
         }
 
         verify(exactly = 0) { anyConstructed<DialogUi>().confirm(any(), any()) }
+        srv.stop(0)
+    }
+
+    @Test
+    fun testDownloadSkipsBundledSignatureForPrerelease() {
+        val (srv, url) = mockServer()
+        val settings = CoderSettings(
+            CoderSettingsState(dataDirectory = tmpdir.resolve("bundled-signature-prerelease").toString()),
+        )
+
+        assertTrue(runBlocking { CoderCLIManager(url, settings).download("v2.29.0-devel+de07351b8", noOpTextProgress) })
+
+        verify(exactly = 1) {
+            anyConstructed<DialogUi>().confirm(any(), match { it.startsWith("No signatures were found") })
+        }
         srv.stop(0)
     }
 
