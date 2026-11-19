@@ -8,6 +8,12 @@
 
 - the header command falls back to the `CODER_HEADER_COMMAND` environment variable when the setting is blank, matching the Coder CLI and the VS Code extension
 
+### Changed
+
+- the Coder CLI is now verified with Coder's new release signing key; the previous key is no longer trusted
+- the plugin ships with new signatures for Coder 2.29.0 to 2.39.4
+- a CLI from a deployment older than 2.29.0 can no longer be verified, and asks for confirmation before it runs
+
 ## 2.23.1 - 2026-01-21
 
 ### Changed

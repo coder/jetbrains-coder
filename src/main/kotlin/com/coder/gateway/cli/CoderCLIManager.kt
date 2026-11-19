@@ -184,6 +184,12 @@ class CoderCLIManager(
             }
 
             if (signatureResult.isNotDownloaded()) {
+                signatureResult = withContext(Dispatchers.IO) {
+                    downloader.bundledSignature(buildVersion)
+                }
+            }
+
+            if (signatureResult.isNotDownloaded()) {
                 if (settings.fallbackOnCoderForSignatures) {
                     logger.info("Trying to download signature file from releases.coder.com")
                     signatureResult = withContext(Dispatchers.IO) {

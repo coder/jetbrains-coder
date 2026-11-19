@@ -449,39 +449,39 @@ internal class CoderSettingsTest {
 
     @Test
     fun `Default CLI and signature for Windows AMD64`() =
-        assertBinaryAndSignature("Windows 10", "amd64", "coder-windows-amd64.exe", "coder-windows-amd64.exe.asc")
+        assertBinaryAndSignature("Windows 10", "amd64", "coder-windows-amd64.exe", "coder-windows-amd64.exe.v2.asc")
 
     @Test
     fun `Default CLI and signature for Windows ARM64`() =
-        assertBinaryAndSignature("Windows 10", "aarch64", "coder-windows-arm64.exe", "coder-windows-arm64.exe.asc")
+        assertBinaryAndSignature("Windows 10", "aarch64", "coder-windows-arm64.exe", "coder-windows-arm64.exe.v2.asc")
 
     @Test
     fun `Default CLI and signature for Linux AMD64`() =
-        assertBinaryAndSignature("Linux", "x86_64", "coder-linux-amd64", "coder-linux-amd64.asc")
+        assertBinaryAndSignature("Linux", "x86_64", "coder-linux-amd64", "coder-linux-amd64.v2.asc")
 
     @Test
     fun `Default CLI and signature for Linux ARM64`() =
-        assertBinaryAndSignature("Linux", "aarch64", "coder-linux-arm64", "coder-linux-arm64.asc")
+        assertBinaryAndSignature("Linux", "aarch64", "coder-linux-arm64", "coder-linux-arm64.v2.asc")
 
     @Test
     fun `Default CLI and signature for Linux ARMV7`() =
-        assertBinaryAndSignature("Linux", "armv7l", "coder-linux-armv7", "coder-linux-armv7.asc")
+        assertBinaryAndSignature("Linux", "armv7l", "coder-linux-armv7", "coder-linux-armv7.v2.asc")
 
     @Test
     fun `Default CLI and signature for Mac AMD64`() =
-        assertBinaryAndSignature("Mac OS X", "x86_64", "coder-darwin-amd64", "coder-darwin-amd64.asc")
+        assertBinaryAndSignature("Mac OS X", "x86_64", "coder-darwin-amd64", "coder-darwin-amd64.v2.asc")
 
     @Test
     fun `Default CLI and signature for Mac ARM64`() =
-        assertBinaryAndSignature("Mac OS X", "aarch64", "coder-darwin-arm64", "coder-darwin-arm64.asc")
+        assertBinaryAndSignature("Mac OS X", "aarch64", "coder-darwin-arm64", "coder-darwin-arm64.v2.asc")
 
     @Test
     fun `Default CLI and signature for unknown OS and Arch`() =
-        assertBinaryAndSignature(null, null, "coder-windows-amd64.exe", "coder-windows-amd64.exe.asc")
+        assertBinaryAndSignature(null, null, "coder-windows-amd64.exe", "coder-windows-amd64.exe.v2.asc")
 
     @Test
     fun `Default CLI and signature for unknown Arch fallback on Linux`() =
-        assertBinaryAndSignature("Linux", "mips64", "coder-linux-amd64", "coder-linux-amd64.asc")
+        assertBinaryAndSignature("Linux", "mips64", "coder-linux-amd64", "coder-linux-amd64.v2.asc")
 
     private fun assertBinaryAndSignature(
         osName: String?,
