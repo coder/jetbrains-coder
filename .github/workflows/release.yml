@@ -156,8 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: publish
     permissions:
-      contents: write # create the GitHub release and push the changelog branch
-      pull-requests: write # open the changelog pull request
+      contents: write # create the GitHub release
     steps:
       - name: Checkout the tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -205,22 +204,74 @@ jobs:
           gh release create "$VERSION" ./build/distributions/* --verify-tag --title "$VERSION" \
             --notes-file "$RUNNER_TEMP/RELEASE_NOTES.md" "${prerelease[@]}"
 
+      # publishPlugin patched CHANGELOG.md; the changelog job opens the pull request with it.
+      - name: Upload the patched changelog
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: changelog
+          path: CHANGELOG.md
+          retention-days: 7
+
+  # GITHUB_TOKEN can't open pull requests in this org, so this job does it as the repository's
+  # release App. It runs in release-pr, the only place besides release-approval where the App's
+  # key signs, and it's the only job here with id-token, so the Gradle build above can't sign.
+  changelog:
+    name: Open the changelog pull request
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: release-pr
+    permissions:
+      contents: read
+      id-token: write # Cloud KMS signs the App's JWT
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.version }}
+          persist-credentials: false
+
+      - name: Download the patched changelog
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: changelog
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md is unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create an App token
+        id: app_token
+        if: steps.diff.outputs.changed == 'true'
+        uses: coder/github-app-token-action@00eaec58ee1bfea9c8b48655b7ab7470b07739e5 # main 2026-11-17
+        with:
+          client-id: ${{ secrets.CODER_RELEASE_PUBLISHER_APP_ID }}
+          kms-key: ${{ secrets.CODER_RELEASE_PUBLISHER_APP_KMS_KEY }}
+          workload-identity-provider: ${{ secrets.APP_KEYS_WORKLOAD_ID_PROVIDER }}
+          repositories: jetbrains-coder
+          permissions: |
+            contents: write
+            pull_requests: write
+
       - name: Open the changelog pull request
+        if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- CHANGELOG.md; then
-            echo "CHANGELOG.md is unchanged."
-            exit 0
-          fi
+          gh auth setup-git
           branch="changelog-update-$VERSION"
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
           git checkout -b "$branch"
           git commit -m "Changelog update - $VERSION" -- CHANGELOG.md
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$branch"
+          git push origin "$branch"
           gh pr create \
             --title "Changelog update - \`$VERSION\`" \
             --body "Current pull request contains patched \`CHANGELOG.md\` file for the \`$VERSION\` version." \
