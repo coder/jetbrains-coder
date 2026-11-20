@@ -4,15 +4,16 @@
 
 ## Unreleased
 
+## 2.24.0 - 2026-11-20
+
 ### Added
 
 - the header command falls back to the `CODER_HEADER_COMMAND` environment variable when the setting is blank, matching the Coder CLI and the VS Code extension
 
-### Changed
+### Security
 
-- the Coder CLI is now verified with Coder's new release signing key; the previous key is no longer trusted
-- the plugin ships with new signatures for Coder 2.29.0 to 2.39.4
-- a CLI from a deployment older than 2.29.0 can no longer be verified, and asks for confirmation before it runs
+- Verify the Coder CLI with Coder's new release signing key. The previous key is no longer trusted. The plugin ships with new signatures for Coder 2.29.0 to 2.39.4.
+- For Coder older than 2.29.0, the plugin can no longer verify the CLI and asks for confirmation before running it.
 
 ## 2.23.1 - 2026-01-21
 
