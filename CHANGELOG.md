@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 2.24.0 - 2026-11-20
+
 ### Added
 
 - the header command falls back to the `CODER_HEADER_COMMAND` environment variable when the setting is blank, matching the Coder CLI and the VS Code extension
